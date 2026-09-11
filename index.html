@@ -20,6 +20,12 @@ header{background:var(--m);color:var(--c);padding:10px 20px;display:flex;align-i
 .he strong{font-family:'Playfair Display',serif;font-size:15px;color:var(--dc);font-weight:700;display:block;}
 .hq{text-align:right;font-size:11px;color:var(--cd);}
 .hq span{font-family:'Playfair Display',serif;font-size:19px;color:var(--dc);font-weight:700;display:block;}
+/* Lote K — botón "Actualizar" (recarga la app para coger la última versión subida a Netlify; el
+   service worker es red-primero, así que basta recargar) y etiqueta de versión para saber cuál está cargada. */
+.hb{margin-top:6px;display:flex;justify-content:flex-end;align-items:center;gap:8px;}
+.btnUpd{background:#2e7d32;color:#fff;border:none;border-radius:6px;padding:5px 11px;font-family:'Lato',sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.btnUpd:hover{background:#3b9142;} .btnUpd:disabled{opacity:.7;cursor:default;}
+#appBuildLbl{font-size:10px;color:var(--cd);opacity:.85;white-space:nowrap;}
 nav{background:var(--mm);display:flex;padding:0 16px;overflow-x:auto;}
 .tb{background:none;border:none;color:var(--cd);padding:13px 20px;cursor:pointer;font-family:'Lato',sans-serif;font-size:13px;font-weight:700;transition:all .2s;border-bottom:3px solid transparent;white-space:nowrap;}
 .tb:hover{color:#fff;} .tb.on{color:var(--dc);border-bottom-color:var(--dc);background:rgba(255,255,255,.06);}
@@ -125,6 +131,36 @@ tr:hover td{background:var(--c);}
      de precio (€/ud=4ª, Total=5ª), el bloque de totales y el resumen de gola (lleva importes). */
   body.sinval #tp th:nth-child(4),body.sinval #tp th:nth-child(5),body.sinval #tp td.pr,body.sinval #tp td.tr{display:none!important;}
   body.sinval .tbox,body.sinval #golaR{display:none!important;}
+  /* Lote K — en papel los controles se ven como texto plano: cantidad sin recuadro; descuento e IVA
+     muestran el <span class="pv"> (que cTot mantiene al día) en vez del input/select. */
+  #tp .qi{border:0;background:none;padding:0;}
+  #tp #pBody strong{text-decoration:none!important;}
+  #tp .di{display:none!important;} #tp .pv{display:inline!important;}
+  /* Lote K — bloque de totales claro (menos tinta): crema con borde marrón y TOTAL en marrón. */
+  .tbox{background:#FFF8E7!important;color:var(--t)!important;border:1.5px solid var(--m);}
+  .trow{border-bottom-color:rgba(74,44,14,.15);}
+  .grand{color:var(--m);}
+  /* Lote K — impresión "Presupuesto cliente" (.pcli en <body> solo durante la impresión): solo
+     cabecera, cliente, líneas y totales. Fuera: resumen de gola y hojas de producción/tiradores/
+     herrajes sueltos. Todo compactado para que un presupuesto normal quepa en UNA hoja. */
+  body.pcli .ws-print,body.pcli #golaR{display:none!important;}
+  body.pcli{font-size:10.5px;}
+  body.pcli .ph{padding-bottom:8px;margin-bottom:8px;}
+  body.pcli .ph img{height:34px;}
+  body.pcli .pn{padding:6px 0;margin-bottom:4px;box-shadow:none;}
+  body.pcli .pt{font-size:12px;margin-bottom:5px;padding-bottom:3px;}
+  body.pcli .cib{font-size:10.5px;gap:1px 14px;margin-bottom:5px;}
+  body.pcli #obsS,body.pcli #cfgS{font-size:10px;}
+  body.pcli .ptw{margin:4px 0;}
+  body.pcli table{font-size:10.5px;}
+  body.pcli th{padding:3px 7px;font-size:8.5px;}
+  body.pcli td{padding:2px 7px;line-height:1.25;}
+  body.pcli #pBody td span{font-size:9px!important;}
+  body.pcli .sh td{font-size:10px;padding:2px 7px;}
+  body.pcli tr{page-break-inside:avoid;}
+  body.pcli .tbox{padding:7px 14px;max-width:300px;}
+  body.pcli .trow{padding:2px 0;font-size:10.5px;}
+  body.pcli .grand{font-size:15px;padding-top:5px;}
 }
 @media(max-width:900px){.l2{grid-template-columns:1fr!important;}}
 </style>
@@ -135,7 +171,9 @@ tr:hover td{background:var(--c);}
     <img src="https://almacengrupocinco.es/wp-content/uploads/2016/05/cropped-logo.png" alt="G5" onerror="this.style.display='none'">
     <div class="he"><strong>Almacén Grupo 5</strong>Cañada Aguilera 63 · 47155 Santovenia de Pisuerga (Valladolid)<br>📞 983 268 328 / 671 817 579 · <a href="mailto:oficina@almacengrupocinco.es">oficina@almacengrupocinco.es</a></div>
   </div>
-  <div class="hq"><span id="qNum">PRES-000001</span>Presupuesto Cocinas</div>
+  <div class="hq"><span id="qNum">PRES-000001</span>Presupuesto Cocinas
+    <div class="hb"><small id="appBuildLbl"></small><button class="btnUpd" id="btnUpd" onclick="actualizarApp()" title="Recarga la app para aplicar la última versión subida">🔄 Actualizar</button></div>
+  </div>
 </header>
 <nav>
   <button class="tb on" onclick="sw('t1',this)">① Proyecto</button>
@@ -675,15 +713,16 @@ tr:hover td{background:var(--c);}
       <div></div>
       <div class="tbox">
         <div class="trow"><span>Subtotal:</span><span id="stot">0,00 €</span></div>
-        <div class="trow"><span>Descuento:</span><span style="display:flex;align-items:center;gap:5px"><input type="number" class="di" id="desc" value="0" min="0" max="100" oninput="cTot()"> %</span></div>
+        <div class="trow"><span>Descuento:</span><span style="display:flex;align-items:center;gap:5px"><input type="number" class="di" id="desc" value="0" min="0" max="100" oninput="cTot()"><span class="pv" id="descP" style="display:none">0</span> %</span></div>
         <div class="trow"><span>Base imponible:</span><span id="bimpon">0,00 €</span></div>
-        <div class="trow"><span>IVA:</span><span style="display:flex;align-items:center;gap:5px"><select class="di" id="ivaR" onchange="cTot()" style="width:70px"><option value="21">21%</option><option value="10">10%</option><option value="0">0%</option></select></span></div>
+        <div class="trow"><span>IVA:</span><span style="display:flex;align-items:center;gap:5px"><select class="di" id="ivaR" onchange="cTot()" style="width:70px"><option value="21">21%</option><option value="10">10%</option><option value="0">0%</option></select><span class="pv" id="ivaP" style="display:none">21 %</span></span></div>
         <div class="trow"><span>Cuota IVA:</span><span id="civa">0,00 €</span></div>
         <div class="trow grand"><span>TOTAL:</span><span id="gtot">0,00 €</span></div>
       </div>
     </div>
   </div>
   <div class="ab np">
+    <button class="btn bp" onclick="imprimirCliente()">🖨️ Presupuesto cliente</button>
     <button class="btn bp" onclick="window.print()">🖨️ Imprimir valorado</button>
     <button class="btn bs" onclick="imprimirSinValorar()">🖨️ Sin valorar</button>
     <button class="btn bs" onclick="expCSV()">📥 CSV</button>
@@ -784,6 +823,9 @@ function sincronizarModeloFoco(){
 // Devuelve el color de fondo (resalte) de un modelo, o '' si none/no existe.
 function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.resalte||'none'];return (r&&m.resalte!=='none')?r.bg:'';}
 
+// Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
+// Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
+const APP_BUILD = '2026-09-11.1';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -812,6 +854,11 @@ const BALDAS_PREF_COLUMNA   = 5; // columnas (incl. Col.Caldera y Col.Rinc — r
 const BALDAS_PREF_MEDIA_COL = 3; // media columna
 // Lote I — medias baldas (solo columnas/media columna): informativas, 4 soportes por unidad
 const SOPORTES_MEDIA_BALDA  = 4;
+// Lote K (11-09-2026) — Escurreplatos y Campana/Grupo llevan SIEMPRE 1 balda por defecto (con puerta
+// o sin ella): no se aplica la regla por tramos de alto de puerta (que daría 2 en A.70/A.90).
+// Solo afecta a herrajes sueltos / prefijado del campo manual; no al precio.
+const BALDAS_FIJAS_CAMPANA_ESCURRE = 1;
+const FAM_BALDA_FIJA = ['Escurreplatos','Campana/Grupo'];
 // Aliases por compatibilidad con código previo (mismas constantes, nombres heredados)
 const LACA_NO_STD_PCT  = REC_LACA_NO_STD;
 const LACA_UNERO_REBAJ = SUP_UNERO_REBAJ;
@@ -1095,6 +1142,16 @@ function buildARM(){
   [50,60,70,80,90,100].forEach((w,i)=>a('Columnas',`Col.Caldera A.220 F58 An.${w}`,220,w,'58',[99.44,105.53,111.57,117.61,123.65,129.69][i]));
   [[205,90,80,344.98],[205,90,90,364.06],[205,95,95,383.58],[205,100,80,362.43],[220,90,80,370.58],[220,90,90,391.88],[220,95,95,413.67],[220,100,80,390.02]].forEach(([al,h,w,d])=>a('Columnas',`Col.Rinc.Esc A.${al} ${h}x${w}`,al,w,'58',d));
   [[205,105,275.02],[205,110,280.55],[205,120,295.53],[220,105,297.16],[220,110,304.79],[220,120,319.98]].forEach(([al,w,d])=>a('Columnas',`Col.Rinc.Recto A.${al} An.${w}`,al,w,'58',d));
+  // Lote K (11-09-2026) — Campana/Grupo: colgar para campana o grupo filtrante. MISMA tarifa que los
+  // Colgar (mismos altos, anchos y precios c35d…c90d); la diferencia es de fabricación: 1 balda por
+  // defecto (ver FAM_BALDA_FIJA). Va al FINAL de la lista para no desplazar los id de los demás
+  // armazones (los proyectos guardados referencian meta.armId); el orden de las pestañas se
+  // ajusta aparte en MCATS.
+  [30,35,40,45,50,60,70,80,90,100].forEach((w,i)=>a('Campana/Grupo',`Campana A.35 An.${w}`,35,w,'33',c35d[i]));
+  [30,35,40,45,50,60,70,80,90,100].forEach((w,i)=>a('Campana/Grupo',`Campana A.45 An.${w}`,45,w,'33',c45d[i]));
+  [30,35,40,45,50,60,70,80,90,100].forEach((w,i)=>a('Campana/Grupo',`Campana A.60 An.${w}`,60,w,'33',c60d[i]));
+  [25,30,35,40,45,50,60,70,80,90,100].forEach((w,i)=>a('Campana/Grupo',`Campana A.70 An.${w}`,70,w,'33',c70d[i]));
+  [25,30,35,40,45,50,60,70,80,90,100].forEach((w,i)=>a('Campana/Grupo',`Campana A.90 An.${w}`,90,w,'33',c90d[i]));
   return R;
 }
 const ARM=buildARM();
@@ -1105,7 +1162,7 @@ function isRinR(arm){return isRin(arm)&&arm.nom.includes('Recto');}
 // Helpers de familia para herrajes sueltos
 function esBajoFam(arm){return['Bajos 70','Bajos 75'].includes(arm.fam);}
 function esColumnaFam(arm){return['Columnas','Media Columna'].includes(arm.fam);}
-function esColganteFam(arm){return['Colgantes','Rincón Colgante','Caldera','Microondas','Escurreplatos','Sobre Encimera','Sobre Frigo'].includes(arm.fam);}
+function esColganteFam(arm){return['Colgantes','Campana/Grupo','Rincón Colgante','Caldera','Microondas','Escurreplatos','Sobre Encimera','Sobre Frigo'].includes(arm.fam);}
 function esRinEsc(arm){return arm.nom.includes('Rinc.Esc')||arm.nom.includes('Rinc.Freg');}
 // Lote H — bajos fregadero: por nombre ('B.Freg' regular y 'B.Rinc.Freg' rincón).
 function esFregadero(arm){return !!arm&&arm.nom.includes('Freg');}
@@ -1167,6 +1224,8 @@ function necesitaBaldasManual(arm,tar){
 function baldasPrefijadasSinPuerta(arm){
   if(!arm)return 0;
   if(esColumnaFam(arm))return arm.fam==='Media Columna'?BALDAS_PREF_MEDIA_COL:BALDAS_PREF_COLUMNA;
+  // Lote K — Escurreplatos y Campana/Grupo: 1 balda fija, independiente del alto
+  if(FAM_BALDA_FIJA.includes(arm.fam))return BALDAS_FIJAS_CAMPANA_ESCURRE;
   // Colgantes y resto de familias colgantes: tramo por alto de armazón (una puerta a todo el alto)
   const h=arm.alt||0;
   if(h<40)return 0; if(h<70)return 1; if(h<=90)return 2; return 3;
@@ -1297,6 +1356,20 @@ function init(){
   // Lote G: ofrecer recuperar el trabajo no guardado y arrancar el autoguardado periódico.
   recuperarBorradorSiExiste();
   setInterval(autoGuardarBorrador,AUTOSAVE_MS);
+  // Lote K — versión visible en la cabecera
+  const bl=document.getElementById('appBuildLbl');if(bl)bl.textContent='v'+APP_BUILD;
+}
+// Lote K — "🔄 Actualizar": guarda el borrador en curso (se ofrece recuperar al arrancar) y recarga.
+// El service worker es red-primero (cache:'no-store'), así que la recarga trae el index.html
+// recién subido a Netlify. Útil sobre todo en la app instalada, que no tiene barra de direcciones.
+function actualizarApp(){
+  const b=document.getElementById('btnUpd');if(b){b.disabled=true;b.textContent='⏳ Actualizando…';}
+  try{autoGuardarBorrador();}catch(e){}
+  const recargar=()=>location.reload();
+  if('serviceWorker' in navigator&&navigator.serviceWorker.getRegistration){
+    navigator.serviceWorker.getRegistration().then(r=>r?r.update():null).catch(()=>{}).then(recargar,recargar);
+    setTimeout(recargar,2500); // red de seguridad
+  }else recargar();
 }
 // ═════════════════════════ LOTE E · PROYECTOS (presupuestos / pedidos) ═════════════════════════
 // Persistencia en localStorage (única excepción acordada al "sin storage del navegador").
@@ -1878,7 +1951,8 @@ function setTGC(side,color,btn){
 // setTO removed - tirador per-puerta now in MPuertas/RPuertas
 
 // MUEBLES
-const MCATS=[...new Set(ARM.map(a=>a.fam))];
+// Lote K — Campana/Grupo está al final de ARM (ids estables) pero se muestra justo después de Colgantes.
+const MCATS=(()=>{const c=[...new Set(ARM.map(a=>a.fam))];const i=c.indexOf('Campana/Grupo');if(i>0){c.splice(i,1);c.splice(c.indexOf('Colgantes')+1,0,'Campana/Grupo');}return c;})();
 function bMC(){document.getElementById('mCats').innerHTML=MCATS.map((c,i)=>`<button class="cpill${i===0?' on':''}" onclick="sMC(this,'${c.replace(/'/g,"\\'")}')">${c}</button>`).join('');}
 function sMC(btn,cat){document.querySelectorAll('#mCats .cpill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');rM(cat);}
 // Precio armazón: tras unificación de tarifa, los cascos blancos pasan a tener el mismo precio que los de diseños.
@@ -2979,9 +3053,10 @@ function rGola(){
 // HERRAJES SUELTOS — Cálculo desde meta de cada línea LN.
 // Reglas confirmadas con Álvaro:
 //   Patas: solo bajos / columnas / media columna. 2 si ancho 15-20, 8 si Rinc.Esc, 6 si Rinc.Rec o ancho≥100, 4 resto.
-//   Colgadores: 3 si Rincón Colgante, 0 si Sobre Frigo, 2 si Colgantes/Caldera/Microondas/Escurreplatos/Sobre Encimera.
+//   Colgadores: 3 si Rincón Colgante, 0 si Sobre Frigo, 2 si Colgantes/Campana-Grupo/Caldera/Microondas/Escurreplatos/Sobre Encimera.
 //   Baldas: Caldera siempre 0. Bajos 1. Columnas/Media Columna manual. Colgantes por altura efectiva de PUERTA:
 //           <40→0, 40-69→1, 70-90→2, >90→3. Si Sin puerta y es colgante → manual (baldasMan).
+//           Lote K — Escurreplatos y Campana/Grupo: 1 fija (FAM_BALDA_FIJA), salvo valor manual >0.
 //   Soportes: por balda. 6 si Rinc.Esc, 4 resto.
 //   Pinzas zócalo madera (CVT zócalo): 2/m × longCm/100 (redondeo hacia arriba).
 //   Pinzas zócalo (Varios): igual fórmula con 400cm por tira.
@@ -3031,6 +3106,8 @@ function calcularHerrajesSueltos(){
       }
       else if(m.esColg){
         if(m.baldasMan>0)b=m.baldasMan;
+        // Lote K — Escurreplatos y Campana/Grupo: 1 balda por defecto, no por tramos de alto
+        else if(FAM_BALDA_FIJA.includes(m.fam))b=BALDAS_FIJAS_CAMPANA_ESCURRE;
         else{
           const h=m.altoPuertaMax||0;
           if(h<40)b=0;else if(h<70)b=1;else if(h<=90)b=2;else b=3;
@@ -3522,7 +3599,7 @@ function refrescarSelectoresGlobales(){
   // pintarLadoTG ya repinta tipo, paneles de modelo de tirador y paleta de color de gola.
   pintarLadoTG('b');pintarLadoTG('a');
 }
-function cTot(){const sub=LN.reduce((s,l)=>s+l.p*l.cnt,0),desc=+document.getElementById('desc')?.value||0,base=sub*(1-desc/100),ivr=+document.getElementById('ivaR')?.value||21,iva=base*ivr/100;document.getElementById('stot').textContent=fmt(sub);document.getElementById('bimpon').textContent=fmt(base);document.getElementById('civa').textContent=fmt(iva);document.getElementById('gtot').textContent=fmt(base+iva);}
+function cTot(){const sub=LN.reduce((s,l)=>s+l.p*l.cnt,0),desc=+document.getElementById('desc')?.value||0,base=sub*(1-desc/100),ivr=+document.getElementById('ivaR')?.value||21,iva=base*ivr/100;document.getElementById('stot').textContent=fmt(sub);document.getElementById('bimpon').textContent=fmt(base);document.getElementById('civa').textContent=fmt(iva);document.getElementById('gtot').textContent=fmt(base+iva);const dp=document.getElementById('descP');if(dp)dp.textContent=String(desc);const ip=document.getElementById('ivaP');if(ip)ip.textContent=ivr+' %';}
 function uBadge(){document.getElementById('badge').textContent=LN.length;}
 
 // EXPORT/NEW
@@ -3553,9 +3630,13 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 // Lote I — impresión sin valorar: aplica la clase .sinval solo durante la impresión.
 // Oculta €/ud, Total, bloque de totales y resumen de gola en la hoja de presupuesto;
 // las hojas de producción, tiradores y herrajes sueltos no llevan precios y no cambian.
-function imprimirSinValorar(){
-  document.body.classList.add('sinval');
-  const quitar=()=>document.body.classList.remove('sinval');
+function imprimirSinValorar(){imprimirConClase('sinval');}
+// Lote K — impresión "Presupuesto cliente": solo cabecera, cliente, líneas y totales (ver CSS .pcli).
+function imprimirCliente(){imprimirConClase('pcli');}
+// Lote K — mecánica común: la clase va en <body> solo mientras dura la impresión.
+function imprimirConClase(cls){
+  document.body.classList.add(cls);
+  const quitar=()=>document.body.classList.remove(cls);
   window.addEventListener('afterprint',quitar,{once:true});
   window.print();
   setTimeout(quitar,3000); // red de seguridad si el navegador no dispara afterprint
