@@ -87,6 +87,11 @@ td{padding:8px 11px;border-bottom:1px solid var(--cd);vertical-align:middle;}
 tr:hover td{background:var(--c);}
 .sh td{background:var(--cd)!important;font-family:'Playfair Display',serif;font-size:12.5px;font-weight:600;color:var(--m);padding:5px 11px;}
 .qi{width:55px;text-align:center;padding:3px 5px;border:1px solid var(--cd);border-radius:4px;font-size:12px;}
+/* Lote M — precio editable en el desglose del mueble (.man = precio manual solo para ese mueble, .mod = tarifa modificada).
+   Con id para ganar a la regla .ap input del panel oscuro. */
+.ap #pDes .pe,.ap #rinD .pe{width:68px;background:#fff;color:var(--m);border:1px solid var(--d);border-radius:4px;padding:1px 4px;font-size:11px;font-weight:700;text-align:right;font-family:'Lato',sans-serif;}
+.ap #pDes .pe.man,.ap #rinD .pe.man{border-color:#f5c842;background:#fff8dc;color:#7a5a00;}
+.ap #pDes .pe.mod,.ap #rinD .pe.mod{border-color:#66bb6a;background:#e8f5e9;color:#1b5e20;}
 .pr{text-align:right;font-weight:700;color:var(--mm);} .tr{text-align:right;font-weight:700;color:var(--m);}
 .tbox{background:var(--m);color:var(--c);border-radius:10px;padding:18px 22px;max-width:360px;margin-left:auto;}
 .trow{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid rgba(255,255,255,.1);}
@@ -281,6 +286,12 @@ tr:hover td{background:var(--c);}
       <button class="tgb" id="bModAVYOU" onclick="setModCaj('AVYOU',this)">AV YOU</button>
     </div>
     <div style="margin-top:5px;font-size:11px;color:var(--mm);font-style:italic">Se aplica a cajones/gavetas auto-insertados al añadir un mueble con frentes de cajón. Es común a todos los modelos.</div>
+  </div>
+  <!-- Lote M — Tarifa modificada: precios cambiados desde el desglose del mueble y guardados en este dispositivo -->
+  <div class="pn">
+    <div class="pt">🏷️ Tarifa modificada (este dispositivo) <span id="tarifaModN" style="font-size:11px;font-weight:400;color:var(--dc);font-style:italic;margin-left:6px"></span></div>
+    <div style="font-size:11px;color:var(--mm);font-style:italic;margin-bottom:8px">Al tocar un precio en el desglose de un mueble y aceptar "guardar en la tarifa", el cambio queda aquí y se aplica a todos los muebles nuevos. Se guarda en este navegador (y viaja con "Exportar copia"); hasta que exista el Servidor G5, cada dispositivo tiene su propia tarifa modificada.</div>
+    <div id="tarifaModLista"></div>
   </div>
   <div class="pn">
     <div class="pt">🔽 Tirador / Gola — Muebles BAJOS <span id="tgFocoB" style="font-size:11px;font-weight:400;color:var(--dc);font-style:italic;margin-left:6px"></span></div>
@@ -842,7 +853,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-14.1';
+const APP_BUILD = '2026-09-14.2';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1028,7 +1039,7 @@ function celdaTarifa(t,a,w){
   return {v:Math.round((v+1e-9)*100)/100,nota};
 }
 // Nota de la última llamada a gpp/gcvt (para pintarla en el desglose junto al precio).
-let GPP_NOTA='';
+let GPP_NOTA='',GPP_BASE=0; // GPP_BASE: precio de tarifa antes de suplementos (Lote M, para el campo editable)
 function gtp(tipo,ancho){
   const d=TD[tipo];if(!d)return 0;
   let i=d.an.findIndex(a=>a>=ancho);if(i<0)i=d.an.length-1;
@@ -1063,11 +1074,13 @@ p:[[9.00,10.83,12.11,13.37,14.64,15.90,16.67,17.16,18.69,33.06],[9.26,12.44,23.2
 'T-VA':{desc:'Puertas Vitrina marco Aluminio (tirador incluido)',al:[60,70,80,90,100,120,140,160,180,200,220],an:[30,35,40,45,50,60],
 p:[[48.41,49.73,51.05,52.35,53.67,56.31],[51.05,52.35,53.67,54.99,56.31,58.92],[53.67,54.99,56.31,57.62,58.92,61.56],[56.31,57.62,58.92,60.26,61.56,64.20],[64.32,66.96,68.28,69.60,70.91,73.55],[72.23,73.53,74.85,76.17,77.49,80.12],[82.58,84.06,85.55,87.05,88.53,90.18],[88.53,90.02,91.50,93.00,94.49,97.47],[99.44,100.92,102.42,103.91,105.39,108.38],[105.39,106.88,108.38,109.86,111.35,114.33],[111.35,112.85,114.33,115.82,117.30,120.29]]}
 };
-function gpp(tar,a,w){
+function gpp(tar,a,w,baseMan){
+  GPP_NOTA='';GPP_BASE=0;
   if(tar==='Sin puerta'||!tar)return 0;
   const t=PD[tar];if(!t)return 0;
   // Lote L: medida no estándar → tramo inmediatamente superior SIN recargo; celda vacía → celdaTarifa.
-  const c=celdaTarifa(t,a,w);GPP_NOTA=c.nota;
+  // Lote M: baseMan = precio manual de tarifa para este mueble (sustituye a la celda; los suplementos siguen).
+  const c=(baseMan!=null)?{v:+baseMan,nota:' (precio manual)'}:celdaTarifa(t,a,w);GPP_NOTA=c.nota;GPP_BASE=c.v;
   let v=c.v;
   if(!v)return 0;
   // 1) Suplementos lacas (color no std, uñero rebajado) si aplica
@@ -1210,6 +1223,129 @@ function buildARM(){
   return R;
 }
 const ARM=buildARM();
+// ═════════════════════════ Lote M (14-09-2026) — TARIFA MODIFICADA ═════════════════════════
+// Los precios del desglose del mueble se pueden editar. Si el usuario acepta "guardar en la tarifa", el
+// cambio se guarda en localStorage (g5_tarifa) y se aplica SOBRE las tablas del código (ARM, PD, TD, GA)
+// en cada arranque: el index.html no cambia. Se conservan los valores originales (p0 / *_ORIG) para
+// poder restaurar. Si no acepta, el precio queda solo en ese mueble (pMan/tMan/MARMMAN). Pendiente de
+// mover al Servidor G5 cuando exista: por ahora cada dispositivo tiene su propia tarifa modificada.
+const LS_TARIFA='g5_tarifa'; // { arm:{nom:{p,orig,etq,fecha}}, pd:{"T-1|70|60":{…}}, tir:{"tirador-j|60":{…}}, ga:{"60":{…}} }
+let TARIFA_MOD={arm:{},pd:{},tir:{},ga:{}};
+ARM.forEach(a=>{a.p0=a.p;});
+const PD_ORIG=Object.fromEntries(Object.entries(PD).map(([k,t])=>[k,t.p.map(r=>r.slice())]));
+const TD_ORIG=Object.fromEntries(Object.entries(TD).map(([k,d])=>[k,d.p.slice()]));
+const GA_ORIG=GA.p.slice();
+// Celda de tarifa de puertas efectiva para a×w (tramo inmediatamente superior). null si fuera de tabla.
+function tarifaClaveCelda(tar,a,w){
+  const t=PD[tar];if(!t)return null;
+  const ri=t.al.findIndex(v=>v>=a),ci=t.an.findIndex(v=>v>=w);
+  if(ri<0||ci<0)return null;
+  return {key:`${tar}|${t.al[ri]}|${t.an[ci]}`,tar,alto:t.al[ri],ancho:t.an[ci],ri,ci};
+}
+function tarifaClaveTir(modelo,w){const d=TD[modelo];if(!d)return null;let i=d.an.findIndex(x=>x>=w);if(i<0)i=d.an.length-1;return {key:`${modelo}|${d.an[i]}`,modelo,an:d.an[i],i};}
+function tarifaClaveGa(w){let i=GA.an.findIndex(x=>x>=w);if(i<0)i=GA.an.length-1;return {key:String(GA.an[i]),an:GA.an[i],i};}
+// Valor original (del código) de una clave.
+function tarifaValorOriginal(tipo,clave){
+  if(tipo==='arm'){const a=ARM.find(x=>x.nom===clave);return a?a.p0:null;}
+  if(tipo==='pd'){const [tar,al,an]=clave.split('|');const t=PD[tar];if(!t)return null;const ri=t.al.indexOf(+al),ci=t.an.indexOf(+an);return (ri<0||ci<0)?null:PD_ORIG[tar][ri][ci];}
+  if(tipo==='tir'){const [m,an]=clave.split('|');const d=TD[m];if(!d)return null;const i=d.an.indexOf(+an);return i<0?null:TD_ORIG[m][i];}
+  if(tipo==='ga'){const i=GA.an.indexOf(+clave);return i<0?null:GA_ORIG[i];}
+  return null;
+}
+// Vuelve a los valores del código y aplica encima todos los cambios guardados.
+function tarifaAplicarTodo(){
+  ARM.forEach(a=>{a.p=a.p0;});
+  Object.keys(PD).forEach(k=>{PD[k].p=PD_ORIG[k].map(r=>r.slice());});
+  Object.keys(TD).forEach(k=>{TD[k].p=TD_ORIG[k].slice();});
+  GA.p=GA_ORIG.slice();
+  Object.entries(TARIFA_MOD.arm||{}).forEach(([nom,o])=>{const a=ARM.find(x=>x.nom===nom);if(a&&o&&o.p>=0)a.p=+o.p;});
+  Object.entries(TARIFA_MOD.pd||{}).forEach(([k,o])=>{const [tar,al,an]=k.split('|');const t=PD[tar];if(!t||!o)return;const ri=t.al.indexOf(+al),ci=t.an.indexOf(+an);if(ri>=0&&ci>=0)t.p[ri][ci]=+o.p;});
+  Object.entries(TARIFA_MOD.tir||{}).forEach(([k,o])=>{const [m,an]=k.split('|');const d=TD[m];if(!d||!o)return;const i=d.an.indexOf(+an);if(i>=0)d.p[i]=+o.p;});
+  Object.entries(TARIFA_MOD.ga||{}).forEach(([k,o])=>{const i=GA.an.indexOf(+k);if(i>=0&&o)GA.p[i]=+o.p;});
+}
+function tarifaCargar(){
+  const d=lsLeer(LS_TARIFA,null);
+  TARIFA_MOD=(d&&typeof d==='object')?{arm:d.arm||{},pd:d.pd||{},tir:d.tir||{},ga:d.ga||{}}:{arm:{},pd:{},tir:{},ga:{}};
+  tarifaAplicarTodo();
+}
+function tarifaNumMod(){return ['arm','pd','tir','ga'].reduce((s,t)=>s+Object.keys(TARIFA_MOD[t]||{}).length,0);}
+function tarifaGuardar(tipo,clave,nuevo,etq){
+  const prev=TARIFA_MOD[tipo][clave];
+  const orig=prev?prev.orig:tarifaValorOriginal(tipo,clave);
+  TARIFA_MOD[tipo][clave]={p:nuevo,orig,etq,fecha:new Date().toISOString().slice(0,10)};
+  if(!lsGuardar(LS_TARIFA,TARIFA_MOD))return false;
+  tarifaAplicarTodo();rCards();renderTarifaModificada();
+  return true;
+}
+function tarifaRestaurar(tipo,clave){
+  const o=TARIFA_MOD[tipo]&&TARIFA_MOD[tipo][clave];if(!o)return;
+  if(!confirm(`Restaurar ${o.etq||clave} al precio original (${o.orig!=null?fmt(o.orig):'sin precio'})?`))return;
+  delete TARIFA_MOD[tipo][clave];
+  lsGuardar(LS_TARIFA,TARIFA_MOD);tarifaAplicarTodo();rCards();renderTarifaModificada();
+  if(SEL){if(isRin(SEL))rdsg();else cp();}
+  flash('↩ Precio restaurado');
+}
+function tarifaEsMod(tipo,clave){return !!(TARIFA_MOD[tipo]&&TARIFA_MOD[tipo][clave]);}
+function renderTarifaModificada(){
+  const cont=document.getElementById('tarifaModLista'),n=document.getElementById('tarifaModN');if(!cont)return;
+  const filas=[];
+  const nombres={arm:'Armazón',pd:'Puerta',tir:'Tirador',ga:'Gola altos'};
+  ['arm','pd','tir','ga'].forEach(t=>Object.entries(TARIFA_MOD[t]||{}).forEach(([k,o])=>filas.push({t,k,o})));
+  if(n)n.textContent=filas.length?`${filas.length} precio(s) cambiado(s)`:'';
+  if(!filas.length){cont.innerHTML='<div style="font-size:12px;color:var(--g);font-style:italic">Sin cambios: se usa la tarifa del programa.</div>';return;}
+  cont.innerHTML='<table style="width:100%;font-size:11.5px;border-collapse:collapse">'+
+    filas.map(f=>`<tr style="border-bottom:1px solid var(--cd)"><td style="padding:4px 6px;color:var(--g)">${nombres[f.t]}</td><td style="padding:4px 6px;font-weight:700">${esc(f.o.etq||f.k)}</td><td style="padding:4px 6px;text-align:right;color:var(--g);text-decoration:line-through">${f.o.orig!=null?fmt(f.o.orig):'—'}</td><td style="padding:4px 6px;text-align:right;font-weight:900;color:#2e7d32">${fmt(f.o.p)}</td><td style="padding:4px 6px;color:var(--g)">${f.o.fecha||''}</td><td style="padding:4px 6px;text-align:right"><button class="btn bd2" style="padding:3px 8px;font-size:11px" onclick="tarifaRestaurar('${f.t}','${f.k.replace(/'/g,"\\'")}')">↩</button></td></tr>`).join('')+'</table>';
+}
+// Campo editable de precio en el desglose. modo 'm' (mueble normal) | 'r' (rincón); t: arm|pd|fr|tir|ftir.
+// man = precio manual de este mueble; mod = precio de la tarifa modificada.
+function peHtml(modo,t,i,val,man,mod){
+  const cls='pe'+(man?' man':(mod?' mod':''));
+  const tit=man?'Precio manual solo de este mueble (vuelve a escribir el de tarifa para quitarlo)':(mod?'Precio de la tarifa modificada en este dispositivo':'Precio de tarifa — edítalo para cambiarlo');
+  return `<input type="number" step="0.01" min="0" class="${cls}" value="${(+val||0).toFixed(2)}" data-m="${modo}" data-t="${t}" data-i="${i}" onchange="editarPrecioDes(this)" onkeydown="if(event.key==='Enter')this.blur()" title="${tit}">${man?' ✎':''}`;
+}
+let CP_ARM=null,RD_ARM=null;   // armazón realmente tarifado en el desglose (para editar su precio)
+let MARMMAN=null,RARMMAN=null; // precio manual del armazón en el modal actual (solo este mueble)
+function editarPrecioDes(inp){
+  const modo=inp.dataset.m,t=inp.dataset.t,i=+inp.dataset.i;
+  const nuevo=Math.round((+inp.value+1e-9)*100)/100;
+  const esR=modo==='r';
+  const refrescar=()=>{if(esR)rdsg();else cp();};
+  if(!(nuevo>=0)){flash('⚠️ Precio no válido');refrescar();return;}
+  const puertas=esR?RPuertas:MPuertas,frentes=esR?RFrentesCJ:MFrentesCJ;
+  let tipo=null,clave=null,etq='',actual=null,setMan=null,clearMan=null;
+  if(t==='arm'){
+    const arm=esR?RD_ARM:CP_ARM;if(!arm)return;
+    tipo='arm';clave=arm.nom;etq=`armazón ${arm.nom}`;actual=arm.p;
+    setMan=()=>{if(esR)RARMMAN=nuevo;else MARMMAN=nuevo;};clearMan=()=>{if(esR)RARMMAN=null;else MARMMAN=null;};
+  } else if(t==='pd'||t==='fr'){
+    const it=(t==='pd'?puertas:frentes)[i];if(!it)return;
+    const c=tarifaClaveCelda(S.tar,+it.alto||0,+it.ancho||0);
+    if(c){tipo='pd';clave=c.key;etq=`puerta ${S.tar} ${c.alto}×${c.ancho}`;actual=PD[S.tar].p[c.ri][c.ci];}
+    setMan=()=>{it.pMan=nuevo;};clearMan=()=>{delete it.pMan;};
+  } else if(t==='tir'||t==='ftir'){
+    const it=(t==='tir'?puertas:frentes)[i];if(!it)return;
+    const w=+it.ancho||0,cfg=isBajo(SEL)?S.tb:S.ta;
+    if(cfg.t==='tirador'&&cfg.s){const c=tarifaClaveTir(cfg.s,w);tipo='tir';clave=c.key;etq=`${TD[cfg.s].d} An.${c.an}`;actual=TD[cfg.s].p[c.i];}
+    else if(cfg.t==='gola'){const c=tarifaClaveGa(w);tipo='ga';clave=c.key;etq=`gola altos An.${c.an}`;actual=GA.p[c.i];}
+    setMan=()=>{it.tMan=nuevo;};clearMan=()=>{delete it.tMan;};
+  } else return;
+  // Escribir el precio de tarifa vigente = quitar el manual (sin preguntar)
+  if(actual!=null&&Math.abs(actual-nuevo)<0.005){clearMan();refrescar();return;}
+  if(clave&&confirm(`¿Guardar ${fmt(nuevo)} en la tarifa para ${etq}?\n\nACEPTAR: se guarda en la tarifa de este dispositivo (antes ${actual!=null?fmt(actual):'sin precio'}) y vale para todos los muebles a partir de ahora.\nCANCELAR: solo cambia en este mueble.`)){
+    if(tarifaGuardar(tipo,clave,nuevo,etq)){clearMan();flash('💾 Tarifa actualizada: '+etq);}
+  } else {
+    setMan();
+    if(!clave)flash('Medida fuera de tabla: el precio queda solo en este mueble');
+  }
+  refrescar();
+}
+// Precio unitario de puerta/frente (base manual si la tiene) y de su tirador/gola altos.
+function precioPuertaItem(a,w,it){return gpp(S.tar,a,w,(it&&it.pMan!=null)?+it.pMan:null);}
+function precioTirItem(cfg,w,it,ladoBajo){
+  if(cfg.t==='tirador'&&cfg.s)return (it&&it.tMan!=null)?+it.tMan:gtp(cfg.s,w);
+  if(cfg.t==='gola'&&!ladoBajo)return (it&&it.tMan!=null)?+it.tMan:gap(w);
+  return 0;
+}
 const BAJOS=['Bajos 70','Bajos 75'];
 function isBajo(arm){return BAJOS.includes(arm.fam)||['Columnas','Media Columna'].includes(arm.fam);}
 function isRin(arm){return['Rinc.','B.Rinc.','Col.Rinc.'].some(k=>arm.nom.includes(k));}
@@ -1406,6 +1542,7 @@ function init(){
   S.qn='';S.tipoDoc='';
   actualizarCabeceraNum();
   renderProyectosGuardados();
+  tarifaCargar();renderTarifaModificada(); // Lote M: aplica la tarifa modificada del dispositivo antes de pintar
   bMC();rM('Colgantes');bVC();fV();bEC();fE();cBalda();
   cargarModeloEnS(0);refrescarCabeceraModelo();renderMuebleModeloSel();renderCVTModeloSel();
   // Lote G: ofrecer recuperar el trabajo no guardado y arrancar el autoguardado periódico.
@@ -1634,7 +1771,8 @@ function renderProyectosGuardados(){
 // Exporta el contenido íntegro de g5_contadores y g5_proyectos a un archivo descargable.
 function exportarCopia(){
   const datos={version:1,fecha:new Date().toISOString(),
-    contadores:lsLeer(LS_CONTADORES,{}),proyectos:lsLeer(LS_PROYECTOS,[])};
+    contadores:lsLeer(LS_CONTADORES,{}),proyectos:lsLeer(LS_PROYECTOS,[]),
+    tarifa:TARIFA_MOD}; // Lote M
   const blob=new Blob([JSON.stringify(datos)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -1677,8 +1815,15 @@ function importarCopia(input){
       }
     }
     lsGuardar(LS_CONTADORES,cont);
+    // Lote M — tarifa modificada de la copia: se aplica sobre la de este dispositivo (la copia manda en las claves que trae)
+    let nTar=0;
+    if(d.tarifa&&typeof d.tarifa==='object'){
+      ['arm','pd','tir','ga'].forEach(t=>{Object.entries(d.tarifa[t]||{}).forEach(([k,o])=>{if(o&&typeof o.p==='number'){TARIFA_MOD[t]=TARIFA_MOD[t]||{};TARIFA_MOD[t][k]=o;nTar++;}});});
+      if(nTar&&confirm('La copia trae '+nTar+' precio(s) de tarifa modificada. ¿Aplicarlos en este dispositivo?')){lsGuardar(LS_TARIFA,TARIFA_MOD);tarifaAplicarTodo();rCards();renderTarifaModificada();}
+      else{nTar=0;tarifaCargar();}
+    }
     renderProyectosGuardados();
-    flash('⬆ Importados '+importados+' · omitidos '+omitidos+' (duplicados o inválidos)');
+    flash('⬆ Importados '+importados+' · omitidos '+omitidos+' (duplicados o inválidos)'+(nTar?' · '+nTar+' precios de tarifa':''));
   };
   r.onerror=()=>alert('No se pudo leer el archivo.');
   r.readAsText(f);
@@ -2027,8 +2172,8 @@ function sMC(btn,cat){document.querySelectorAll('#mCats .cpill').forEach(b=>b.cl
 //    forma especial NO se aplica además el +30%.
 //  · El +15% por 19mm es INDEPENDIENTE y se aplica SIEMPRE encima del resultado anterior.
 // Sin opts, gap2 mantiene el comportamiento previo (solo 19mm) → no afecta a las tarjetas de catálogo.
-function gap2(arm,opts){
-  let p=arm.p;
+function gap2(arm,opts,baseMan){
+  let p=(baseMan!=null)?+baseMan:arm.p; // Lote M: precio manual del armazón (solo este mueble)
   if(opts){
     if(opts.esEspecial)p*=FACTOR_FORMA_ESP;            // ×2 forma especial
     else if(opts.altoNoStd||opts.fondoNoStd)p*=(1+REC_ARM_NO_STD); // +30% alto/fondo no estándar
@@ -2039,12 +2184,12 @@ function gap2(arm,opts){
 // Equivalente "gola bajos": el bajo de 80 con gola se tarifa como Bajos 75. Reenvía los recargos.
 // Lote L: solo los BAJOS (esBajoFam) pasan a Bajos 75; las columnas/medias columnas siguen con su armazón
 // (antes isBajo() incluía columnas y una Columna A.205 se cobraba como un Bajo A.75).
-function gapG(arm,opts){
+function gapG(arm,opts,baseMan){
   if(S.tb.t==='gola'&&esBajoFam(arm)&&!isRin(arm)){
     const eq=ARM.find(a=>a.fam==='Bajos 75'&&a.anc===arm.anc&&!a.nom.includes('Freg')&&!a.nom.includes('Rinc'));
-    if(eq)return gap2(eq,opts);
+    if(eq)return gap2(eq,opts,baseMan);
   }
-  return gap2(arm,opts);
+  return gap2(arm,opts,baseMan);
 }
 // Armazón cuyas medidas (alt/fon) definen "lo estándar" para el recargo +30%.
 // En gola bajos la referencia es el equivalente Bajos 75 (alto 75), no el bajo original.
@@ -2160,6 +2305,7 @@ function selA(id,card){
   // Carga la config del modelo elegido para el mueble (con 1 modelo, MMODELO=0).
   cargarModeloEnS(MMODELO);
   document.getElementById('selInf').textContent=SEL.nom;
+  MARMMAN=null;RARMMAN=null; // Lote M: precio manual de armazón se reinicia al elegir armazón
   if(isRin(SEL)){document.getElementById('addF').style.display='none';document.getElementById('rinF').style.display='block';rRincon();actualizarBaldasManUIRincon(SEL);actualizarBaldaFregUI(SEL,'r');actualizarMediasBaldasUI(SEL,'r');RFrentesCJ=[];renderRFCJ();}
   else{document.getElementById('rinF').style.display='none';document.getElementById('addF').style.display='block';
     const isGB=S.tb.t==='gola'&&esBajoFam(SEL); // Lote L: solo bajos (las columnas no cambian de alto)
@@ -2190,8 +2336,8 @@ function htmlToggleTir(fn,i,tir){
   const on=tir!=='off';
   const st=(sel,col,glow)=>sel?`background:${col};color:#fff;box-shadow:0 0 8px 2px ${glow};font-weight:900;border-color:${col}`:'opacity:.45';
   return `<div class="fg"><label>Tirador</label><div class="tgg" style="margin-top:4px">`+
-    `<button class="tgb" style="padding:4px 8px;font-size:10.5px;white-space:nowrap;${st(on,'#2e7d32','rgba(46,125,50,.7)')}" onclick="${fn}(${i},'tir','on')">✅ Con tirador</button>`+
-    `<button class="tgb" style="padding:4px 8px;font-size:10.5px;white-space:nowrap;${st(!on,'#c62828','rgba(198,40,40,.7)')}" onclick="${fn}(${i},'tir','off')">❌ Sin tirador</button>`+
+    `<button class="tgb" style="padding:4px 8px;font-size:10.5px;white-space:nowrap;${st(on,'#2e7d32','rgba(46,125,50,.7)')}" onclick="${fn}(${i},'tir','on')">✅ Sí</button>`+
+    `<button class="tgb" style="padding:4px 8px;font-size:10.5px;white-space:nowrap;${st(!on,'#c62828','rgba(198,40,40,.7)')}" onclick="${fn}(${i},'tir','off')">❌ No</button>`+
     `</div></div>`;
 }
 function renderMP(){
@@ -2268,25 +2414,36 @@ function cp(){
   const mAltV=+document.getElementById('mAlt').value||ref.alt;
   const mFonV=+document.getElementById('mFon').value||(+ref.fon);
   const optsArm=calcOptsArm(ref,mAltV,mFonV,MFORMA);
-  const armP=gapG(armTarifar,optsArm);
+  const armP=gapG(armTarifar,optsArm,MARMMAN);
   const cfg=isBajo(SEL)?S.tb:S.ta;
   const cnt=+document.getElementById('aCnt').value||1;
   const notaAncho=(/An\.\d+/.test(SEL.nom)&&mAncV!==armTarifar.anc)?` · ancho ${mAncV}cm → tarifa An.${armTarifar.anc}${ajusteAncho.supera?' (excede estándar)':''}`:'';
-  let lines=[`Armazón: ${fmt(armP)}${notaRecargoArm(optsArm,MFORMA)}${notaAncho}`],ptTot=0,tTot=0;
+  // Lote M: el precio del desglose es editable (input). Se edita el precio BASE de tarifa; los recargos
+  // (×2, +30%, +15%, lacas, vidrio, recargo modelo) se aplican encima y se muestran a la derecha.
+  CP_ARM=ref;
+  const armBase=(MARMMAN!=null)?MARMMAN:ref.p;
+  const recArm=notaRecargoArm(optsArm,MFORMA);
+  let lines=[`Armazón: ${peHtml('m','arm',0,armBase,MARMMAN!=null,tarifaEsMod('arm',ref.nom))} €${recArm?`${recArm} = ${fmt(armP)}`:''}${notaAncho}`],ptTot=0,tTot=0;
+  const ladoBajo=isBajo(SEL);
   MPuertas.forEach((p,i)=>{
     const a=+p.alto||0,w=+p.ancho||0;
     if(a&&w){
       const m=p.mano||'D';
       // 2Pta: el frente se cobra ×2 (son 2 hojas físicas). FF: frente normal pero sin tirador.
       const mult=(m==='2')?2:1;
-      const ppUd=gpp(S.tar,a,w);const pp=ppUd*mult;ptTot+=pp;
-      let tp=0;
+      const ppUd=precioPuertaItem(a,w,p);const pp=ppUd*mult;ptTot+=pp;const base=GPP_BASE,nota=GPP_NOTA;
+      let tp=0,tpUd=0;
       const llevaTir=(m!=='FF')&&p.tir!=='off'&&admiteTirador(S.tar); // Lote L
-      if(llevaTir&&cfg.t==='tirador'&&cfg.s)tp=gtp(cfg.s,w)*mult;
-      else if(llevaTir&&cfg.t==='gola'&&!isBajo(SEL))tp=gap(w)*mult;
+      if(llevaTir){tpUd=precioTirItem(cfg,w,p,ladoBajo);tp=tpUd*mult;}
       tTot+=tp;
       if(S.tar==='Sin puerta')lines.push(`P${i+1}: Sin puerta (sin tirador)`);
-      else if(pp>0)lines.push(`P${i+1} ${S.tar} (${a}×${w}) ${MANO_LAB[m]||'D'}: ${fmt(pp)}${GPP_NOTA}${tp>0?' +tir.'+fmt(tp):''}${m==='FF'?' [FF sin tir.]':(p.tir==='off'?' [sin tir.]':(S.tar==='T-VA'?' [tirador incluido]':''))}`);
+      else if(pp>0){
+        const cc=tarifaClaveCelda(S.tar,a,w);
+        const supl=Math.abs(ppUd-base)>0.005;
+        lines.push(`P${i+1} ${S.tar} (${a}×${w}) ${MANO_LAB[m]||'D'}: ${peHtml('m','pd',i,base,p.pMan!=null,!!(cc&&tarifaEsMod('pd',cc.key)))} €${mult>1?' ×2':''}${supl?' +supl. = '+fmt(pp):(mult>1?' = '+fmt(pp):'')}${p.pMan!=null?'':nota}`+
+          (tp>0?` +tir. ${peHtml('m','tir',i,tpUd,p.tMan!=null,false)} €${mult>1?' ×2':''}`:'')+
+          `${m==='FF'?' [FF sin tir.]':(p.tir==='off'?' [sin tir.]':(S.tar==='T-VA'?' [tirador incluido]':''))}`);
+      }
       else lines.push(`P${i+1} (${a}×${w}): sin precio`);
     }
   });
@@ -2294,13 +2451,15 @@ function cp(){
   MFrentesCJ.forEach((f,i)=>{
     const a=+f.alto||0,w=+f.ancho||0;
     if(a&&w){
-      const pp=gpp(S.tar,a,w);const notaF=GPP_NOTA;ptTot+=pp;
+      const pp=precioPuertaItem(a,w,f);const notaF=GPP_NOTA,baseF=GPP_BASE;ptTot+=pp;
       let tp=0;
       const llevaTirF=f.tir!=='off'&&admiteTirador(S.tar); // Lote L
-      if(llevaTirF&&cfg.t==='tirador'&&cfg.s)tp=gtp(cfg.s,w);
-      else if(llevaTirF&&cfg.t==='gola'&&!isBajo(SEL))tp=gap(w);
+      if(llevaTirF)tp=precioTirItem(cfg,w,f,ladoBajo);
       tTot+=tp;
-      if(pp>0)lines.push(`F${i+1} ${S.tar} (${a}×${w}) ${f.tipo}: ${fmt(pp)}${notaF}${tp>0?' +tir.'+fmt(tp):''}${f.tir==='off'?' [sin tir.]':''}`);
+      if(pp>0){
+        const cc=tarifaClaveCelda(S.tar,a,w);
+        lines.push(`F${i+1} ${S.tar} (${a}×${w}) ${f.tipo}: ${peHtml('m','fr',i,baseF,f.pMan!=null,!!(cc&&tarifaEsMod('pd',cc.key)))} €${Math.abs(pp-baseF)>0.005?' +supl. = '+fmt(pp):''}${f.pMan!=null?'':notaF}${tp>0?` +tir. ${peHtml('m','ftir',i,tp,f.tMan!=null,false)} €`:''}${f.tir==='off'?' [sin tir.]':''}`);
+      }
       // Cajón herraje auto (informativo en el desglose). Lote H: salvasifón en gavetas de fregadero.
       const ssEf=f.tipo==='GV'&&f.ss==='on'&&admiteSalvasifon(SEL);
       const her=precioCajonHerraje(S.modCaj,f.tipo,f.fondo||'F50',w,ssEf);
@@ -2318,7 +2477,8 @@ function cp(){
   // La regleta YA NO suma al precio del mueble: se inserta como línea CVT independiente (asociada al mueble).
   const tot=armP+ptTot+tTot;
   lines.push(`\nTotal/ud (sin cajones herraje): ${fmt(tot)} · ×${cnt}: ${fmt(tot*cnt)}`);
-  document.getElementById('pDes').textContent=lines.join('\n');
+  if(MARMMAN!=null||MPuertas.some(p=>p.pMan!=null||p.tMan!=null)||MFrentesCJ.some(f=>f.pMan!=null||f.tMan!=null))lines.push(`✎ = precio manual solo de este mueble`);
+  document.getElementById('pDes').innerHTML=lines.join('\n'); // Lote M: HTML (campos editables); el contenedor es white-space:pre-line
   document.getElementById('pTot').textContent=`${fmt(tot*cnt)}`;
 }
 function addM(){
@@ -2350,24 +2510,23 @@ function addM(){
   const mFonV=+document.getElementById('mFon').value||(+ref.fon);
   const optsArm=calcOptsArm(ref,mAltV,mFonV,MFORMA);
   const dobleFondo=(MFORMA==='chaflan')?{dcho:+document.getElementById('mDFD').value||null,izq:+document.getElementById('mDFI').value||null}:null;
-  const armP=gapG(armTarifar,optsArm);
+  const armP=gapG(armTarifar,optsArm,MARMMAN); // Lote M: precio manual de armazón si lo hay
   const cfg=isBajo(SEL)?S.tb:S.ta;
   let ptTot=0,tTot=0,pd=[],altoPuertaMax=0,manos=[];
-  // Snapshot completo de puertas y frentes para permitir edición posterior
-  const snapPuertas=MPuertas.map(p=>({alto:+p.alto||0,ancho:+p.ancho||0,tir:p.tir||'on',mano:p.mano||'D'}));
-  const snapFrentes=MFrentesCJ.map(f=>({alto:+f.alto||0,ancho:+f.ancho||0,tir:f.tir||'on',tipo:f.tipo||'CJ',fondo:f.fondo||'F50',ss:(f.tipo==='GV'&&f.ss==='on')?'on':'off'}));
+  // Snapshot completo de puertas y frentes para permitir edición posterior (Lote M: incluye precios manuales)
+  const snapPuertas=MPuertas.map(p=>({alto:+p.alto||0,ancho:+p.ancho||0,tir:p.tir||'on',mano:p.mano||'D',...(p.pMan!=null?{pMan:+p.pMan}:{}),...(p.tMan!=null?{tMan:+p.tMan}:{})}));
+  const snapFrentes=MFrentesCJ.map(f=>({alto:+f.alto||0,ancho:+f.ancho||0,tir:f.tir||'on',tipo:f.tipo||'CJ',fondo:f.fondo||'F50',ss:(f.tipo==='GV'&&f.ss==='on')?'on':'off',...(f.pMan!=null?{pMan:+f.pMan}:{}),...(f.tMan!=null?{tMan:+f.tMan}:{})}));
   MPuertas.forEach((p,i)=>{
     const a=+p.alto||0,w=+p.ancho||0;
     if(a&&w){
       const m=p.mano||'D';manos.push(m);
       const mult=(m==='2')?2:1;
-      const ppUd=gpp(S.tar,a,w);ptTot+=ppUd*mult;
+      const ppUd=precioPuertaItem(a,w,p);ptTot+=ppUd*mult;
       pd.push(`P${i+1}:${a}×${w} ${MANO_LAB[m]||'D'}`);
       if(a>altoPuertaMax)altoPuertaMax=a;
       let tp=0;
       const llevaTir=(m!=='FF')&&p.tir!=='off'&&admiteTirador(S.tar); // Lote L
-      if(llevaTir&&cfg.t==='tirador'&&cfg.s)tp=gtp(cfg.s,w)*mult;
-      else if(llevaTir&&cfg.t==='gola'&&!isBajo(SEL))tp=gap(w)*mult;
+      if(llevaTir)tp=precioTirItem(cfg,w,p,isBajo(SEL))*mult;
       tTot+=tp;
       // Nota: S.gat / S.gml NO se acumulan aquí. Se recalculan al final desde LN
       // mediante recalcularAcumulados() para evitar dobles cuentas en edición.
@@ -2378,13 +2537,12 @@ function addM(){
   MFrentesCJ.forEach((f,i)=>{
     const a=+f.alto||0,w=+f.ancho||0;
     if(a&&w){
-      ptTot+=gpp(S.tar,a,w);
+      ptTot+=precioPuertaItem(a,w,f);
       frentesParaIndic.push({tipo:f.tipo,ancho:w});
       pd.push(`F${i+1}:${a}×${w} ${f.tipo}`);
       let tp=0;
       const llevaTirF=f.tir!=='off'&&admiteTirador(S.tar); // Lote L
-      if(llevaTirF&&cfg.t==='tirador'&&cfg.s)tp=gtp(cfg.s,w);
-      else if(llevaTirF&&cfg.t==='gola'&&!isBajo(SEL))tp=gap(w);
+      if(llevaTirF)tp=precioTirItem(cfg,w,f,isBajo(SEL));
       tTot+=tp;
     }
   });
@@ -2409,6 +2567,8 @@ function addM(){
   const algunaConTir=admiteTirador(S.tar)&&(MPuertas.some(p=>(+p.alto)&&(+p.ancho)&&p.tir!=='off'&&p.mano!=='FF')||MFrentesCJ.some(f=>(+f.alto)&&(+f.ancho)&&f.tir!=='off'));
   if(algunaConTir){const t=descTG(isBajo(SEL)?'b':'a');if(t)desc+=` · ${t}`;}
   if(S.recargoModelo>0&&pd.length)desc+=` · recargo modelo +${S.recargoModelo}%`; // Lote L
+  const hayManual=MARMMAN!=null||MPuertas.some(p=>p.pMan!=null||p.tMan!=null)||MFrentesCJ.some(f=>f.pMan!=null||f.tMan!=null);
+  if(hayManual)desc+=` · precio manual`; // Lote M
   const baldasMan=necesitaBaldasManual(SEL,S.tar)?(+document.getElementById('aBaldas').value||0):0;
   // Lote H — fregadero: sin balda por defecto; el checkbox añade 1 balda (solo herrajes sueltos, no precio)
   const baldaFreg=esFregadero(SEL)&&!!document.getElementById('chkBaldaFreg')?.checked;
@@ -2429,7 +2589,9 @@ function addM(){
     tb:{...S.tb}, ta:{...S.ta},
     mPuertas:snapPuertas, mFrentesCJ:snapFrentes, regleta,
     // Lote F
-    forma:MFORMA, dobleFondo
+    forma:MFORMA, dobleFondo,
+    // Lote M — precio manual del armazón (solo este mueble)
+    armPMan:MARMMAN
   };
   // Modo edición: si EDIT_ID está activo, sustituye la línea existente. Si no, crea una nueva.
   // Lote J — en alta, si ya existe un mueble IDÉNTICO (misma huella: desc+precio+nota+meta,
@@ -2576,36 +2738,42 @@ function rdsg(){
   const armTar=ajusteRR.arm;
   // Lote F: en rincón el alto/fondo no son editables, así que solo aplica la forma especial (×2).
   const optsArm={esEspecial:RFORMA!=='ninguna',altoNoStd:false,fondoNoStd:false};
-  const armP=gap2(armTar,optsArm);
-  let lines=[`Armazón: ${fmt(armP)}${notaRecargoArm(optsArm,RFORMA)}`+(ajusteRR.ajustado?` · ancho real ${anchoRealRR}cm → tarifa An.${armTar.anc}${ajusteRR.supera?' (excede estándar)':''}`:'')],pt=0,tt=0;
+  const armP=gap2(armTar,optsArm,RARMMAN);
+  RD_ARM=armTar; // Lote M
+  const recArmR=notaRecargoArm(optsArm,RFORMA);
+  let lines=[`Armazón: ${peHtml('r','arm',0,RARMMAN!=null?RARMMAN:armTar.p,RARMMAN!=null,tarifaEsMod('arm',armTar.nom))} €${recArmR?`${recArmR} = ${fmt(armP)}`:''}`+(ajusteRR.ajustado?` · ancho real ${anchoRealRR}cm → tarifa An.${armTar.anc}${ajusteRR.supera?' (excede estándar)':''}`:'')],pt=0,tt=0;
+  const ladoBajoR=isBajo(SEL);
   RPuertas.forEach((p,i)=>{
     const a=+p.alto||0,w=+p.ancho||0;
     if(a&&w){
       const m=p.mano||'D';
       const mult=(m==='2')?2:1;
-      const ppUd=gpp(S.tar,a,w);pt+=ppUd*mult;
+      const ppUd=precioPuertaItem(a,w,p);pt+=ppUd*mult;const baseP=GPP_BASE;
       const cfg=isBajo(SEL)?S.tb:S.ta;
-      let tp=0;
+      let tp=0,tpUd=0;
       const notaP=GPP_NOTA;
       const llevaTir=(m!=='FF')&&p.tir!=='off'&&admiteTirador(S.tar); // Lote L
-      if(llevaTir&&cfg.t==='tirador'&&cfg.s)tp=gtp(cfg.s,w)*mult;
-      else if(llevaTir&&cfg.t==='gola'&&!isBajo(SEL))tp=gap(w)*mult;
+      if(llevaTir){tpUd=precioTirItem(cfg,w,p,ladoBajoR);tp=tpUd*mult;}
       tt+=tp;
-      lines.push(`P${i+1} (${a}×${w}) ${MANO_LAB[m]||'D'}: ${fmt(ppUd*mult)}${notaP}${tp>0?' +tir.'+fmt(tp):''}${m==='FF'?' [FF sin tir.]':(p.tir==='off'?' [sin tir.]':(S.tar==='T-VA'?' [tirador incluido]':''))}`);
+      if(S.tar==='Sin puerta'){lines.push(`P${i+1}: Sin puerta (sin tirador)`);}
+      else{
+        const cc=tarifaClaveCelda(S.tar,a,w);
+        lines.push(`P${i+1} (${a}×${w}) ${MANO_LAB[m]||'D'}: ${peHtml('r','pd',i,baseP,p.pMan!=null,!!(cc&&tarifaEsMod('pd',cc.key)))} €${mult>1?' ×2':''}${Math.abs(ppUd-baseP)>0.005?' +supl. = '+fmt(ppUd*mult):(mult>1?' = '+fmt(ppUd*mult):'')}${p.pMan!=null?'':notaP}${tp>0?` +tir. ${peHtml('r','tir',i,tpUd,p.tMan!=null,false)} €${mult>1?' ×2':''}`:''}${m==='FF'?' [FF sin tir.]':(p.tir==='off'?' [sin tir.]':(S.tar==='T-VA'?' [tirador incluido]':''))}`);
+      }
     }
   });
   // Frentes Cajón/Gaveta
   RFrentesCJ.forEach((f,i)=>{
     const a=+f.alto||0,w=+f.ancho||0;
     if(a&&w){
-      const pp=gpp(S.tar,a,w);const notaF=GPP_NOTA;pt+=pp;
+      const pp=precioPuertaItem(a,w,f);const notaF=GPP_NOTA,baseF=GPP_BASE;pt+=pp;
       const cfg=isBajo(SEL)?S.tb:S.ta;
       let tp=0;
       const llevaTirF=f.tir!=='off'&&admiteTirador(S.tar); // Lote L
-      if(llevaTirF&&cfg.t==='tirador'&&cfg.s)tp=gtp(cfg.s,w);
-      else if(llevaTirF&&cfg.t==='gola'&&!isBajo(SEL))tp=gap(w);
+      if(llevaTirF)tp=precioTirItem(cfg,w,f,ladoBajoR);
       tt+=tp;
-      lines.push(`F${i+1} (${a}×${w}) ${f.tipo}: ${fmt(pp)}${notaF}${tp>0?' +tir.'+fmt(tp):''}`);
+      const cc=tarifaClaveCelda(S.tar,a,w);
+      lines.push(`F${i+1} (${a}×${w}) ${f.tipo}: ${peHtml('r','fr',i,baseF,f.pMan!=null,!!(cc&&tarifaEsMod('pd',cc.key)))} €${Math.abs(pp-baseF)>0.005?' +supl. = '+fmt(pp):''}${f.pMan!=null?'':notaF}${tp>0?` +tir. ${peHtml('r','ftir',i,tp,f.tMan!=null,false)} €`:''}`);
       const her=precioCajonHerraje(S.modCaj,f.tipo,f.fondo||'F50',w);
       if(her)lines.push(`  ↳ ${her.descripcion}: ${fmt(her.precio)}`);
       else if(w>120)lines.push(`  ⚠️ Cajón > 120 cm — no permitido`);
@@ -2619,7 +2787,8 @@ function rdsg(){
   if(S.recargoModelo>0&&pt>0)lines.push(`Recargo modelo +${S.recargoModelo}% aplicado a puertas/frentes${S.recargoCVT?' y costados/regletas':''}`);
   const tot=armP+pt+tt,cnt=+document.getElementById('rCnt')?.value||1;
   lines.push(`\nTotal/ud (sin cajones herraje): ${fmt(tot)} · ×${cnt}: ${fmt(tot*cnt)}`);
-  document.getElementById('rinD').textContent=lines.join('\n');
+  if(RARMMAN!=null||RPuertas.some(p=>p.pMan!=null||p.tMan!=null)||RFrentesCJ.some(f=>f.pMan!=null||f.tMan!=null))lines.push(`✎ = precio manual solo de este mueble`);
+  document.getElementById('rinD').innerHTML=lines.join('\n'); // Lote M
 }
 function addRin(){
   if(!SEL)return;
@@ -2642,35 +2811,33 @@ function addRin(){
   // Lote F: forma especial (×2) en rincón. Alto/fondo no editables → solo esEspecial.
   const optsArm={esEspecial:RFORMA!=='ninguna',altoNoStd:false,fondoNoStd:false};
   const dobleFondo=(RFORMA==='chaflan')?{dcho:+document.getElementById('rDFD').value||null,izq:+document.getElementById('rDFI').value||null}:null;
-  const armP=gap2(armTar,optsArm);let pt=0,tt=0,pd=[],altoPuertaMax=0,manos=[];
-  const snapPuertas=RPuertas.map(p=>({alto:+p.alto||0,ancho:+p.ancho||0,tir:p.tir||'on',mano:p.mano||'D'}));
-  const snapFrentes=RFrentesCJ.map(f=>({alto:+f.alto||0,ancho:+f.ancho||0,tir:f.tir||'on',tipo:f.tipo||'CJ',fondo:f.fondo||'F50'}));
+  const armP=gap2(armTar,optsArm,RARMMAN);let pt=0,tt=0,pd=[],altoPuertaMax=0,manos=[]; // Lote M
+  const snapPuertas=RPuertas.map(p=>({alto:+p.alto||0,ancho:+p.ancho||0,tir:p.tir||'on',mano:p.mano||'D',...(p.pMan!=null?{pMan:+p.pMan}:{}),...(p.tMan!=null?{tMan:+p.tMan}:{})}));
+  const snapFrentes=RFrentesCJ.map(f=>({alto:+f.alto||0,ancho:+f.ancho||0,tir:f.tir||'on',tipo:f.tipo||'CJ',fondo:f.fondo||'F50',...(f.pMan!=null?{pMan:+f.pMan}:{}),...(f.tMan!=null?{tMan:+f.tMan}:{})}));
   RPuertas.forEach((p,i)=>{
     const a=+p.alto||0,w=+p.ancho||0;
     if(a&&w){
       const m=p.mano||'D';manos.push(m);
       const mult=(m==='2')?2:1;
-      const ppUd=gpp(S.tar,a,w);pt+=ppUd*mult;
+      const ppUd=precioPuertaItem(a,w,p);pt+=ppUd*mult;
       pd.push(`P${i+1}:${a}×${w} ${MANO_LAB[m]||'D'}`);
       if(a>altoPuertaMax)altoPuertaMax=a;
       const cfg=isBajo(SEL)?S.tb:S.ta;
       const llevaTir=(m!=='FF')&&p.tir!=='off'&&admiteTirador(S.tar); // Lote L
-      if(llevaTir&&cfg.t==='tirador'&&cfg.s)tt+=gtp(cfg.s,w)*mult;
-      else if(llevaTir&&cfg.t==='gola'&&!isBajo(SEL))tt+=gap(w)*mult;
+      if(llevaTir)tt+=precioTirItem(cfg,w,p,isBajo(SEL))*mult;
     }
   });
   const frentesParaIndic=[];
   RFrentesCJ.forEach((f,i)=>{
     const a=+f.alto||0,w=+f.ancho||0;
     if(a&&w){
-      pt+=gpp(S.tar,a,w);
+      pt+=precioPuertaItem(a,w,f);
       frentesParaIndic.push({tipo:f.tipo,ancho:w});
       pd.push(`F${i+1}:${a}×${w} ${f.tipo}`);
       const cfg=isBajo(SEL)?S.tb:S.ta;
       let tp=0;
       const llevaTirF=f.tir!=='off'&&admiteTirador(S.tar); // Lote L
-      if(llevaTirF&&cfg.t==='tirador'&&cfg.s)tp=gtp(cfg.s,w);
-      else if(llevaTirF&&cfg.t==='gola'&&!isBajo(SEL))tp=gap(w);
+      if(llevaTirF)tp=precioTirItem(cfg,w,f,isBajo(SEL));
       tt+=tp;
     }
   });
@@ -2693,6 +2860,7 @@ function addRin(){
   const algunaConTir=admiteTirador(S.tar)&&(RPuertas.some(p=>(+p.alto)&&(+p.ancho)&&p.tir!=='off'&&p.mano!=='FF')||RFrentesCJ.some(f=>(+f.alto)&&(+f.ancho)&&f.tir!=='off'));
   if(algunaConTir){const t=descTG(isBajo(SEL)?'b':'a');if(t)desc+=` · ${t}`;}
   if(S.recargoModelo>0&&pd.length)desc+=` · recargo modelo +${S.recargoModelo}%`; // Lote L
+  if(RARMMAN!=null||RPuertas.some(p=>p.pMan!=null||p.tMan!=null)||RFrentesCJ.some(f=>f.pMan!=null||f.tMan!=null))desc+=` · precio manual`; // Lote M
   const baldasMan=necesitaBaldasManual(SEL,S.tar)?(+document.getElementById('rBaldas').value||0):0;
   // Lote H — rincón fregadero: sin balda por defecto; el checkbox añade 1 balda (solo herrajes sueltos)
   const baldaFreg=esFregadero(armTar)&&!!document.getElementById('chkRBaldaFreg')?.checked;
@@ -2709,7 +2877,8 @@ function addRin(){
     mPuertas:snapPuertas, mFrentesCJ:snapFrentes, regleta,
     esRincon:true,
     // Lote F
-    forma:RFORMA, dobleFondo
+    forma:RFORMA, dobleFondo,
+    armPMan:RARMMAN // Lote M
   };
   let idMueble,fusionadoRin=null;
   if(EDIT_ID){
@@ -3478,12 +3647,12 @@ function recalcularAcumulados(){
       const a=+p.alto||0,w=+p.ancho||0;if(!a||!w)return;
       const mano=p.mano||'D';const mult=(mano==='2')?2:1;
       const llevaTir=(mano!=='FF')&&p.tir!=='off';if(!llevaTir)return;
-      if(!ladoBajo)add(color,'at',gap(w)*mult*cnt);
+      if(!ladoBajo)add(color,'at',(p.tMan!=null?+p.tMan:gap(w))*mult*cnt); // Lote M: precio manual de gola altos
       else add(color,'ml',w*mult*cnt);
     });
     (m.mFrentesCJ||[]).forEach(f=>{
       const a=+f.alto||0,w=+f.ancho||0;if(!a||!w)return;if(f.tir==='off')return;
-      if(!ladoBajo)add(color,'at',gap(w)*cnt);
+      if(!ladoBajo)add(color,'at',(f.tMan!=null?+f.tMan:gap(w))*cnt);
       else add(color,'ml',w*cnt);
     });
     if(m.esRincon&&m.esRinRec&&m.esBajo)add(color,'codo');
@@ -3568,6 +3737,7 @@ function iniciarEdicion(id){
     renderRinP();renderRFCJ();
     // Lote F: restaurar forma especial / doble fondo del rincón
     RFORMA=m.forma||'ninguna';pintarFormaTgg('r',RFORMA);
+    RARMMAN=(m.armPMan!=null)?+m.armPMan:null; // Lote M
     document.getElementById('rDFD').value=(m.dobleFondo&&m.dobleFondo.dcho)||'';
     document.getElementById('rDFI').value=(m.dobleFondo&&m.dobleFondo.izq)||'';
     document.getElementById('rCnt').value=l.cnt;
@@ -3593,6 +3763,7 @@ function iniciarEdicion(id){
     document.getElementById('mFon').value=m.fon||SEL.fon;
     // Lote F: restaurar forma especial / doble fondo
     MFORMA=m.forma||'ninguna';pintarFormaTgg('m',MFORMA);
+    MARMMAN=(m.armPMan!=null)?+m.armPMan:null; // Lote M
     document.getElementById('mDFD').value=(m.dobleFondo&&m.dobleFondo.dcho)||'';
     document.getElementById('mDFI').value=(m.dobleFondo&&m.dobleFondo.izq)||'';
     MPuertas=m.mPuertas.map(p=>({...p}));
@@ -3640,6 +3811,7 @@ function limpiarFormularioMueble(){
   SEL=null;
   MPuertas=[];MFrentesCJ=[];RPuertas=[];RFrentesCJ=[];
   MFORMA='ninguna';RFORMA='ninguna';pintarFormaTgg('m','ninguna');pintarFormaTgg('r','ninguna');
+  MARMMAN=null;RARMMAN=null; // Lote M
   // Vaciar contenedores de puertas/frentes (modal normal y rincón)
   ['mPuertasC','mFrentesCJC','rinP','rFrentesCJC'].forEach(idc=>{const c=document.getElementById(idc);if(c)c.innerHTML='';});
   // Lote H: ocultar y desmarcar checkboxes de balda fregadero
