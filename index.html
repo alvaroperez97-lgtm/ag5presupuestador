@@ -1,4 +1,4 @@
-[Resource from GitHub at repo://alvaroperez97-lgtm/ag5presupuestador/sha/09d63391825d4b59c62bb15e6ac9f973bf9f0c03/contents/index.html] <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -119,6 +119,14 @@ tr:hover td{background:var(--c);}
 .wst .wsh{background:#EDE4D0;font-weight:700;color:#4A2C0E;font-size:9px;}
 .wst .wsr td:last-child,.wst .wsr td:nth-last-child(2){text-align:right;font-weight:700;}
 .wst .wstot{background:#FFF8E7;font-weight:900;color:#7B4A1E;}
+/* Lote N — medidas de balda con canto: subrayado simple = 1 canto, doble = 2 (convención de la calculadora de corte) */
+.bdc1{text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:2px;}
+.bdc2{text-decoration:underline double;text-decoration-thickness:1.5px;text-underline-offset:2px;}
+/* Lote N — favoritos de líneas manuales (chips: tocar = usar; ✕ = quitar) */
+.favs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.favch{display:inline-flex;border:1.5px solid var(--cd);border-radius:20px;overflow:hidden;background:var(--c);}
+.favch button{border:none;background:none;cursor:pointer;font-family:'Lato',sans-serif;font-size:11.5px;font-weight:700;color:var(--m);padding:5px 10px;text-align:left;}
+.favch button:hover{background:var(--cd);} .favch .favx{color:#c62828;padding:5px 8px;border-left:1.5px solid var(--cd);}
 .wshead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #4A2C0E;padding-bottom:8px;margin-bottom:10px;}
 .wshead img{height:36px;}
 .wsinfo{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;font-size:9px;margin-bottom:8px;border:1px solid #ccc;padding:6px;border-radius:4px;}
@@ -566,21 +574,39 @@ tr:hover td{background:var(--c);}
 
 <!-- T4 VARIOS -->
 <div id="t4" class="tc">
-  <!-- Widget Baldas Melamina configurable: matriz 14 anchos × 10 fondos × 2 acabados + recargo 15% en 19mm -->
+  <!-- Lote N (17-09-2026) — Balda suelta: por mueble (medida calculada) o manual (4 lados, falseada),
+       cantos por lado marcados en el dibujo y soportes. Tarifa: matriz ancho mueble × fondo (+15% en 19 mm). -->
   <div class="pn" style="margin-bottom:18px">
-    <div class="pt">📐 Balda Melamina (configurable)</div>
-    <div style="font-size:11px;color:var(--g);margin-bottom:10px;font-style:italic">Baldas canteadas 4 cantos. Recargo +15% si espesor 19mm. Recuerda: los armazones ya incluyen su balda; los colgar de A.90 incluyen 2. Sólo añadir baldas extra.</div>
+    <div class="pt">📐 Balda suelta</div>
+    <div style="font-size:11px;color:var(--g);margin-bottom:10px;font-style:italic">Tarifa por ancho de mueble × fondo (tramo superior). El precio es el mismo lleve los cantos que lleve; +15% si 19 mm; balda falseada +10 € con canto / +5 € sin canto. Recuerda: los armazones ya incluyen su balda; los colgar de A.90 incluyen 2. Sólo añadir baldas extra.</div>
+    <div class="tgg" id="bdModoTgg" style="margin:0 0 10px">
+      <button class="tgb on" id="bdModoM" onclick="setBaldaModo('mueble',this)">Por mueble</button>
+      <button class="tgb" id="bdModoX" onclick="setBaldaModo('manual',this)">Medidas manuales</button>
+    </div>
+    <div id="bdBoxMueble">
+      <div class="tgg" id="bdOrigTgg" style="margin:0 0 9px">
+        <button class="tgb on" id="bdOrigP" onclick="setBaldaOrigen('proy',this)">Del presupuesto</button>
+        <button class="tgb" id="bdOrigC" onclick="setBaldaOrigen('cat',this)">Del catálogo</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;margin-bottom:8px">
+        <div class="fg" id="bdFgProy" style="grid-column:1/-1"><label>Mueble del presupuesto</label><select id="bdMueble" onchange="baldaMuebleElegido()"></select></div>
+        <div class="fg" id="bdFgFam" style="display:none"><label>Familia</label><select id="bdFam" onchange="renderBaldaArm()"></select></div>
+        <div class="fg" id="bdFgArm" style="display:none;grid-column:span 2"><label>Armazón</label><select id="bdArm" onchange="baldaArmElegido()"></select></div>
+        <div class="fg"><label>Ancho mueble (cm)</label><input type="number" id="bdMAnc" step="0.1" min="1" oninput="cBalda()"></div>
+        <div class="fg"><label>Fondo mueble (cm)</label><input type="number" id="bdMFon" step="0.1" min="1" oninput="cBalda()"></div>
+      </div>
+      <div id="bdMInfo" style="font-size:11px;color:var(--mm);margin-bottom:10px"></div>
+    </div>
+    <div id="bdBoxManual" style="display:none">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px;margin-bottom:8px">
+        <div class="fg"><label>Frente (cm)</label><input type="number" id="bdF" step="0.1" min="1" oninput="cBalda()"></div>
+        <div class="fg"><label>Trasera (cm)</label><input type="number" id="bdT" step="0.1" min="1" oninput="cBalda()" disabled></div>
+        <div class="fg"><label>Izquierdo (cm)</label><input type="number" id="bdI" step="0.1" min="1" oninput="cBalda()"></div>
+        <div class="fg"><label>Derecho (cm)</label><input type="number" id="bdD" step="0.1" min="1" oninput="cBalda()" disabled></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:12px;cursor:pointer;margin-bottom:10px"><input type="checkbox" id="bdFalseada" style="width:auto" onchange="setBaldaFalseada(this.checked)"> Balda falseada (trasera y derecho distintos del frente e izquierdo)</label>
+    </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;margin-bottom:10px">
-      <div class="fg"><label>Para mueble (ancho)</label>
-        <select id="bdAnc" onchange="cBalda()">
-          <option value="20">20</option><option value="25">25</option><option value="30">30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="60" selected>60</option><option value="70">70</option><option value="80">80</option><option value="90">90</option><option value="100">100</option><option value="110">110</option><option value="120">120</option>
-        </select>
-      </div>
-      <div class="fg"><label>Fondo</label>
-        <select id="bdFon" onchange="cBalda()">
-          <option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30" selected>30</option><option value="35">35</option><option value="40">40</option><option value="45">45</option><option value="50">50</option><option value="55">55</option><option value="60">60</option>
-        </select>
-      </div>
       <div class="fg"><label>Acabado</label>
         <div class="tgg" style="margin-top:5px">
           <button class="tgb on" id="bdBl" onclick="setBaldaAcab('blanco',this)">Blanco</button>
@@ -595,10 +621,20 @@ tr:hover td{background:var(--c);}
       </div>
       <div class="fg"><label>Cantidad</label><input type="number" id="bdCnt" value="1" min="1" oninput="cBalda()"></div>
     </div>
-    <div class="pd" style="margin-bottom:10px">
-      <div style="font-size:10px;color:rgba(196,151,58,.7);margin-bottom:3px">PRECIO</div>
-      <div id="bdDes" style="font-size:11px;color:rgba(232,215,185,.85);line-height:1.65"></div>
-      <div class="pdv" id="bdTot">0,00 €</div>
+    <div class="fg" style="margin-bottom:10px"><label>Soportes de balda</label>
+      <div class="tgg" id="bdSopTgg" style="margin-top:5px">
+        <button class="tgb on" onclick="setBaldaSop('tradicional',this)">Tradicional</button>
+        <button class="tgb" onclick="setBaldaSop('antivuelco',this)">Antivuelco</button>
+        <button class="tgb" onclick="setBaldaSop('sin',this)">Sin soportes</button>
+      </div>
+    </div>
+    <div class="l2" style="display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:14px;align-items:start;margin-bottom:10px">
+      <div class="fg"><label>Cantos (toca un lado para cantear / quitar)</label><div id="bdDib" style="margin-top:5px"></div><div id="bdCantosTxt" style="font-size:11px;color:var(--mm);margin-top:4px;font-weight:700"></div></div>
+      <div class="pd" style="margin:0">
+        <div style="font-size:10px;color:var(--mm);margin-bottom:3px">PRECIO</div>
+        <div id="bdDes" style="font-size:11px;color:var(--t);line-height:1.65"></div>
+        <div class="pdv" id="bdTot" style="color:var(--m)">0,00 €</div>
+      </div>
     </div>
     <div class="fg" style="margin-bottom:9px"><label>Nota</label><input id="bdNt"></div>
     <button class="btn badd" onclick="addBalda()">✅ Añadir balda al Presupuesto</button>
@@ -628,7 +664,10 @@ tr:hover td{background:var(--c);}
   <!-- Lote I: línea manual libre. Suma al presupuesto (sección Varios), editable (✏️) y borrable (✕) desde la tabla -->
   <div class="pn" style="margin-bottom:18px">
     <div class="pt">✍️ Línea manual</div>
-    <div style="font-size:11px;color:var(--g);margin-bottom:10px;font-style:italic">Concepto libre que suma al presupuesto. Después se puede editar (✏️) o eliminar (✕) desde la pestaña Presupuesto.</div>
+    <div style="font-size:11px;color:var(--g);margin-bottom:10px;font-style:italic">Concepto libre que suma al presupuesto. Después se puede editar (✏️) o eliminar (✕) desde la pestaña Presupuesto. ⭐ guarda el concepto como favorito en este dispositivo para reutilizarlo en otros presupuestos.</div>
+    <!-- Lote N — favoritos: conceptos guardados (localStorage g5_favoritos). Tocar un chip rellena descripción y €/ud. -->
+    <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mm);margin-bottom:4px">⭐ Favoritos (toca para usar)</div>
+    <div class="favs" id="vmFavs"></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;margin-bottom:10px;align-items:end">
       <div class="fg" style="grid-column:1/-1"><label>Descripción</label><input id="vmDesc"></div>
       <div class="fg"><label>Cantidad</label><input type="number" id="vmCnt" value="1" min="1" oninput="cVM()"></div>
@@ -637,6 +676,7 @@ tr:hover td{background:var(--c);}
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn bp" id="vmBtn" onclick="addVariosManual()">✅ Añadir al Presupuesto</button>
+      <button class="btn" style="background:#f5c842;color:#856404" onclick="favoritoDesdeWidget()" title="Guardar descripción y €/ud como favorito">⭐ Guardar como favorito</button>
       <button class="btn" id="vmCancel" style="display:none;background:var(--g);color:#fff" onclick="cancelarVariosManual()">✕ Cancelar edición</button>
     </div>
   </div>
@@ -853,7 +893,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-14.2';
+const APP_BUILD = '2026-09-17.1';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -892,6 +932,25 @@ const FAM_BALDA_FIJA = ['Escurreplatos','Campana/Grupo'];
 const LACA_NO_STD_PCT  = REC_LACA_NO_STD;
 const LACA_UNERO_REBAJ = SUP_UNERO_REBAJ;
 const BALDA_REC_19MM   = REC_19MM;
+// Lote N (17-09-2026) — Baldas sueltas por mueble / manuales / falseadas (reglas de Álvaro):
+//  · Ancho de balda = ancho del mueble − 2 × grosor de costado del proyecto (16 → −3,2 cm; 19 → −3,8).
+//    Coincide con la tarifa ("Para muebles 60 ancho" = 56,8).
+//  · Fondo de balda: bajos y columnas de F.58 → 51,5 · Sobre Frigo → 41,5 · resto → fondo del mueble − 3,5
+//    (colgantes F.33 → 29,5; bajos de menos fondo → fondo − 3,5).
+//  · Precio: celda de tarifa del ancho de mueble (mayor ancho de la balda + 3,2) y fondo (mayor fondo)
+//    inmediatamente superiores; fuera de tabla se extrapola como en puertas (celdaTarifa).
+//    El precio NO cambia por los cantos que lleve la balda (la tarifa es "canteadas 4 cantos").
+//  · Falseada (trasera ≠ frente o derecho ≠ izquierdo): tramo superior + 10 € si lleva algún canto, + 5 € si no.
+//  · Soportes (tradicional / antivuelco / sin): solo informativo (hoja de producción y herrajes sueltos).
+const BALDA_DESC_FONDO         = 3.5;  // cm que se descuentan al fondo del mueble
+const BALDA_FONDO_F58          = 51.5; // fondo de balda en bajos / columnas de F.58
+const BALDA_FONDO_SFRIGO       = 41.5; // fondo de balda en sobre frigo
+const BALDA_DESC_ANCHO_TAR     = 3.2;  // la tarifa indexa por ancho de mueble = ancho de balda + 3,2 (costados de 16)
+const BALDA_SUP_FALSEADA_CANTO = 10;   // € por balda falseada con algún canto
+const BALDA_SUP_FALSEADA_SIN   = 5;    // € por balda falseada sin canto
+const SOPORTES_BALDA_SUELTA    = 4;    // soportes por balda suelta (informativo, si lleva soportes)
+const BALDA_SOPORTES={tradicional:'Soporte tradicional',antivuelco:'Soporte antivuelco',sin:'Sin soportes'};
+const BALDA_LADOS={f:'frente',t:'trasera',i:'izq.',d:'dcho.'};
 // Lote E — persistencia de proyectos en localStorage (única excepción acordada a "sin storage").
 const LS_CONTADORES='g5_contadores'; // { PRES:{ "2026":N }, PED:{ "2026":N } }
 const LS_PROYECTOS ='g5_proyectos';  // [ snapshot, ... ]
@@ -1543,7 +1602,8 @@ function init(){
   actualizarCabeceraNum();
   renderProyectosGuardados();
   tarifaCargar();renderTarifaModificada(); // Lote M: aplica la tarifa modificada del dispositivo antes de pintar
-  bMC();rM('Colgantes');bVC();fV();bEC();fE();cBalda();
+  favoritosCargar();renderFavoritos(); // Lote N: favoritos de líneas manuales del dispositivo
+  bMC();rM('Colgantes');bVC();fV();bEC();fE();renderBaldaMuebles();
   cargarModeloEnS(0);refrescarCabeceraModelo();renderMuebleModeloSel();renderCVTModeloSel();
   // Lote G: ofrecer recuperar el trabajo no guardado y arrancar el autoguardado periódico.
   recuperarBorradorSiExiste();
@@ -1772,7 +1832,8 @@ function renderProyectosGuardados(){
 function exportarCopia(){
   const datos={version:1,fecha:new Date().toISOString(),
     contadores:lsLeer(LS_CONTADORES,{}),proyectos:lsLeer(LS_PROYECTOS,[]),
-    tarifa:TARIFA_MOD}; // Lote M
+    tarifa:TARIFA_MOD, // Lote M
+    favoritos:FAVORITOS}; // Lote N
   const blob=new Blob([JSON.stringify(datos)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -1822,8 +1883,14 @@ function importarCopia(input){
       if(nTar&&confirm('La copia trae '+nTar+' precio(s) de tarifa modificada. ¿Aplicarlos en este dispositivo?')){lsGuardar(LS_TARIFA,TARIFA_MOD);tarifaAplicarTodo();rCards();renderTarifaModificada();}
       else{nTar=0;tarifaCargar();}
     }
+    // Lote N — favoritos de la copia: se añaden los que no existan ya (misma descripción y precio)
+    let nFav=0;
+    if(Array.isArray(d.favoritos)){
+      d.favoritos.forEach(f=>{if(favoritoValido(f)&&!favoritoExiste(f.desc.trim(),f.p)){FAVORITOS.push({desc:f.desc.trim(),p:f.p,fecha:f.fecha||''});nFav++;}});
+      if(nFav){favoritosOrdenar();lsGuardar(LS_FAVORITOS,FAVORITOS);renderFavoritos();}
+    }
     renderProyectosGuardados();
-    flash('⬆ Importados '+importados+' · omitidos '+omitidos+' (duplicados o inválidos)'+(nTar?' · '+nTar+' precios de tarifa':''));
+    flash('⬆ Importados '+importados+' · omitidos '+omitidos+' (duplicados o inválidos)'+(nTar?' · '+nTar+' precios de tarifa':'')+(nFav?' · '+nFav+' favoritos':''));
   };
   r.onerror=()=>alert('No se pudo leer el archivo.');
   r.readAsText(f);
@@ -1888,6 +1955,7 @@ function sw(id,btn){
   btn.classList.add('on');
   if(id==='t1'){cargarModeloEnS(MFOCO);refrescarCabeceraModelo();}
   if(id==='t2')renderMuebleModeloSel();
+  if(id==='t4')renderBaldaMuebles(); // Lote N: muebles del presupuesto en el widget de baldas
   if(id==='tp')rP();
   if(id==='t3'){renderCVTModeloSel();cargarModeloEnS(CVTMODELO);actualizarPanelCVTtab();rCVTList();}
 }
@@ -3072,6 +3140,48 @@ function editarVariosManual(id){
   flash('✏️ Editando línea manual');
 }
 function cancelarVariosManual(){resetVariosManual();flash('Edición cancelada');}
+// ═════════════════════════ Lote N (17-09-2026) — FAVORITOS DE LÍNEAS MANUALES ═════════════════════════
+// Conceptos libres (descripción + €/ud) guardados en este dispositivo (localStorage g5_favoritos, misma
+// excepción acordada que la tarifa modificada) para volver a usarlos en otro presupuesto con un toque.
+// Se marcan desde el widget (⭐ Guardar como favorito) o desde la tabla del presupuesto (⭐ en la línea
+// manual). Van en la copia de seguridad (exportar/importar) y se fusionan sin duplicar (misma descripción y precio).
+const LS_FAVORITOS='g5_favoritos'; // [{desc,p,fecha}]
+let FAVORITOS=[];
+function favoritoValido(f){return !!(f&&typeof f.desc==='string'&&f.desc.trim()&&typeof f.p==='number'&&f.p>=0);}
+function favoritosCargar(){const d=lsLeer(LS_FAVORITOS,[]);FAVORITOS=Array.isArray(d)?d.filter(favoritoValido):[];}
+function favoritoExiste(desc,p){return FAVORITOS.some(f=>f.desc.toLowerCase()===desc.toLowerCase()&&f.p===p);}
+function favoritosOrdenar(){FAVORITOS.sort((a,b)=>a.desc.localeCompare(b.desc,'es'));}
+function favoritoGuardar(desc,p){
+  desc=String(desc||'').trim();p=Math.round((+p||0)*100)/100;
+  if(!desc)return false;
+  if(favoritoExiste(desc,p)){flash('⭐ Ya estaba en favoritos');return false;}
+  FAVORITOS.push({desc,p,fecha:new Date().toISOString().slice(0,10)});favoritosOrdenar();
+  if(!lsGuardar(LS_FAVORITOS,FAVORITOS))return false;
+  renderFavoritos();flash('⭐ Guardado en favoritos: '+desc);return true;
+}
+function favoritoDesdeWidget(){
+  const desc=gv('vmDesc').trim(),pu=+gv('vmPu');
+  if(!desc){flash('⚠️ Escribe la descripción');document.getElementById('vmDesc').focus();return;}
+  if(gv('vmPu')===''||isNaN(pu)||pu<0){flash('⚠️ Indica el € por unidad');document.getElementById('vmPu').focus();return;}
+  favoritoGuardar(desc,pu);
+}
+function favoritoDesdeLinea(id){const l=LN.find(x=>x.id===id);if(!l||!l.meta||l.meta.tipo!=='varios_manual'){flash('⚠️ Solo las líneas manuales se guardan como favorito');return;}favoritoGuardar(l.desc,l.p);}
+// Tocar un chip: rellena descripción y €/ud del widget (la cantidad y el modo edición no se tocan).
+function favoritoUsar(i){
+  const f=FAVORITOS[i];if(!f)return;
+  document.getElementById('vmDesc').value=f.desc;document.getElementById('vmPu').value=f.p;cVM();
+  document.getElementById('vmCnt').focus();flash('⭐ '+f.desc);
+}
+function favoritoBorrar(i){
+  const f=FAVORITOS[i];if(!f)return;
+  if(!confirm(`¿Quitar de favoritos «${f.desc}» (${fmt(f.p)})?`))return;
+  FAVORITOS.splice(i,1);lsGuardar(LS_FAVORITOS,FAVORITOS);renderFavoritos();
+}
+function renderFavoritos(){
+  const c=document.getElementById('vmFavs');if(!c)return;
+  if(!FAVORITOS.length){c.innerHTML='<span style="font-size:11px;color:var(--g);font-style:italic">Sin favoritos todavía. Guarda un concepto con ⭐ y aparecerá aquí en los próximos presupuestos.</span>';return;}
+  c.innerHTML=FAVORITOS.map((f,i)=>`<span class="favch"><button type="button" onclick="favoritoUsar(${i})" title="Usar este concepto">⭐ ${esc(f.desc)} · ${fmt(f.p)}</button><button type="button" class="favx" onclick="favoritoBorrar(${i})" title="Quitar de favoritos">✕</button></span>`).join('');
+}
 
 // ═════════════════════════ GOLA MANUAL (metros lineales) ═════════════════════════
 // D4: por TIRAS reales. m → cm y se reutiliza calcGolaTiras (tira 4ml + media 2ml).
@@ -3132,31 +3242,167 @@ const BALDAS_PRECIOS={
   110:[6.86,8.12,9.33,10.59,11.81,13.07,14.28,15.54,16.76,18.02],
   120:[7.35,8.70,10.05,11.45,12.80,14.15,15.50,16.85,18.20,19.55]
 };
-let BDS={acab:'blanco', esp:'16'};
+// ═════════════════════════ Lote N (17-09-2026) — BALDAS SUELTAS: por mueble, manuales y falseadas ═════════════════════════
+// Tabla de baldas en el formato de celdaTarifa: "alto" = ancho de mueble, "ancho" = fondo de balda.
+const BALDAS_TAB={al:BALDAS_ANCHOS,an:BALDAS_FONDOS,p:BALDAS_ANCHOS.map(a=>BALDAS_PRECIOS[a])};
+// Estado del widget. Medidas en cm. cantos por lado: f frente · t trasera · i izquierdo · d derecho.
+let BDS={acab:'blanco',esp:'16',modo:'mueble',origen:'proy',falseada:false,sop:'tradicional',cantos:{f:true,t:true,i:true,d:true},mueble:null,modeloId:null,fam:''};
+const r1=x=>Math.round((+x||0)*10)/10; // redondeo a décima de cm (evita 56,8+3,2 = 60,00000001 → tramo 70)
+function fmtCm(v){return (+v||0).toLocaleString('es-ES',{maximumFractionDigits:1});}
 function setBaldaAcab(v,btn){pill(btn,['bdBl','bdDi']);BDS.acab=v;cBalda();}
 function setBaldaEsp(v,btn){pill(btn,['bd16','bd19']);BDS.esp=v;cBalda();}
-function getPrecioBalda(){
-  const anc=+gv('bdAnc'),fon=+gv('bdFon');
-  const row=BALDAS_PRECIOS[anc];if(!row)return 0;
-  const idxF=BALDAS_FONDOS.indexOf(fon);if(idxF<0)return 0;
-  // Tarifa unificada (ver cabecera): el toggle Blanco/Diseño es informativo, no afecta precio.
-  let p=row[idxF]||0;
-  if(BDS.esp==='19')p*=(1+BALDA_REC_19MM);
-  return Math.round(p*100)/100;
+function setBaldaSop(v,btn){document.querySelectorAll('#bdSopTgg .tgb').forEach(b=>b.classList.remove('on'));btn.classList.add('on');BDS.sop=v;cBalda();}
+function setBaldaModo(v,btn){
+  pill(btn,['bdModoM','bdModoX']);BDS.modo=v;
+  document.getElementById('bdBoxMueble').style.display=v==='mueble'?'block':'none';
+  document.getElementById('bdBoxManual').style.display=v==='manual'?'block':'none';
+  if(v==='mueble')renderBaldaMuebles();else cBalda();
+}
+function setBaldaOrigen(v,btn){
+  pill(btn,['bdOrigP','bdOrigC']);BDS.origen=v;
+  document.getElementById('bdFgProy').style.display=v==='proy'?'flex':'none';
+  ['bdFgFam','bdFgArm'].forEach(id=>{document.getElementById(id).style.display=v==='cat'?'flex':'none';});
+  if(v==='proy')baldaMuebleElegido();else baldaArmElegido();
+}
+function setBaldaFalseada(on){BDS.falseada=!!on;['bdT','bdD'].forEach(id=>{document.getElementById(id).disabled=!on;});cBalda();}
+function toggleCantoBalda(k){BDS.cantos[k]=!BDS.cantos[k];cBalda();}
+// Desplegables de muebles: los del presupuesto (líneas de mueble, sin rincones: su balda no es rectangular →
+// usar medidas manuales/falseada) y el catálogo (familia + armazón). Se refresca al entrar en Varios.
+function renderBaldaMuebles(){
+  const sel=document.getElementById('bdMueble');if(!sel)return;
+  const prev=sel.value;
+  const ms=LN.filter(l=>l.meta&&l.meta.tipo==='mueble'&&!/Rinc/.test(l.meta.nom||''));
+  sel.innerHTML=ms.length?ms.map(l=>{const m=l.meta;const mid=(m.modeloId!=null&&MODELOS.length>1)?`M${m.modeloId+1} · `:'';return `<option value="${l.id}">${esc(mid+(m.nom||''))} · ${fmtCm(m.anc)}×${fmtCm(m.fon)}${l.cnt>1?' ×'+l.cnt:''}</option>`;}).join(''):'<option value="">— sin muebles en el presupuesto —</option>';
+  if(prev&&ms.some(l=>String(l.id)===prev))sel.value=prev;
+  const fam=document.getElementById('bdFam');
+  if(fam&&!fam.options.length){
+    fam.innerHTML=MCATS.filter(c=>ARM.some(a=>a.fam===c&&!isRin(a))).map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    fam.value='Bajos 70';renderBaldaArm(false);
+  }
+  if(BDS.origen==='proy')baldaMuebleElegido();else cBalda();
+}
+function renderBaldaArm(recalc=true){
+  const fam=gv('bdFam'),sel=document.getElementById('bdArm');if(!sel)return;
+  sel.innerHTML=ARM.filter(a=>a.fam===fam&&!isRin(a)).map(a=>`<option value="${a.id}">${esc(a.nom)} · ${a.anc}×${a.fon}</option>`).join('');
+  if(recalc)baldaArmElegido();
+}
+// Mueble del presupuesto elegido → ancho/fondo reales de esa línea (editables) y su modelo.
+function baldaMuebleElegido(){
+  const l=LN.find(x=>String(x.id)===gv('bdMueble'));
+  if(!l){BDS.mueble=null;BDS.modeloId=null;BDS.fam='';cBalda();return;}
+  const m=l.meta;BDS.mueble=m.nom||'';BDS.modeloId=(m.modeloId!=null)?m.modeloId:null;BDS.fam=m.fam||'';
+  document.getElementById('bdMAnc').value=r1(m.anc);document.getElementById('bdMFon').value=r1(m.fon);
+  cBalda();
+}
+function baldaArmElegido(){
+  const a=ARM.find(x=>String(x.id)===gv('bdArm'));
+  if(!a){BDS.mueble=null;BDS.modeloId=null;BDS.fam='';cBalda();return;}
+  BDS.mueble=a.nom;BDS.modeloId=null;BDS.fam=a.fam;
+  document.getElementById('bdMAnc').value=a.anc;document.getElementById('bdMFon').value=+a.fon;
+  cBalda();
+}
+// Fondo de balda a partir del mueble: Sobre Frigo 41,5 · bajos/columnas F.58 51,5 · resto fondo − 3,5.
+function fondoBaldaMueble(fam,fon){
+  fon=r1(fon);
+  if(fam==='Sobre Frigo')return BALDA_FONDO_SFRIGO;
+  if(fon===58&&(BAJOS.includes(fam)||['Columnas','Media Columna'].includes(fam)))return BALDA_FONDO_F58;
+  return r1(fon-BALDA_DESC_FONDO);
+}
+// Ancho de balda = ancho del mueble − 2 × grosor de costado (mm → cm).
+function anchoBaldaMueble(anc,gros){return r1((+anc||0)-2*(+gros||16)/10);}
+// Medidas de la balda según el modo: {f,t,i,d} en cm, o null si faltan datos.
+function medidasBalda(){
+  if(BDS.modo==='mueble'){
+    const anc=+gv('bdMAnc')||0,fon=+gv('bdMFon')||0;
+    if(!(anc>0&&fon>0))return null;
+    const w=anchoBaldaMueble(anc,S.gros),h=fondoBaldaMueble(BDS.fam,fon);
+    if(!(w>0&&h>0))return null;
+    return {f:w,t:w,i:h,d:h};
+  }
+  const f=r1(gv('bdF')),i=r1(gv('bdI'));
+  const t=BDS.falseada?r1(gv('bdT')):f,d=BDS.falseada?r1(gv('bdD')):i;
+  if(!(f>0&&i>0&&t>0&&d>0))return null;
+  return {f,t,i,d};
+}
+function esBaldaFalseada(m){return !!m&&(m.t!==m.f||m.d!==m.i);}
+function textoCantosBalda(c){const l=['f','t','i','d'].filter(k=>c&&c[k]).map(k=>BALDA_LADOS[k]);return l.length===4?'los 4 lados':(l.length?l.join(' + '):'sin canto');}
+function textoMedidasBalda(m){return esBaldaFalseada(m)?`falseada F${fmtCm(m.f)} / T${fmtCm(m.t)} / I${fmtCm(m.i)} / D${fmtCm(m.d)}`:`${fmtCm(m.f)} × ${fmtCm(m.i)}`;}
+// Precio de una balda suelta → {p, base, celda, nota, rec19, sup, fals} o null si no hay precio.
+//  · celda: ancho de mueble (mayor ancho de la balda + 3,2) × fondo (mayor fondo), al tramo superior;
+//    fuera de tabla se extrapola linealmente (celdaTarifa, como puertas y costados).
+//  · +15% si 19 mm (mismo redondeo que antes del Lote N) · falseada: +10 € con canto, +5 € sin canto.
+function precioBaldaSuelta(m,esp,cantos){
+  if(!m)return null;
+  const ancM=r1(Math.max(m.f,m.t)+BALDA_DESC_ANCHO_TAR),fon=r1(Math.max(m.i,m.d));
+  const c=celdaTarifa(BALDAS_TAB,ancM,fon);
+  if(!c.v)return null;
+  // celdaTarifa habla en términos de puertas ("alto"/"ancho"): aquí son ancho de mueble y fondo
+  const nota=c.nota.replace(/ancho /g,'fondo ').replace(/alto /g,'ancho mueble ');
+  const ri=BALDAS_ANCHOS.findIndex(v=>v>=ancM),ci=BALDAS_FONDOS.findIndex(v=>v>=fon);
+  const celda=`mueble ${fmtCm(ri<0?ancM:BALDAS_ANCHOS[ri])} × fondo ${fmtCm(ci<0?fon:BALDAS_FONDOS[ci])}`;
+  let p=c.v,rec19=0;
+  if(esp==='19'){const p19=Math.round(p*(1+BALDA_REC_19MM)*100)/100;rec19=Math.round((p19-p)*100)/100;p=p19;}
+  const fals=esBaldaFalseada(m),conCanto=!!(cantos&&(cantos.f||cantos.t||cantos.i||cantos.d));
+  const sup=fals?(conCanto?BALDA_SUP_FALSEADA_CANTO:BALDA_SUP_FALSEADA_SIN):0;
+  p=Math.round((p+sup)*100)/100;
+  return {p,base:c.v,celda,nota,rec19,sup,fals};
+}
+// Dibujo en planta de la balda: frente abajo, trasera arriba, esquina delantera izquierda a escuadra
+// (el falseo se ve en el lado derecho y/o en la trasera). Lados canteados en trazo grueso dorado; sin
+// canto en gris fino discontinuo. interactivo=true → cada lado es pulsable y se rotulan las medidas.
+function svgBalda(m,cantos,W,H,interactivo){
+  cantos=cantos||{};
+  const f=+m.f||0,t=+m.t||0,i=+m.i||0,d=+m.d||0;
+  const pad=interactivo?{l:46,r:46,t:18,b:22}:{l:3,r:3,t:3,b:3};
+  const maxW=Math.max(f,t,0.1),maxH=Math.max(i,d,0.1);
+  const sc=Math.min((W-pad.l-pad.r)/maxW,(H-pad.t-pad.b)/maxH);
+  const ox=pad.l+((W-pad.l-pad.r)-maxW*sc)/2,oyB=pad.t+((H-pad.t-pad.b)-maxH*sc)/2+maxH*sc; // origen: esquina frente-izq
+  const A=[ox,oyB],B=[ox+f*sc,oyB],C=[ox+t*sc,oyB-d*sc],D=[ox,oyB-i*sc];
+  const lados=[['f',A,B],['d',B,C],['t',C,D],['i',D,A]];
+  const n=v=>v.toFixed(1);
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block;max-width:100%">`+
+    `<polygon points="${[A,B,C,D].map(p=>n(p[0])+','+n(p[1])).join(' ')}" fill="#F3E9D2" stroke="none"/>`;
+  lados.forEach(([k,p,q])=>{
+    const on=!!cantos[k];
+    s+=`<line x1="${n(p[0])}" y1="${n(p[1])}" x2="${n(q[0])}" y2="${n(q[1])}" stroke="${on?'#9B7A2A':'#b5b5b5'}" stroke-width="${on?(interactivo?6:3):(interactivo?2:1)}"${on?'':' stroke-dasharray="4 3"'} stroke-linecap="round"/>`;
+    if(interactivo)s+=`<line x1="${n(p[0])}" y1="${n(p[1])}" x2="${n(q[0])}" y2="${n(q[1])}" stroke="rgba(0,0,0,0)" stroke-width="24" pointer-events="stroke" style="cursor:pointer" onclick="toggleCantoBalda('${k}')"><title>${BALDA_LADOS[k]}: ${on?'con canto (pulsa para quitar)':'sin canto (pulsa para cantear)'}</title></line>`;
+  });
+  if(interactivo){
+    const lab=(x,y,txt,anchor)=>`<text x="${n(x)}" y="${n(y)}" font-size="11" font-family="Lato,sans-serif" font-weight="700" fill="#4A2C0E" text-anchor="${anchor||'middle'}" pointer-events="none">${txt}</text>`;
+    s+=lab((A[0]+B[0])/2,A[1]+16,`F ${fmtCm(f)}`)+lab((C[0]+D[0])/2,Math.min(C[1],D[1])-7,`T ${fmtCm(t)}`)+
+       lab(D[0]-8,(A[1]+D[1])/2+4,`I ${fmtCm(i)}`,'end')+lab(Math.max(B[0],C[0])+8,(B[1]+C[1])/2+4,`D ${fmtCm(d)}`,'start');
+  }
+  return s+'</svg>';
 }
 function cBalda(){
-  const anc=+gv('bdAnc'),fon=+gv('bdFon'),cnt=+document.getElementById('bdCnt').value||1;
-  const p=getPrecioBalda(),tot=p*cnt;
+  const dib=document.getElementById('bdDib');if(!dib)return;
+  const ct=document.getElementById('bdCantosTxt'),des=document.getElementById('bdDes'),tot=document.getElementById('bdTot'),inf=document.getElementById('bdMInfo');
+  const m=medidasBalda(),cnt=Math.max(1,+gv('bdCnt')||1);
+  if(inf)inf.textContent=BDS.modo!=='mueble'?'':(m?`${BDS.mueble||'Mueble'}: balda de ${fmtCm(m.f)} × ${fmtCm(m.i)} cm (ancho − ${fmtCm(2*(+S.gros||16)/10)} de costados de ${S.gros} mm · fondo según familia)`:'Elige un mueble o indica ancho y fondo.');
+  if(!m){dib.innerHTML='';ct.textContent='';des.innerHTML='Indica las medidas de la balda.';tot.textContent=fmt(0);return;}
+  dib.innerHTML=svgBalda(m,BDS.cantos,280,190,true);
+  ct.textContent='Cantos: '+textoCantosBalda(BDS.cantos);
+  const r=precioBaldaSuelta(m,BDS.esp,BDS.cantos);
+  if(!r){des.innerHTML='Combinación sin precio';tot.textContent=fmt(0);return;}
   const acab=BDS.acab==='blanco'?'Blanco':'Diseños';
-  const rec=BDS.esp==='19'?' (+15% por 19mm)':'';
-  document.getElementById('bdDes').innerHTML=`Balda ${acab} ${BDS.esp}mm · mueble ${anc} × fondo ${fon}${rec}<br>${cnt} ud · ${fmt(p)}/ud`;
-  document.getElementById('bdTot').textContent=fmt(tot);
+  des.innerHTML=`Balda ${acab} ${BDS.esp}mm · ${textoMedidasBalda(m)}<br>Tarifa ${r.celda}${esc(r.nota)}: ${fmt(r.base)}`+
+    (r.rec19?` · +15% 19mm: ${fmt(r.rec19)}`:'')+(r.fals?` · falseada ${r.sup>=BALDA_SUP_FALSEADA_CANTO?'con canto':'sin canto'}: +${r.sup} €`:'')+
+    `<br>${cnt} ud · ${fmt(r.p)}/ud`;
+  tot.textContent=fmt(r.p*cnt);
 }
 function addBalda(){
-  const anc=+gv('bdAnc'),fon=+gv('bdFon'),cnt=+document.getElementById('bdCnt').value||1;
-  const p=getPrecioBalda();if(p<=0)return flash('⚠️ Combinación sin precio');
-  const acab=BDS.acab==='blanco'?'Blanco':'Diseños';
-  const ln={sec:'Varios',tab:'t4',desc:`Balda Melamina ${BDS.esp}mm ${acab} · mueble ${anc} × fondo ${fon}`,cnt,p,nota:gv('bdNt')};
+  const m=medidasBalda();if(!m)return flash('⚠️ Indica las medidas de la balda');
+  const r=precioBaldaSuelta(m,BDS.esp,BDS.cantos);if(!r||r.p<=0)return flash('⚠️ Combinación sin precio');
+  const cnt=Math.max(1,Math.round(+gv('bdCnt')||1)),acab=BDS.acab==='blanco'?'Blanco':'Diseños';
+  const cantos={f:!!BDS.cantos.f,t:!!BDS.cantos.t,i:!!BDS.cantos.i,d:!!BDS.cantos.d};
+  let desc=`Balda Melamina ${BDS.esp}mm ${acab} · ${textoMedidasBalda(m)}`;
+  if(BDS.modo==='mueble'&&BDS.mueble)desc+=` (${BDS.mueble})`;
+  desc+=` · cantos: ${textoCantosBalda(cantos)} · ${BALDA_SOPORTES[BDS.sop].toLowerCase()}`;
+  if(r.fals)desc+=` · falseada +${r.sup} €`;
+  // meta: snapshot de la balda para la hoja de producción (medidas, cantos, soportes) y herrajes sueltos
+  const meta={tipo:'balda',modo:BDS.modo,mueble:BDS.modo==='mueble'?(BDS.mueble||''):'',modeloId:BDS.modo==='mueble'?BDS.modeloId:null,
+    f:m.f,t:m.t,i:m.i,d:m.d,esp:BDS.esp,acab:BDS.acab,cantos,sop:BDS.sop,falseada:r.fals,celda:r.celda,gros:S.gros};
+  const ln={sec:'Varios',tab:'t4',desc,cnt,p:r.p,nota:gv('bdNt'),meta};
   const fus=consolidarLN(ln); // Lote J
   if(!fus){ln.id=++LID;LN.push(ln);}
   uBadge();flash(fus?`✅ Balda añadida (agrupado: ${fus.cnt} uds)`:'✅ Balda añadida');
@@ -3254,7 +3500,7 @@ function rP(){
       const esHija=!!l.parentId||l.auto==='gola'; // Lote L: las líneas auto de gola se gestionan solas
       const botones=esHija?`<span style="font-size:10px;color:var(--g);font-style:italic">(auto)</span>`
         :(editable?`<button class="btn" style="background:#f5c842;color:#856404;padding:4px 8px;font-size:11px;margin-right:4px" onclick="iniciarEdicion(${l.id})" title="Editar">✏️</button><button class="btn bd2" onclick="dL(${l.id})">✕</button>`
-          :editableVM?`<button class="btn" style="background:#f5c842;color:#856404;padding:4px 8px;font-size:11px;margin-right:4px" onclick="editarVariosManual(${l.id})" title="Editar">✏️</button><button class="btn bd2" onclick="dL(${l.id})">✕</button>`
+          :editableVM?`<button class="btn" style="background:#f5c842;color:#856404;padding:4px 8px;font-size:11px;margin-right:4px" onclick="favoritoDesdeLinea(${l.id})" title="Guardar como favorito">⭐</button><button class="btn" style="background:#f5c842;color:#856404;padding:4px 8px;font-size:11px;margin-right:4px" onclick="editarVariosManual(${l.id})" title="Editar">✏️</button><button class="btn bd2" onclick="dL(${l.id})">✕</button>`
           :`<button class="btn bd2" onclick="dL(${l.id})">✕</button>`);
       // Sombreado por modelo en filas de muebles y costados/regletas
       const mid=(l.meta&&l.meta.modeloId!=null)?l.meta.modeloId:(l.modeloId!=null?l.modeloId:null);
@@ -3311,6 +3557,7 @@ function rGola(){
 //   Pinzas zócalo (Varios): igual fórmula con 400cm por tira.
 function calcularHerrajesSueltos(){
   let patas=0,colgadores=0,baldas=0,soportes=0,pinzasMad=0,pinzasZoc=0,salvasifon=0,mbaldas=0;
+  let sopTrad=0,sopAnti=0; // Lote N — soportes de baldas sueltas, por tipo (tradicional / antivuelco)
   const detalle=[];
   LN.forEach(l=>{
     if(!l.meta)return;
@@ -3376,20 +3623,27 @@ function calcularHerrajesSueltos(){
       pinzasMad+=Math.ceil((m.longCm*c)/100*2);
     } else if(m.tipo==='zocalo_varios'){
       pinzasZoc+=Math.ceil((m.longCm*c)/100*2);
+    } else if(m.tipo==='balda'){
+      // Lote N — balda suelta: 4 soportes por unidad del tipo elegido (informativo); "sin soportes" no cuenta.
+      const n=(m.sop==='tradicional'||m.sop==='antivuelco')?SOPORTES_BALDA_SUELTA:0;
+      if(m.sop==='tradicional')sopTrad+=n*c;else if(m.sop==='antivuelco')sopAnti+=n*c;
+      if(n)detalle.push({nom:`Balda suelta ${textoMedidasBalda(m)} · ${BALDA_SOPORTES[m.sop]}`,indic:'',cnt:c,patas:0,colgadores:0,baldas:0,mbaldas:0,soportes:n});
     }
   });
-  return {patas,colgadores,baldas,mbaldas,soportes,pinzasMad,pinzasZoc,salvasifon,detalle};
+  return {patas,colgadores,baldas,mbaldas,soportes,sopTrad,sopAnti,pinzasMad,pinzasZoc,salvasifon,detalle};
 }
 // Hoja imprimible de herrajes sueltos. Página informativa para fábrica, no suma al presupuesto.
 function buildHerrajesSueltosHTML(){
   const h=calcularHerrajesSueltos();
-  if(!h.patas&&!h.colgadores&&!h.baldas&&!h.mbaldas&&!h.soportes&&!h.pinzasMad&&!h.pinzasZoc&&!h.salvasifon)return '';
+  if(!h.patas&&!h.colgadores&&!h.baldas&&!h.mbaldas&&!h.soportes&&!h.sopTrad&&!h.sopAnti&&!h.pinzasMad&&!h.pinzasZoc&&!h.salvasifon)return '';
   const filas=[
     h.patas?['Patas',h.patas]:null,
     h.colgadores?['Colgadores',h.colgadores]:null,
     h.baldas?['Baldas',h.baldas]:null,
     h.mbaldas?['Medias baldas',h.mbaldas]:null,
     h.soportes?['Soportes de balda',h.soportes]:null,
+    h.sopTrad?['Soportes balda suelta (tradicional)',h.sopTrad]:null, // Lote N
+    h.sopAnti?['Soportes balda suelta (antivuelco)',h.sopAnti]:null,  // Lote N
     h.salvasifon?['Accesorio salvasifón',h.salvasifon]:null,
     h.pinzasMad?['Pinzas zócalo de madera',h.pinzasMad]:null,
     h.pinzasZoc?['Pinzas zócalo',h.pinzasZoc]:null
@@ -3501,13 +3755,17 @@ function buildWS(){
     let stm=0;muebles.forEach(l=>{stm+=l.p*l.cnt;h+=`<tr class="wsr" style="${rowBg(l)}"><td>${l.cnt}</td><td>${tag(l)}${esc(l.desc)}</td><td></td><td></td><td></td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;});
     h+=`<tr class="wstot"><td colspan="5"></td><td>Subtotal</td><td>${stm.toFixed(2)}</td></tr></table></div>`;
   }
-  // VARIOS
-  const varios=agruparParaHoja([...(secs['Varios']||[]),...(secs['Puertas adicionales']||[])],midOf);
+  // VARIOS (Lote N: las baldas sueltas van en su propia tabla, con medidas, cantos y soportes)
+  const variosTodos=[...(secs['Varios']||[]),...(secs['Puertas adicionales']||[])];
+  const varios=agruparParaHoja(variosTodos.filter(l=>!(l.meta&&l.meta.tipo==='balda')),midOf);
   if(varios.length){
     h+=`<div><table class="wst"><tr class="wsh"><td colspan="4">VARIOS</td></tr><tr><th>Uds</th><th>Descripción</th><th>Puntos</th><th>Total</th></tr>`;
     let stv=0;varios.forEach(l=>{stv+=l.p*l.cnt;h+=`<tr class="wsr"><td>${l.cnt}</td><td>${esc(l.desc)}</td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;});
     h+=`<tr class="wstot"><td colspan="2"></td><td>Subtotal</td><td>${stv.toFixed(2)}</td></tr></table></div>`;
   }
+  // BALDAS SUELTAS (Lote N) — a todo el ancho: medidas subrayadas por canto, planta, soportes y puntos
+  const baldas=agruparParaHoja(variosTodos.filter(l=>l.meta&&l.meta.tipo==='balda'),midOf);
+  if(baldas.length)h+=buildBaldasSueltasHTML(baldas,rowBg,tag);
   // COSTADOS
   const cvts=agruparParaHoja(secs['Costados/Regletas']||[],midOf);
   if(cvts.length){
@@ -3537,6 +3795,32 @@ function buildWS(){
   // HOJA LISTA DE TIRADORES (Lote H, informativa)
   h+=buildTiradoresHTML();
   document.getElementById('wsContent').innerHTML=h;
+}
+// Lote N — tabla de baldas sueltas en la hoja de producción. Las medidas llevan los cantos subrayados con la
+// misma convención que la lista de corte de la calculadora (1 raya = 1 canto, 2 rayas = 2 cantos) y un
+// dibujo en planta con los lados canteados en trazo grueso. Soportes según lo elegido en cada balda.
+function buildBaldasSueltasHTML(baldas,rowBg,tag){
+  let h=`<div style="grid-column:1/-1"><table class="wst"><tr class="wsh"><td colspan="8">BALDAS SUELTAS</td></tr>`+
+    `<tr><th>Uds</th><th>Balda</th><th>Medidas (cm)</th><th>Planta</th><th>Cantos</th><th>Soportes</th><th>Puntos</th><th>Total</th></tr>`;
+  let st=0;
+  baldas.forEach(l=>{
+    const m=l.meta||{},c=m.cantos||{};st+=l.p*l.cnt;
+    const acab=m.acab==='blanco'?'Blanco':'Diseños';
+    const nomb=`${tag(l)}${m.esp||16}mm ${acab}${m.mueble?' · '+esc(m.mueble):''}${m.falseada?' · <b>FALSEADA</b>':''}`;
+    h+=`<tr class="wsr" style="${rowBg(l)}"><td style="font-weight:900;font-size:11px">${l.cnt}</td><td>${nomb}${l.nota?`<br><i style="color:#666">${esc(l.nota)}</i>`:''}</td>`+
+      `<td style="white-space:nowrap;font-size:10px">${medidasBaldaSubrayadas(m)}</td><td style="text-align:center">${svgBalda(m,c,64,44,false)}</td>`+
+      `<td>${textoCantosBalda(c)}</td><td>${BALDA_SOPORTES[m.sop]||'—'}</td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;
+  });
+  h+=`<tr class="wstot"><td colspan="6"></td><td>Subtotal</td><td>${st.toFixed(2)}</td></tr></table></div>`;
+  return h;
+}
+// Medidas con subrayado por canto: rectangular → "56,8 × 51,5" (ancho subrayado 1 ó 2 veces según frente/trasera
+// canteados; fondo según izq/dcho); falseada → cada lado con su propio subrayado.
+function medidasBaldaSubrayadas(m){
+  const c=m.cantos||{};
+  const u=(v,n)=>n===2?`<span class="bdc2">${v}</span>`:(n===1?`<span class="bdc1">${v}</span>`:v);
+  if(!esBaldaFalseada(m))return `${u(fmtCm(m.f),(c.f?1:0)+(c.t?1:0))} × ${u(fmtCm(m.i),(c.i?1:0)+(c.d?1:0))}`;
+  return `F ${u(fmtCm(m.f),c.f?1:0)} · T ${u(fmtCm(m.t),c.t?1:0)} · I ${u(fmtCm(m.i),c.i?1:0)} · D ${u(fmtCm(m.d),c.d?1:0)}`;
 }
 function addGolaP(){
   // Lote L: las líneas de gola son automáticas (regenerarLineasGola, desde recalcularAcumulados).
@@ -3886,6 +4170,7 @@ function goTab(tabId){
     if(tabId==='t1'){cargarModeloEnS(MFOCO);refrescarCabeceraModelo();}
     if(tabId==='t2')renderMuebleModeloSel();
     if(tabId==='t3'){renderCVTModeloSel();cargarModeloEnS(CVTMODELO);actualizarPanelCVTtab();rCVTList();}
+    if(tabId==='t4')renderBaldaMuebles(); // Lote N
   }
 }
 
