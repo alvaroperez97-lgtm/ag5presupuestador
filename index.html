@@ -22,9 +22,10 @@ header{background:var(--m);color:var(--c);padding:10px 20px;display:flex;align-i
 .hq span{font-family:'Playfair Display',serif;font-size:19px;color:var(--dc);font-weight:700;display:block;}
 /* Lote K — botón "Actualizar" (recarga la app para coger la última versión subida a Netlify; el
    service worker es red-primero, así que basta recargar) y etiqueta de versión para saber cuál está cargada. */
-.hb{margin-top:6px;display:flex;justify-content:flex-end;align-items:center;gap:8px;}
+.hb{margin-top:6px;display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;} /* Lote O: wrap en móvil */
 .btnUpd{background:#2e7d32;color:#fff;border:none;border-radius:6px;padding:5px 11px;font-family:'Lato',sans-serif;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .btnUpd:hover{background:#3b9142;} .btnUpd:disabled{opacity:.7;cursor:default;}
+.btnNew{background:var(--dc);color:var(--m);} .btnNew:hover{background:#d9ab4a;} /* Lote O: Nuevo proyecto */
 #appBuildLbl{font-size:10px;color:var(--cd);opacity:.85;white-space:nowrap;}
 nav{background:var(--mm);display:flex;padding:0 16px;overflow-x:auto;}
 .tb{background:none;border:none;color:var(--cd);padding:13px 20px;cursor:pointer;font-family:'Lato',sans-serif;font-size:13px;font-weight:700;transition:all .2s;border-bottom:3px solid transparent;white-space:nowrap;}
@@ -185,7 +186,7 @@ tr:hover td{background:var(--c);}
     <div class="he"><strong>Almacén Grupo 5</strong>Cañada Aguilera 63 · 47155 Santovenia de Pisuerga (Valladolid)<br>📞 983 268 328 / 671 817 579 · <a href="mailto:oficina@almacengrupocinco.es">oficina@almacengrupocinco.es</a></div>
   </div>
   <div class="hq"><span id="qNum">PRES-000001</span>Presupuesto Cocinas
-    <div class="hb"><small id="appBuildLbl"></small><button class="btnUpd" id="btnUpd" onclick="actualizarApp()" title="Recarga la app para aplicar la última versión subida">🔄 Actualizar</button></div>
+    <div class="hb"><small id="appBuildLbl"></small><button class="btnUpd btnNew" onclick="nuevoP()" title="Vacía cliente, modelos, líneas y formularios para empezar un proyecto nuevo">🆕 Nuevo proyecto</button><button class="btnUpd" id="btnUpd" onclick="actualizarApp()" title="Recarga la app para aplicar la última versión subida">🔄 Actualizar</button></div>
   </div>
 </header>
 <nav>
@@ -403,8 +404,8 @@ tr:hover td{background:var(--c);}
         <div id="addF" style="display:none">
           <div id="gInfo" style="display:none;background:rgba(155,122,42,.2);border:1px solid var(--d);border-radius:6px;padding:8px;margin-bottom:10px;font-size:11px;color:var(--dc)"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:10px">
-            <div class="fg"><label>Alto armz.</label><input type="number" id="mAlt" min="1" oninput="cp()"></div>
-            <div class="fg"><label>Ancho armz.</label><input type="number" id="mAnc" min="1" oninput="cp()"></div>
+            <div class="fg"><label>Alto armz.</label><input type="number" id="mAlt" min="1" oninput="seguirMedidaArm('alto')"></div>
+            <div class="fg"><label>Ancho armz.</label><input type="number" id="mAnc" min="1" oninput="seguirMedidaArm('ancho')"></div>
             <div class="fg"><label>Fondo armz.</label><input type="number" id="mFon" min="1" oninput="cp()"></div>
           </div>
           <!-- Lote F: forma especial (×2 armazón) + doble fondo informativo en chaflanes -->
@@ -893,12 +894,13 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-17.1';
+const APP_BUILD = '2026-09-18.1';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
 const REC_MEDIDA_NO_STD  = 0.30;  // (Lote L: YA NO SE APLICA a puertas/costados — van siempre al tramo superior sin recargo. Se conserva la constante por compatibilidad)
 const ALTO_BAJO_GOLA     = 80;    // Lote L: bajos con gola se fabrican de 80 pero se tarifan como Bajos 75 (sin +30%)
+const REBAJE_PUERTA_GOLA = 3;     // Lote P: en bajos con gola la puerta mide alto de armazón − 3 (80 → 77) por el perfil
 const REC_LACA_NO_STD    = 0.20;  // +20% color laca no estándar (T-7A/7B/CVT-7)
 // Lote F — recargos sobre el ARMAZÓN (solo afectan al precio del casco, nunca a puertas/tiradores):
 const REC_ARM_NO_STD     = 0.30;  // +30% armazón por alto o fondo no estándar (excluyente con ×2 forma especial)
@@ -1279,6 +1281,12 @@ function buildARM(){
   // Lote L (14-09-2026) — Bajos rincón escuadra de alto 75 (PDF pág. 15), familia que faltaba.
   // Al final de la lista por la misma razón que Campana/Grupo (no mover ids de armazones ya guardados).
   [[90,80,146.93],[90,90,154.09],[95,95,161.36],[100,80,169.84]].forEach(([h,w,d])=>a('Bajos 75',`B.Rinc.Esc A.75 ${h}x${w}`,75,w,'58',d));
+  // Lote P (18-09-2026) — Familia "Bajos 80". No existe en la tarifa 2021 pero se pide cada vez más.
+  // Regla confirmada por Álvaro (18-09-2026): TODOS los "Bajo algo" de 80 (Bajo, B.Freg, B.Rinc.Esc,
+  // B.Rinc.Freg, B.Rinc.Recto) se cobran al precio de su equivalente de Bajos 75. Se clona la familia
+  // Bajos 75 con alto 80 y nombre A.80; ids al final para no mover armazones ya guardados en proyectos.
+  // Con gola bajos siguen tarifándose como Bajos 75 (equivalenteBajos75), igual que los de 70.
+  R.filter(x=>x.fam==='Bajos 75').forEach(x=>a('Bajos 80',x.nom.replace('A.75','A.80'),80,x.anc,x.fon,x.p));
   return R;
 }
 const ARM=buildARM();
@@ -1405,12 +1413,12 @@ function precioTirItem(cfg,w,it,ladoBajo){
   if(cfg.t==='gola'&&!ladoBajo)return (it&&it.tMan!=null)?+it.tMan:gap(w);
   return 0;
 }
-const BAJOS=['Bajos 70','Bajos 75'];
+const BAJOS=['Bajos 70','Bajos 75','Bajos 80']; // Lote P: + Bajos 80
 function isBajo(arm){return BAJOS.includes(arm.fam)||['Columnas','Media Columna'].includes(arm.fam);}
 function isRin(arm){return['Rinc.','B.Rinc.','Col.Rinc.'].some(k=>arm.nom.includes(k));}
 function isRinR(arm){return isRin(arm)&&arm.nom.includes('Recto');}
 // Helpers de familia para herrajes sueltos
-function esBajoFam(arm){return['Bajos 70','Bajos 75'].includes(arm.fam);}
+function esBajoFam(arm){return BAJOS.includes(arm.fam);} // Lote P: misma lista que isBajo (incluye Bajos 80)
 function esColumnaFam(arm){return['Columnas','Media Columna'].includes(arm.fam);}
 function esColganteFam(arm){return['Colgantes','Campana/Grupo','Rincón Colgante','Caldera','Microondas','Escurreplatos','Sobre Encimera','Sobre Frigo'].includes(arm.fam);}
 function esRinEsc(arm){return arm.nom.includes('Rinc.Esc')||arm.nom.includes('Rinc.Freg');}
@@ -2226,7 +2234,9 @@ function setTGC(side,color,btn){
 
 // MUEBLES
 // Lote K — Campana/Grupo está al final de ARM (ids estables) pero se muestra justo después de Colgantes.
-const MCATS=(()=>{const c=[...new Set(ARM.map(a=>a.fam))];const i=c.indexOf('Campana/Grupo');if(i>0){c.splice(i,1);c.splice(c.indexOf('Colgantes')+1,0,'Campana/Grupo');}return c;})();
+const MCATS=(()=>{const c=[...new Set(ARM.map(a=>a.fam))];const i=c.indexOf('Campana/Grupo');if(i>0){c.splice(i,1);c.splice(c.indexOf('Colgantes')+1,0,'Campana/Grupo');}
+  const j=c.indexOf('Bajos 80');if(j>0){c.splice(j,1);c.splice(c.indexOf('Bajos 75')+1,0,'Bajos 80');} // Lote P: Bajos 80 tras Bajos 75
+  return c;})();
 function bMC(){document.getElementById('mCats').innerHTML=MCATS.map((c,i)=>`<button class="cpill${i===0?' on':''}" onclick="sMC(this,'${c.replace(/'/g,"\\'")}')">${c}</button>`).join('');}
 function sMC(btn,cat){document.querySelectorAll('#mCats .cpill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');rM(cat);}
 // Precio armazón: tras unificación de tarifa, los cascos blancos pasan a tener el mismo precio que los de diseños.
@@ -2252,9 +2262,19 @@ function gap2(arm,opts,baseMan){
 // Equivalente "gola bajos": el bajo de 80 con gola se tarifa como Bajos 75. Reenvía los recargos.
 // Lote L: solo los BAJOS (esBajoFam) pasan a Bajos 75; las columnas/medias columnas siguen con su armazón
 // (antes isBajo() incluía columnas y una Columna A.205 se cobraba como un Bajo A.75).
+// Lote P (18-09-2026) — Equivalente "Bajos 75" de un bajo regular (no rincón) de otra altura, por LÍNEA DE
+// PRODUCTO: Bajo A.70 An.60 → Bajo A.75 An.60; B.Freg A.80 An.60 → B.Freg A.75 An.60. Antes se buscaba
+// siempre el "Bajo" liso del mismo ancho, con lo que un B.Freg con gola se cobraba como Bajo 75 (An.60:
+// 57,19 en vez de 53,10). null si no aplica (no es bajo regular o no hay equivalente).
+function equivalenteBajos75(arm){
+  if(!arm||!esBajoFam(arm)||isRin(arm))return null;
+  if(arm.fam==='Bajos 75')return arm;
+  const nom=arm.nom.replace(/A\.\d+/,'A.75');
+  return ARM.find(a=>a.fam==='Bajos 75'&&a.nom===nom)||null;
+}
 function gapG(arm,opts,baseMan){
-  if(S.tb.t==='gola'&&esBajoFam(arm)&&!isRin(arm)){
-    const eq=ARM.find(a=>a.fam==='Bajos 75'&&a.anc===arm.anc&&!a.nom.includes('Freg')&&!a.nom.includes('Rinc'));
+  if(S.tb.t==='gola'){
+    const eq=equivalenteBajos75(arm); // Lote P: por línea de producto
     if(eq)return gap2(eq,opts,baseMan);
   }
   return gap2(arm,opts,baseMan);
@@ -2262,11 +2282,43 @@ function gapG(arm,opts,baseMan){
 // Armazón cuyas medidas (alt/fon) definen "lo estándar" para el recargo +30%.
 // En gola bajos la referencia es el equivalente Bajos 75 (alto 75), no el bajo original.
 function refArmazon(arm){
-  if(S.tb.t==='gola'&&esBajoFam(arm)&&!isRin(arm)){
-    const eq=ARM.find(a=>a.fam==='Bajos 75'&&a.anc===arm.anc&&!a.nom.includes('Freg')&&!a.nom.includes('Rinc'));
+  if(S.tb.t==='gola'){
+    const eq=equivalenteBajos75(arm); // Lote P: por línea de producto
     if(eq)return eq;
   }
   return arm;
+}
+// Lote P (18-09-2026) — Alto de puerta por defecto para un alto de armazón: en bajos con gola la puerta
+// pierde el perfil (80 → 77); en el resto, puerta = alto del armazón.
+function altoPuertaDefecto(arm,altoArm){
+  const golaBajo=S.tb.t==='gola'&&!!arm&&esBajoFam(arm)&&!isRin(arm);
+  return golaBajo?altoArm-REBAJE_PUERTA_GOLA:altoArm;
+}
+// Lote P — medidas "por defecto" vigentes de puertas/frentes en el modal regular. Al teclear alto/ancho
+// del armazón, solo se arrastran las puertas/frentes que siguen en la medida por defecto; las tocadas a
+// mano no se pisan. Se fija en selA / iniciarEdicion y se va actualizando en seguirMedidaArm.
+let MDEF={alto:0,ancho:0};
+function seguirMedidaArm(campo){
+  if(!SEL){cp();return;}
+  const v=+document.getElementById(campo==='alto'?'mAlt':'mAnc').value||0;
+  if(!v){cp();return;} // campo vacío o 0: no propagar, solo recalcular
+  let cambio=false;
+  if(campo==='alto'){
+    const nuevo=altoPuertaDefecto(SEL,v);
+    MPuertas.forEach(p=>{if(+p.alto===MDEF.alto){p.alto=nuevo;cambio=true;}});
+    MDEF.alto=nuevo;
+  } else {
+    MPuertas.forEach(p=>{if(+p.ancho===MDEF.ancho){p.ancho=v;cambio=true;}});
+    MFrentesCJ.forEach(f=>{if(+f.ancho===MDEF.ancho){f.ancho=v;cambio=true;}});
+    MDEF.ancho=v;
+  }
+  if(cambio){renderMP();renderMFCJ();}else cp();
+}
+// Lote P — medidas reales del armazón para la descripción del presupuesto, solo si difieren de la tarjeta:
+// "Bajo A.70 An.60 (72×57×50)". Así la línea refleja exactamente lo elegido (y lo editado después).
+function descMedidasArm(arm,alt,anc,fon){
+  if(!arm||(alt===arm.alt&&anc===arm.anc&&fon===(+arm.fon)))return '';
+  return ` (${fmtCm(alt)}×${fmtCm(anc)}×${fmtCm(fon)})`;
 }
 // Etiqueta legible de la forma especial (para descripción y desglose).
 const FORMA_LAB={ninguna:'',chaflan:'Chaflán',viga:'Cajeo viga',columna:'Cajeo columna'};
@@ -2377,13 +2429,17 @@ function selA(id,card){
   if(isRin(SEL)){document.getElementById('addF').style.display='none';document.getElementById('rinF').style.display='block';rRincon();actualizarBaldasManUIRincon(SEL);actualizarBaldaFregUI(SEL,'r');actualizarMediasBaldasUI(SEL,'r');RFrentesCJ=[];renderRFCJ();}
   else{document.getElementById('rinF').style.display='none';document.getElementById('addF').style.display='block';
     const isGB=S.tb.t==='gola'&&esBajoFam(SEL); // Lote L: solo bajos (las columnas no cambian de alto)
-    document.getElementById('mAlt').value=isGB?75:SEL.alt;
+    // Lote P (18-09-2026): con gola el alto mostrado es el REAL (80, sin recargo por ALTO_BAJO_GOLA); antes se
+    // mostraba 75 (alto de tarifa) y la puerta 77 no se derivaba de nada. Con la familia Bajos 80 es lo mismo.
+    const altoArm0=isGB?ALTO_BAJO_GOLA:SEL.alt;
+    document.getElementById('mAlt').value=altoArm0;
     document.getElementById('mAnc').value=SEL.anc;
     document.getElementById('mFon').value=SEL.fon;
     // Reset forma especial al elegir mueble nuevo
     MFORMA='ninguna';document.getElementById('mDFD').value='';document.getElementById('mDFI').value='';pintarFormaTgg('m','ninguna');
     const gi=document.getElementById('gInfo');gi.style.display=isGB?'block':'none';if(isGB)gi.textContent='🔧 Gola bajos: armazón se cobra como 75 (aunque sea de 80) · puerta 77 → tramo 90 sin recargo · la gola se suma sola en el presupuesto';
-    MPuertas=[{alto:isGB?77:SEL.alt,ancho:SEL.anc,tir:'on',mano:'D'}];
+    MDEF={alto:altoPuertaDefecto(SEL,altoArm0),ancho:SEL.anc}; // Lote P
+    MPuertas=[{alto:MDEF.alto,ancho:MDEF.ancho,tir:'on',mano:'D'}];
     MFrentesCJ=[];
     renderMP();renderMFCJ();
     document.getElementById('chkMR').checked=false;document.getElementById('mRegF').style.display='none';
@@ -2429,7 +2485,7 @@ function renderMP(){
     c.appendChild(d);
   });cp();
 }
-function addMP(){MPuertas.push({alto:SEL?SEL.alt:'',ancho:SEL?SEL.anc:'',tir:'on',mano:'D'});renderMP();}
+function addMP(){MPuertas.push({alto:MDEF.alto||(SEL?SEL.alt:''),ancho:MDEF.ancho||(SEL?SEL.anc:''),tir:'on',mano:'D'});renderMP();} // Lote P: medida vigente
 function updMP(idx,field,val){if(MPuertas[idx]){MPuertas[idx][field]=val;if(field==='tir'||field==='mano')renderMP();else cp();}}
 function delMP(idx){MPuertas.splice(idx,1);renderMP();}
 
@@ -2464,7 +2520,7 @@ function renderMFCJ(){
   });
   cp();
 }
-function addMFCJ(){MFrentesCJ.push({alto:'',ancho:SEL?SEL.anc:'',tir:'on',tipo:'CJ',fondo:'F50',ss:'off'});renderMFCJ();}
+function addMFCJ(){MFrentesCJ.push({alto:'',ancho:MDEF.ancho||(SEL?SEL.anc:''),tir:'on',tipo:'CJ',fondo:'F50',ss:'off'});renderMFCJ();} // Lote P: ancho vigente
 // Lote H — al cambiar tipo a CJ se resetea el salvasifón (solo aplica a gavetas)
 function updMFCJ(idx,field,val){if(MFrentesCJ[idx]){MFrentesCJ[idx][field]=val;if(field==='tipo'&&val!=='GV')MFrentesCJ[idx].ss='off';if(field==='tir'||field==='tipo'||field==='fondo'||field==='ss')renderMFCJ();else cp();}}
 function delMFCJ(idx){MFrentesCJ.splice(idx,1);renderMFCJ();}
@@ -2621,7 +2677,7 @@ function addM(){
   }
   // La regleta NO suma al precio del mueble (pasa a ser línea CVT independiente, ver más abajo).
   const tot=armP+ptTot+tTot;
-  let desc=SEL.nom;if(pd.length)desc+=` + ${S.tar} [${pd.join(', ')}]`;
+  let desc=SEL.nom+descMedidasArm(SEL,mAltV,mAncV,mFonV);if(pd.length)desc+=` + ${S.tar} [${pd.join(', ')}]`; // Lote P: medidas reales
   // Lote F: anotar forma especial (×2) y, si chaflán, el doble fondo informativo en la descripción.
   if(MFORMA!=='ninguna'){
     desc+=` · ${FORMA_LAB[MFORMA]} ×2`;
@@ -2708,6 +2764,7 @@ function addM(){
     limpiarFormularioMueble(); // D1: evita duplicar al re-pulsar tras guardar
   } else {
     flash(fusionado?`✅ Añadido (agrupado: ${fusionado.cnt} uds)`:'✅ Añadido');
+    limpiarFormularioMueble(); // Lote O (17-09-2026): tras añadir, formulario en limpio para el siguiente mueble
   }
   recalcularAcumulados();
   uBadge();document.getElementById('aNt').value='';document.getElementById('aCnt').value=1;
@@ -2726,7 +2783,14 @@ function addQP(){const a=+document.getElementById('qA').value||0,w=+document.get
   const ln={sec:'Puertas adicionales',tab:'t2',desc:(gv('qD')||`Puerta ${S.tar} ${a}×${w}`)+(S.recargoModelo>0?` · recargo modelo +${S.recargoModelo}%`:''),cnt,p,nota:(GPP_NOTA||'').trim()};
   const fus=consolidarLN(ln); // Lote J
   if(!fus){ln.id=++LID;LN.push(ln);}
-  uBadge();flash(fus?`🚪 Puerta añadida (agrupado: ${fus.cnt} uds)`:'🚪 Puerta añadida');}
+  uBadge();flash(fus?`🚪 Puerta añadida (agrupado: ${fus.cnt} uds)`:'🚪 Puerta añadida');
+  limpiarPuertaRapida();} // Lote O
+// Lote O (17-09-2026) — vacía el mini-formulario de puertas adicionales (alto, ancho, desc, ud=1)
+function limpiarPuertaRapida(){
+  ['qA','qW','qD'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const c=document.getElementById('qC');if(c)c.value=1;
+  const p=document.getElementById('qpP');if(p)p.textContent='';
+}
 
 // RINCÓN — array based para renumeración correcta
 let RPuertas=[]; // [{alto,ancho,tir}]
@@ -2985,6 +3049,7 @@ function addRin(){
     limpiarFormularioMueble(); // D1: evita duplicar al re-pulsar tras guardar
   } else {
     flash(fusionadoRin?`✅ Rincón añadido (agrupado: ${fusionadoRin.cnt} uds)`:'✅ Rincón añadido');
+    limpiarFormularioMueble(); // Lote O (17-09-2026): tras añadir, formulario en limpio para el siguiente mueble
   }
   recalcularAcumulados();
   uBadge();
@@ -3047,7 +3112,18 @@ function addCVT(){
   if(CVTTIPO==='zocalo')ln.meta={tipo:'zocalo_cvt',longCm:w};
   const fus=consolidarLN(ln); // Lote J (la huella incluye desc con medidas, nota y modelo)
   if(!fus){ln.id=++LID;LN.push(ln);}
-  uBadge();document.getElementById('cvtNt').value='';rCVTList();flash(fus?`✅ ${tipo} añadido (agrupado: ${fus.cnt} uds)`:'✅ '+tipo+' añadido');
+  uBadge();limpiarFormularioCVT();rCVTList();flash(fus?`✅ ${tipo} añadido (agrupado: ${fus.cnt} uds)`:'✅ '+tipo+' añadido'); // Lote O: campos en limpio
+}
+// Lote O (17-09-2026) — deja el formulario CVT en limpio (medidas, cantidad y nota). Conserva tipo
+// (costado/regleta/zócalo) y espesor: son ajustes que suelen repetirse. Con total=true (nuevo
+// proyecto) vuelve también el tipo a Costado Visto.
+function limpiarFormularioCVT(total){
+  ['cvtA','cvtW','cvtNt'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const c=document.getElementById('cvtCnt');if(c)c.value=1;
+  if(total){CVTTIPO='costado';['cvtCost','cvtReg','cvtZoc'].forEach(id=>document.getElementById(id)?.classList.toggle('on',id==='cvtCost'));}
+  const d=document.getElementById('cvtDes'),t=document.getElementById('cvtTot');
+  if(d)d.textContent='Introduce alto y ancho';if(t)t.textContent=fmt(0);
+  if(CVTTAR)cCVT();
 }
 // Listado en pantalla de líneas CVT añadidas (sección Costados/Regletas)
 function rCVTList(){
@@ -3094,6 +3170,9 @@ function addV(idx){const item=VF[idx];if(!item)return;
   // Lote J — consolidación: si ya existe una línea idéntica, se suman unidades
   const fus=consolidarLN(ln);
   if(!fus){ln.id=++LID;LN.push(ln);}
+  // Lote O (17-09-2026): la tarjeta vuelve a su estado inicial (1 ud, sin puerta del cliente)
+  const cI=document.getElementById('vCnt'+idx);if(cI)cI.value=1;
+  const pcI=document.getElementById('vPC'+idx);if(pcI)pcI.checked=false;
   uBadge();flash(fus?`✅ Añadido (agrupado: ${fus.cnt} uds)`:`✅ Añadido${cnt>1?` ×${cnt}`:''}`);}
 
 // ═════════════════════════ Lote I — LÍNEA MANUAL DE VARIOS ═════════════════════════
@@ -3266,13 +3345,38 @@ function setBaldaOrigen(v,btn){
 }
 function setBaldaFalseada(on){BDS.falseada=!!on;['bdT','bdD'].forEach(id=>{document.getElementById(id).disabled=!on;});cBalda();}
 function toggleCantoBalda(k){BDS.cantos[k]=!BDS.cantos[k];cBalda();}
+// Lote O (17-09-2026) — deja el widget de balda suelta en limpio tras añadir. Vacía medidas, mueble
+// elegido, cantidad y nota; conserva acabado/espesor/soportes/cantos (ajustes que se repiten entre
+// baldas del mismo proyecto). Con total=true (nuevo proyecto) vuelve todo a los valores por defecto.
+function limpiarFormularioBalda(total){
+  ['bdMAnc','bdMFon','bdF','bdT','bdI','bdD','bdNt'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const c=document.getElementById('bdCnt');if(c)c.value=1;
+  const fz=document.getElementById('bdFalseada');if(fz)fz.checked=false;
+  BDS.falseada=false;['bdT','bdD'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=true;});
+  ['bdMueble','bdArm'].forEach(id=>{const s=document.getElementById(id);if(s)s.value='';});
+  BDS.mueble=null;BDS.modeloId=null;BDS.fam='';
+  if(total){
+    BDS.acab='blanco';BDS.esp='16';BDS.sop='tradicional';BDS.cantos={f:true,t:true,i:true,d:true};BDS.modo='mueble';BDS.origen='proy';
+    document.getElementById('bdBl')?.classList.add('on');document.getElementById('bdDi')?.classList.remove('on');
+    document.getElementById('bd16')?.classList.add('on');document.getElementById('bd19')?.classList.remove('on');
+    document.querySelectorAll('#bdSopTgg .tgb').forEach((b,i)=>b.classList.toggle('on',i===0));
+    document.getElementById('bdModoM')?.classList.add('on');document.getElementById('bdModoX')?.classList.remove('on');
+    document.getElementById('bdOrigP')?.classList.add('on');document.getElementById('bdOrigC')?.classList.remove('on');
+    const bm=document.getElementById('bdBoxMueble');if(bm)bm.style.display='block';
+    const bx=document.getElementById('bdBoxManual');if(bx)bx.style.display='none';
+    const fp=document.getElementById('bdFgProy');if(fp)fp.style.display='flex';
+    ['bdFgFam','bdFgArm'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  }
+  cBalda();
+}
 // Desplegables de muebles: los del presupuesto (líneas de mueble, sin rincones: su balda no es rectangular →
 // usar medidas manuales/falseada) y el catálogo (familia + armazón). Se refresca al entrar en Varios.
 function renderBaldaMuebles(){
   const sel=document.getElementById('bdMueble');if(!sel)return;
   const prev=sel.value;
   const ms=LN.filter(l=>l.meta&&l.meta.tipo==='mueble'&&!/Rinc/.test(l.meta.nom||''));
-  sel.innerHTML=ms.length?ms.map(l=>{const m=l.meta;const mid=(m.modeloId!=null&&MODELOS.length>1)?`M${m.modeloId+1} · `:'';return `<option value="${l.id}">${esc(mid+(m.nom||''))} · ${fmtCm(m.anc)}×${fmtCm(m.fon)}${l.cnt>1?' ×'+l.cnt:''}</option>`;}).join(''):'<option value="">— sin muebles en el presupuesto —</option>';
+  // Lote O: primera opción vacía; así el widget queda realmente en limpio tras añadir una balda
+  sel.innerHTML='<option value="">'+(ms.length?'— elige un mueble —':'— sin muebles en el presupuesto —')+'</option>'+ms.map(l=>{const m=l.meta;const mid=(m.modeloId!=null&&MODELOS.length>1)?`M${m.modeloId+1} · `:'';return `<option value="${l.id}">${esc(mid+(m.nom||''))} · ${fmtCm(m.anc)}×${fmtCm(m.fon)}${l.cnt>1?' ×'+l.cnt:''}</option>`;}).join('');
   if(prev&&ms.some(l=>String(l.id)===prev))sel.value=prev;
   const fam=document.getElementById('bdFam');
   if(fam&&!fam.options.length){
@@ -3283,7 +3387,7 @@ function renderBaldaMuebles(){
 }
 function renderBaldaArm(recalc=true){
   const fam=gv('bdFam'),sel=document.getElementById('bdArm');if(!sel)return;
-  sel.innerHTML=ARM.filter(a=>a.fam===fam&&!isRin(a)).map(a=>`<option value="${a.id}">${esc(a.nom)} · ${a.anc}×${a.fon}</option>`).join('');
+  sel.innerHTML='<option value="">— elige un armazón —</option>'+ARM.filter(a=>a.fam===fam&&!isRin(a)).map(a=>`<option value="${a.id}">${esc(a.nom)} · ${a.anc}×${a.fon}</option>`).join(''); // Lote O: opción vacía
   if(recalc)baldaArmElegido();
 }
 // Mueble del presupuesto elegido → ancho/fondo reales de esa línea (editables) y su modelo.
@@ -3406,6 +3510,7 @@ function addBalda(){
   const fus=consolidarLN(ln); // Lote J
   if(!fus){ln.id=++LID;LN.push(ln);}
   uBadge();flash(fus?`✅ Balda añadida (agrupado: ${fus.cnt} uds)`:'✅ Balda añadida');
+  limpiarFormularioBalda(); // Lote O (17-09-2026): widget en limpio para la siguiente balda
 }
 
 // ═════════════════════════ ENCIMERAS Y MOSTRADORES · UI Y CÁLCULO ═════════════════════════
@@ -3464,6 +3569,28 @@ function addEnc(){
     const fus=consolidarLN(ln); // Lote J
     if(!fus){ln.id=++LID;LN.push(ln);}
     uBadge();flash(fus?`✅ Encimera añadida (agrupado: ${fus.cnt} uds)`:'✅ Encimera añadida');
+  }
+  limpiarFormularioEncimera(); // Lote O (17-09-2026): formulario en limpio para la siguiente encimera
+}
+// Lote O (17-09-2026) — deja el formulario de encimera en limpio: sin modelo seleccionado, tableros y
+// cantidad a 1, nota vacía. Conserva tipo/espesor/rango (se repiten dentro de un proyecto); con
+// total=true (nuevo proyecto) vuelve a Encimera 30mm rango 1.
+function limpiarFormularioEncimera(total){
+  SELE=null;
+  document.querySelectorAll('.ec').forEach(c=>c.classList.remove('on'));
+  const f=document.getElementById('eForm');if(f)f.style.display='none';
+  const inf=document.getElementById('eInf');if(inf)inf.textContent='Selecciona un modelo';
+  const tb=document.getElementById('eTbl');if(tb)tb.value=1;
+  const c=document.getElementById('eCnt');if(c)c.value=1;
+  const n=document.getElementById('eNt');if(n)n.value='';
+  const d=document.getElementById('eDes'),t=document.getElementById('eTot');if(d)d.innerHTML='';if(t)t.textContent=fmt(0);
+  if(total){
+    ETIPO='encimera';ESP='30';ERANGO='r1';
+    document.getElementById('eTipoE')?.classList.add('on');document.getElementById('eTipoM')?.classList.remove('on');
+    ['e30','e38'].forEach(id=>document.getElementById(id)?.classList.toggle('on',id==='e30'));
+    ['eR1','eR2','eR3'].forEach(id=>document.getElementById(id)?.classList.toggle('on',id==='eR1'));
+    const eb=document.getElementById('eEspBox'),tbx=document.getElementById('eTblBox'),rb=document.getElementById('eRangoBox');
+    if(eb)eb.style.display='block';if(tbx)tbx.style.display='block';if(rb)rb.style.display='none';
   }
 }
 
@@ -3752,7 +3879,7 @@ function buildWS(){
   const muebles=agruparParaHoja(secs['Muebles']||[],midOf);
   if(muebles.length){
     h+=`<div><table class="wst"><tr class="wsh"><td colspan="7">ARMAZONES / PUERTAS Y FRENTES</td></tr><tr><th>Uds</th><th>Descripción</th><th>Alto</th><th>Ancho</th><th>Fondo</th><th>Puntos</th><th>Total</th></tr>`;
-    let stm=0;muebles.forEach(l=>{stm+=l.p*l.cnt;h+=`<tr class="wsr" style="${rowBg(l)}"><td>${l.cnt}</td><td>${tag(l)}${esc(l.desc)}</td><td></td><td></td><td></td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;});
+    let stm=0;muebles.forEach(l=>{stm+=l.p*l.cnt;const dm=dimsHojaMueble(l);h+=`<tr class="wsr" style="${rowBg(l)}"><td>${l.cnt}</td><td>${tag(l)}${esc(l.desc)}</td><td>${dm[0]}</td><td>${dm[1]}</td><td>${dm[2]}</td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;}); // Lote P: medidas reales
     h+=`<tr class="wstot"><td colspan="5"></td><td>Subtotal</td><td>${stm.toFixed(2)}</td></tr></table></div>`;
   }
   // VARIOS (Lote N: las baldas sueltas van en su propia tabla, con medidas, cantos y soportes)
@@ -3869,6 +3996,16 @@ function fusionarNotasAuto(pares){
 }
 // Agrupación para las hojas impresas (producción): fusiona TODA línea idéntica
 // (desc+precio+modelo), hija o no, sumando unidades. Solo presentación.
+// Lote P (18-09-2026) — Alto/Ancho/Fondo reales del mueble para la hoja de producción (antes iban vacíos).
+// Regular: medidas tecleadas en el modal (meta.alt/anc/fon). Rincón recto: ancho real si se indicó;
+// escuadra: los dos anchos de la tarjeta (90x80). Líneas sin meta de mueble: en blanco.
+function dimsHojaMueble(l){
+  const m=l.meta;if(!m||m.tipo!=='mueble')return ['','',''];
+  let anc=m.anchoReal||m.anc;
+  if(m.esRinEsc){const mm=(m.nom||'').match(/(\d+)x(\d+)$/);if(mm)anc=`${mm[1]}x${mm[2]}`;}
+  const f=v=>(v==null||v===''||(typeof v==='number'&&!v))?'':(typeof v==='number'?fmtCm(v):esc(String(v)));
+  return [f(+m.alt||m.alt),f(typeof anc==='string'&&/x/.test(anc)?anc:(+anc||anc)),f(+m.fon||m.fon)];
+}
 function agruparParaHoja(arr,midOf){
   const out=[],ix={};
   arr.forEach(l=>{
@@ -4045,6 +4182,7 @@ function iniciarEdicion(id){
     document.getElementById('mAlt').value=m.alt||SEL.alt;
     document.getElementById('mAnc').value=m.anc||SEL.anc;
     document.getElementById('mFon').value=m.fon||SEL.fon;
+    MDEF={alto:altoPuertaDefecto(SEL,+m.alt||SEL.alt),ancho:+m.anc||SEL.anc}; // Lote P: para que alto/ancho arrastren las puertas también al editar
     // Lote F: restaurar forma especial / doble fondo
     MFORMA=m.forma||'ninguna';pintarFormaTgg('m',MFORMA);
     MARMMAN=(m.armPMan!=null)?+m.armPMan:null; // Lote M
@@ -4096,6 +4234,7 @@ function limpiarFormularioMueble(){
   MPuertas=[];MFrentesCJ=[];RPuertas=[];RFrentesCJ=[];
   MFORMA='ninguna';RFORMA='ninguna';pintarFormaTgg('m','ninguna');pintarFormaTgg('r','ninguna');
   MARMMAN=null;RARMMAN=null; // Lote M
+  MDEF={alto:0,ancho:0}; // Lote P
   // Vaciar contenedores de puertas/frentes (modal normal y rincón)
   ['mPuertasC','mFrentesCJC','rinP','rFrentesCJC'].forEach(idc=>{const c=document.getElementById(idc);if(c)c.innerHTML='';});
   // Lote H: ocultar y desmarcar checkboxes de balda fregadero
@@ -4125,6 +4264,7 @@ function limpiarFormularioMueble(){
 // Igual que cancelar pero sin tocar formulario: se llama al guardar (addM con EDIT_ID activo)
 function finalizarEdicion(){
   EDIT_ID=null;
+  cargarModeloEnS(MMODELO); // Lote P (18-09-2026): S deja de ser el snapshot del mueble (S_OVERLAY=false) → autoguardado y selectores globales operativos sin cambiar de pestaña
   document.getElementById('editBanner').style.display='none';
   // Restaura la etiqueta original de TODOS los botones .badd (no solo addM/addRin):
   // CVT, Balda y Encimera también se cambiaron al entrar en edición. Se restaura desde
@@ -4155,7 +4295,48 @@ function uBadge(){document.getElementById('badge').textContent=LN.length;}
 
 // EXPORT/NEW
 function expCSV(){const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';let csv='Nº;Sección;Descripción;Nota;Cantidad;Precio/ud;Total\n';let n=1;LN.forEach(l=>{csv+=`${n++};${q(l.sec)};${q(l.desc)};${q(l.nota||'')};${l.cnt};${l.p.toFixed(2)};${(l.p*l.cnt).toFixed(2)}\n`;});const sub=LN.reduce((s,l)=>s+l.p*l.cnt,0),d=+document.getElementById('desc')?.value||0,base=sub*(1-d/100),ivr=+document.getElementById('ivaR')?.value||21;csv+=`\n;;Subtotal;;;${sub.toFixed(2)}\n;;Base;;;${base.toFixed(2)}\n;;IVA ${ivr}%;;;${(base*ivr/100).toFixed(2)}\n;;TOTAL;;;${(base*(1+ivr/100)).toFixed(2)}\n`;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));a.download=`${S.qn||'presupuesto'}.csv`;a.click();}
-function nuevoP(){if(LN.length&&!confirm('¿Nuevo presupuesto? Se perderán las líneas actuales.'))return;LN=[];SEL=null;LID=0;resetVariosManual();S.gola={};EDIT_ID=null;MFrentesCJ=[];RFrentesCJ=[];MPuertas=[];RPuertas=[];MFORMA='ninguna';RFORMA='ninguna';MODELOS=[nuevoModelo(1)];MFOCO=0;MMODELO=0;CVTMODELO=0;cargarModeloEnS(0);const eb=document.getElementById('editBanner');if(eb)eb.style.display='none';['cNom','cTel','cEmail','cDir','pObs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});S.qn='';S.tipoDoc='';lsBorrar(LS_BORRADOR);const nm=document.getElementById('numManual');if(nm)nm.value='';const nmc=document.getElementById('numManualChk');if(nmc)nmc.checked=false;actualizarCabeceraNum();renderProyectosGuardados();document.getElementById('pFecha').value=new Date().toISOString().split('T')[0];uBadge();rCVTList();refrescarCabeceraModelo();renderMuebleModeloSel();renderCVTModeloSel();sw('t1',document.querySelectorAll('.tb')[0]);}
+// Lote O (17-09-2026) — NUEVO PROYECTO. Botón en cabecera (visible desde cualquier pestaña) y en ⑥ Proyectos.
+// Deja la app como recién abierta: cliente, modelos, líneas, gola acumulada, dto/IVA/validez, grosor,
+// cajón, y TODOS los formularios de las pestañas (mueble, puerta rápida, CVT, balda, gola manual, línea
+// manual, catálogos, encimera). No toca lo guardado en este dispositivo (proyectos, tarifa modificada,
+// favoritos, contadores). Reescrita en formato legible desde la versión de una sola línea.
+function nuevoP(){
+  const hayTrabajo=LN.length||gv('cNom').trim()||gv('cDir').trim();
+  if(hayTrabajo&&!confirm('¿Nuevo proyecto? Se perderán las líneas y los datos actuales no guardados.'))return;
+  // Estado de líneas, edición y modelos
+  LN=[];SEL=null;LID=0;EDIT_ID=null;S_OVERLAY=false;
+  resetVariosManual();S.gola={};
+  MFrentesCJ=[];RFrentesCJ=[];MPuertas=[];RPuertas=[];MFORMA='ninguna';RFORMA='ninguna';
+  MODELOS=[nuevoModelo(1)];MFOCO=0;MMODELO=0;CVTMODELO=0;cargarModeloEnS(0);
+  const eb=document.getElementById('editBanner');if(eb)eb.style.display='none';
+  // Ajustes globales del proyecto: grosor 16, cajón I.ATIRA
+  S.gros='16';document.getElementById('b16')?.classList.add('on');document.getElementById('b19')?.classList.remove('on');
+  S.modCaj='IATIRA';
+  // Cliente, fecha, validez, observaciones (DOM → S vía sp)
+  ['cNom','cTel','cEmail','cDir','pObs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  setVal('pVal','30 días');
+  document.getElementById('pFecha').value=new Date().toISOString().split('T')[0];
+  sp();
+  // Numeración y borrador
+  S.qn='';S.tipoDoc='';lsBorrar(LS_BORRADOR);
+  const nm=document.getElementById('numManual');if(nm)nm.value='';
+  const nmc=document.getElementById('numManualChk');if(nmc)nmc.checked=false;
+  // Descuento e IVA de la hoja de presupuesto
+  setVal('desc',0);const iv=document.getElementById('ivaR');if(iv)iv.value='21';
+  // Formularios de todas las pestañas
+  limpiarFormularioMueble();limpiarPuertaRapida();
+  limpiarFormularioCVT(true);
+  limpiarFormularioBalda(true);
+  const gm=document.getElementById('gmML');if(gm)gm.value='';setGolaManColor('Blanco',document.querySelector('#gmColP .tgb'));cGolaMan();
+  setVal('vsrch','');fV();setVal('esrch','');fE();
+  limpiarFormularioEncimera(true);
+  // Repintado
+  actualizarCabeceraNum();renderProyectosGuardados();
+  uBadge();rCards();rCVTList();refrescarCabeceraModelo();refrescarSelectoresGlobales();renderMuebleModeloSel();renderCVTModeloSel();
+  cTot();
+  sw('t1',document.querySelectorAll('.tb')[0]);
+  flash('🆕 Proyecto nuevo');
+}
 
 // NAVIGATE FROM PRESUPUESTO
 function goTab(tabId){
