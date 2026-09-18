@@ -98,6 +98,7 @@ tr:hover td{background:var(--c);}
 .trow{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid rgba(255,255,255,.1);}
 .grand{font-family:'Playfair Display',serif;font-size:21px;font-weight:700;color:var(--dc);border-bottom:none;padding-top:11px;}
 .di{width:65px;text-align:center;border:1px solid rgba(0,0,0,.28);background:#fff;color:#000;border-radius:4px;padding:2px 5px;font-size:12px;}
+.dsel{width:auto;min-width:120px;text-align:left;padding:6px 8px;font-size:12px;font-weight:700;color:var(--m);} /* Lote Q: desplegables del árbol de muebles */
 .cib{display:grid;grid-template-columns:1fr 1fr;gap:5px 18px;font-size:12.5px;margin-bottom:13px;}
 .cir{display:flex;gap:6px;} .cil{color:var(--mm);font-size:10px;font-weight:700;text-transform:uppercase;width:75px;flex-shrink:0;padding-top:2px;}
 .ab{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px;}
@@ -380,7 +381,14 @@ tr:hover td{background:var(--c);}
     <div>
       <div class="pn">
         <div class="pt">🏠 Armazones</div>
-        <div class="cpills" id="mCats"></div>
+        <!-- Lote Q (18-09-2026): árbol de muebles por desplegables (Familia → Alto en Bajos → Subfamilia → Opción).
+             Las pills de familia se sustituyen por selects; el catálogo ARM no cambia (ver ARBOL_MUEBLES). -->
+        <div class="cpills" id="mCats" style="gap:9px;align-items:flex-end">
+          <div class="fg"><label>Familia</label><select class="di dsel" id="selFam" onchange="cambiarFamArbol(this.value)"></select></div>
+          <div class="fg" id="selAltoBox" style="display:none"><label>Alto</label><select class="di dsel" id="selAlto" onchange="cambiarAltoBajos(this.value)"></select></div>
+          <div class="fg"><label>Subfamilia</label><select class="di dsel" id="selSub" onchange="cambiarSubArbol(this.value)"></select></div>
+          <div class="fg" id="selOpBox" style="display:none"><label>Opción</label><select class="di dsel" id="selOp" onchange="cambiarOpArbol(this.value)"></select></div>
+        </div>
         <div class="mgr" id="mGrid"></div>
       </div>
       <div class="qadd">
@@ -894,7 +902,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-18.1';
+const APP_BUILD = '2026-09-18.2';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1491,7 +1499,7 @@ function baldasPrefijadasSinPuerta(arm){
 // Etiquetas legibles para la mano de apertura: se imprimen en la hoja de producción.
 // '2' (2Pta) implica DOS hojas físicas en una sola línea — afecta a precio y tirador (×2).
 // 'FF' (frente fijo) cuenta como frente pero NO lleva tirador ni bisagra.
-const MANO_LAB={D:'Dcha',I:'Izq','2':'2Pta',FF:'FF'};
+const MANO_LAB={D:'Dcha',I:'Izq','2':'2Pta',FF:'FF',AB:'Abat.'}; // Lote Q: AB = puerta abatible (sobrefrigo), sin mano
 // Compone la etiqueta CJ/GV de un frente cajón/gaveta para mostrar en hoja de trabajo
 // y descripción de línea. Ej. 1 CJ + 0 GV → '1CJ', 2 CJ + 1 GV → '2CJ+1GV'.
 // Cuenta agrupada por tipo (CJ y GV) — recibe array de frentes y devuelve string.
@@ -1510,7 +1518,7 @@ function composIndicadorMueble(manos,frentes){
   const partes=[];
   let nPta=0,nFF=0;
   (manos||[]).forEach(m=>{
-    if(m==='I'||m==='D')nPta++;
+    if(m==='I'||m==='D'||m==='AB')nPta++; // Lote Q: AB (abatible) cuenta como puerta
     else if(m==='2')nPta+=2;
     else if(m==='FF')nFF++;
   });
@@ -1518,6 +1526,7 @@ function composIndicadorMueble(manos,frentes){
     const m=manos[0];
     if(m==='I')partes.push('Izq');
     else if(m==='D')partes.push('Dcha');
+    else if(m==='AB')partes.push('Abat.');
   } else if(nPta>=2){
     partes.push(nPta+'Pta');
   } else if(nPta===1){
@@ -1611,7 +1620,7 @@ function init(){
   renderProyectosGuardados();
   tarifaCargar();renderTarifaModificada(); // Lote M: aplica la tarifa modificada del dispositivo antes de pintar
   favoritosCargar();renderFavoritos(); // Lote N: favoritos de líneas manuales del dispositivo
-  bMC();rM('Colgantes');bVC();fV();bEC();fE();renderBaldaMuebles();
+  bMC();bVC();fV();bEC();fE();renderBaldaMuebles(); // Lote Q: bMC pinta los desplegables y la rejilla
   cargarModeloEnS(0);refrescarCabeceraModelo();renderMuebleModeloSel();renderCVTModeloSel();
   // Lote G: ofrecer recuperar el trabajo no guardado y arrancar el autoguardado periódico.
   recuperarBorradorSiExiste();
@@ -2237,8 +2246,158 @@ function setTGC(side,color,btn){
 const MCATS=(()=>{const c=[...new Set(ARM.map(a=>a.fam))];const i=c.indexOf('Campana/Grupo');if(i>0){c.splice(i,1);c.splice(c.indexOf('Colgantes')+1,0,'Campana/Grupo');}
   const j=c.indexOf('Bajos 80');if(j>0){c.splice(j,1);c.splice(c.indexOf('Bajos 75')+1,0,'Bajos 80');} // Lote P: Bajos 80 tras Bajos 75
   return c;})();
-function bMC(){document.getElementById('mCats').innerHTML=MCATS.map((c,i)=>`<button class="cpill${i===0?' on':''}" onclick="sMC(this,'${c.replace(/'/g,"\\'")}')">${c}</button>`).join('');}
-function sMC(btn,cat){document.querySelectorAll('#mCats .cpill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');rM(cat);}
+// ═════════════════════════ Lote Q (18-09-2026) — ÁRBOL DE MUEBLES (desplegables) ═════════════════════════
+// Capa de PRESENTACIÓN sobre el catálogo ARM: la pantalla de Muebles pasa de pills de familia a desplegables
+// Familia → (Alto, solo en Bajos) → Subfamilia → Opción, y cada hoja del árbol es un FILTRO sobre los armazones
+// que ya existen. fam/nom/ids de ARM NO cambian, así que precios, baldas, patas, gola y los proyectos guardados
+// (meta.armId) siguen valiendo tal cual. Las subfamilias que no tienen armazón propio en la tarifa 2021
+// (gavetero/cajonero, placa, placa horno, horno/micro, escobero, sobreencimera caldera, sobrefrigo abatible)
+// usan el armazón y el precio del regular (reglas confirmadas por Álvaro el 18-09-2026): la subfamilia solo
+// aporta etiqueta de descripción, frentes de arranque y algún flag de producción.
+//   lab       etiqueta que encabeza la descripción de la línea ("Bajo", "Bajo placa horno", "Columna escobero"…)
+//   filtro    (arm, alto) => bool sobre ARM (alto solo se usa en Bajos)
+//   arranque  frentes con los que arranca el mueble al elegir armazón: 'P' (1 puerta, por defecto) |
+//             'GV' (1 gaveta: gavetero/cajonero) | 'GV2' (2 gavetas: placa y placa horno)
+//   sinBaldas true → el mueble no lleva balda (placa / placa horno); solo afecta a la hoja de herrajes
+//   forma     forma especial preseleccionada: 'chaflan' → ×2 armazón (rincón chaflán de bajos y columnas se
+//             resuelve así sobre el regular; en altos existe Rinc.Chaf con precio propio)
+//   abatible  sobrefrigo abatible: puertas SIN mano de apertura + 1 herraje abatible por puerta en la hoja de
+//             herrajes (informativo; la tabla de medidas del herraje queda pendiente de cargar)
+//   ops       opciones de la subfamilia; cada opción puede sobrescribir lab/filtro/forma/… (se fusiona sobre la sub)
+const ARBOL_MUEBLES=(()=>{
+  const fam=f=>a=>a.fam===f;
+  const bajoReg=(a,h)=>a.fam==='Bajos '+h&&a.nom.startsWith('Bajo A.');
+  const bajoNom=k=>(a,h)=>a.fam==='Bajos '+h&&a.nom.includes(k);
+  const colReg=a=>a.fam==='Columnas'&&a.nom.startsWith('Columna A.');
+  const colNom=k=>a=>a.fam==='Columnas'&&a.nom.includes(k);
+  const rcNom=k=>a=>a.fam==='Rincón Colgante'&&a.nom.includes(k);
+  return [
+    {id:'altos',lab:'Altos',subs:[
+      {id:'puertas',lab:'Alto',filtro:fam('Colgantes')},
+      {id:'caldera',lab:'Alto caldera',filtro:fam('Caldera')},
+      {id:'micro',lab:'Alto microondas',filtro:fam('Microondas')},
+      {id:'escurre',lab:'Alto escurreplatos',filtro:fam('Escurreplatos')},
+      {id:'campana',lab:'Alto campana',filtro:fam('Campana/Grupo'),ops:[
+        {id:'integrada',lab:'Alto campana integrada'},{id:'extraible',lab:'Alto campana extraíble'},{id:'grupo',lab:'Alto grupo filtrante'}]},
+      {id:'rincon',lab:'Alto rincón',filtro:fam('Rincón Colgante'),ops:[
+        {id:'recto',lab:'Alto rincón recto',filtro:rcNom('Rinc.Recto')},
+        {id:'escuadra',lab:'Alto rincón escuadra',filtro:rcNom('Rinc.Esc')},
+        {id:'chaflan',lab:'Alto rincón chaflán',filtro:rcNom('Rinc.Chaf')}]}
+    ]},
+    {id:'bajos',lab:'Bajos',altos:[70,75,80],subs:[
+      {id:'puertas',lab:'Bajo',filtro:bajoReg},
+      {id:'gavetero',lab:'Bajo',filtro:bajoReg,arranque:'GV'},
+      {id:'fregadero',lab:'Bajo fregadero',filtro:bajoNom('Freg')},
+      {id:'placa',lab:'Bajo placa',filtro:bajoReg,arranque:'GV2',sinBaldas:true},
+      {id:'placah',lab:'Bajo placa horno',filtro:bajoReg,arranque:'GV2',sinBaldas:true},
+      {id:'rincon',lab:'Bajo rincón',filtro:bajoNom('B.Rinc.'),ops:[
+        {id:'recto',lab:'Bajo rincón recto',filtro:bajoNom('B.Rinc.Recto')},
+        {id:'escuadra',lab:'Bajo rincón escuadra',filtro:bajoNom('B.Rinc.Esc')},
+        {id:'chaflan',lab:'Bajo rincón chaflán',filtro:bajoReg,forma:'chaflan'}]}
+    ]},
+    {id:'columnas',lab:'Columnas',subs:[
+      {id:'despensero',lab:'Columna despensero',filtro:colReg},
+      {id:'caldera',lab:'Columna caldera',filtro:colNom('Col.Caldera')},
+      {id:'escobero',lab:'Columna escobero',filtro:colReg,ops:[
+        {id:'sinbaldas',lab:'Columna escobero sin baldas'},{id:'medias',lab:'Columna escobero medias baldas'},{id:'interior',lab:'Columna escobero armazón interior'}]},
+      {id:'horno',lab:'Columna horno/micro',filtro:colReg},
+      {id:'rincon',lab:'Columna rincón',filtro:colNom('Col.Rinc.'),ops:[
+        {id:'recto',lab:'Columna rincón recto',filtro:colNom('Col.Rinc.Recto')},
+        {id:'escuadra',lab:'Columna rincón escuadra',filtro:colNom('Col.Rinc.Esc')},
+        {id:'chaflan',lab:'Columna rincón chaflán',filtro:colReg,forma:'chaflan'}]}
+    ]},
+    {id:'sobrefrigo',lab:'Sobrefrigos',subs:[
+      {id:'puerta',lab:'Sobrefrigo',filtro:fam('Sobre Frigo')},
+      {id:'abatible',lab:'Sobrefrigo abatible',filtro:fam('Sobre Frigo'),abatible:true}
+    ]},
+    {id:'sobreencimera',lab:'Sobreencimeras',subs:[
+      {id:'despensero',lab:'Sobreencimera despensero',filtro:fam('Sobre Encimera')},
+      {id:'horno',lab:'Sobreencimera horno/micro',filtro:fam('Sobre Encimera')},
+      {id:'caldera',lab:'Sobreencimera caldera',filtro:fam('Sobre Encimera')}
+    ]},
+    {id:'semicolumnas',lab:'Semicolumnas',subs:[
+      {id:'despensero',lab:'Semicolumna despensero',filtro:fam('Media Columna')},
+      {id:'horno',lab:'Semicolumna horno/micro',filtro:fam('Media Columna')}
+    ]}
+  ];
+})();
+const BAJO_ALTO_DEFECTO=75;
+// Selección actual de los desplegables. BAJO_ALTO_STICKY: último alto de bajos elegido, se conserva durante toda la
+// sesión (normalmente un pedido lleva todos los bajos del mismo alto). Solo se recuerda el alto, no la subfamilia.
+let MSEL={fam:'altos',alto:BAJO_ALTO_DEFECTO,sub:'puertas',op:null};
+let BAJO_ALTO_STICKY=BAJO_ALTO_DEFECTO;
+// Hoja del árbol con la que se eligió el armazón en curso (snapshot: ids + flags, sin funciones). Se guarda en
+// meta.subfam para poder regenerar la descripción y restaurar los desplegables al editar.
+let MHOJA=null;
+function arbolFam(id){return ARBOL_MUEBLES.find(f=>f.id===id)||ARBOL_MUEBLES[0];}
+function arbolSub(f,id){return f.subs.find(s=>s.id===id)||f.subs[0];}
+// Fusiona familia + subfamilia + opción en una hoja plana (la opción pisa a la subfamilia).
+function hojaArbol(famId,subId,opId,alto){
+  const f=arbolFam(famId),s=arbolSub(f,subId);
+  const o=(s.ops||[]).find(x=>x.id===opId)||(s.ops||[])[0]||null;
+  const h={famId:f.id,subId:s.id,opId:o?o.id:null,alto:f.altos?(+alto||BAJO_ALTO_DEFECTO):null,
+    lab:s.lab,filtro:s.filtro,arranque:s.arranque||'P',sinBaldas:!!s.sinBaldas,forma:s.forma||null,abatible:!!s.abatible};
+  if(o){if(o.lab)h.lab=o.lab;if(o.filtro)h.filtro=o.filtro;if(o.arranque)h.arranque=o.arranque;if(o.sinBaldas!=null)h.sinBaldas=!!o.sinBaldas;if(o.forma)h.forma=o.forma;if(o.abatible!=null)h.abatible=!!o.abatible;}
+  return h;
+}
+function hojaActual(){return hojaArbol(MSEL.fam,MSEL.sub,MSEL.op,MSEL.alto);}
+// Snapshot serializable de una hoja (lo que va a meta.subfam).
+function snapHoja(h){return h?{fam:h.famId,sub:h.subId,op:h.opId,alto:h.alto,lab:h.lab,arranque:h.arranque,sinBaldas:h.sinBaldas,forma:h.forma,abatible:h.abatible}:null;}
+function hojaDesdeSnap(s){return s?hojaArbol(s.fam,s.sub,s.op,s.alto):null;}
+// Para líneas antiguas (sin meta.subfam): primera hoja del árbol cuyo filtro acepta el armazón.
+function hojaDesdeArm(arm){
+  if(!arm)return null;
+  const mAlt=(arm.fam||'').match(/^Bajos (\d+)$/);const alto=mAlt?+mAlt[1]:null;
+  for(const f of ARBOL_MUEBLES)for(const s of f.subs){
+    const ops=s.ops||[null];
+    for(const o of ops){const h=hojaArbol(f.id,s.id,o?o.id:null,alto);if(h.forma)continue;if(h.filtro(arm,h.alto))return h;}
+  }
+  return null;
+}
+function armazonesHoja(h){return ARM.filter(a=>h.filtro(a,h.alto));}
+// Pinta los cuatro desplegables según MSEL.
+function pintarSelectoresArbol(){
+  const f=arbolFam(MSEL.fam);if(!f.subs.some(s=>s.id===MSEL.sub))MSEL.sub=f.subs[0].id;
+  const s=arbolSub(f,MSEL.sub);
+  if(s.ops){if(!s.ops.some(o=>o.id===MSEL.op))MSEL.op=s.ops[0].id;}else MSEL.op=null;
+  document.getElementById('selFam').innerHTML=ARBOL_MUEBLES.map(x=>`<option value="${x.id}"${x.id===MSEL.fam?' selected':''}>${x.lab}</option>`).join('');
+  const ab=document.getElementById('selAltoBox');ab.style.display=f.altos?'flex':'none';
+  if(f.altos)document.getElementById('selAlto').innerHTML=f.altos.map(h=>`<option value="${h}"${h===MSEL.alto?' selected':''}>A.${h}</option>`).join('');
+  document.getElementById('selSub').innerHTML=f.subs.map(x=>`<option value="${x.id}"${x.id===MSEL.sub?' selected':''}>${etiquetaSelectSub(x)}</option>`).join('');
+  const ob=document.getElementById('selOpBox');ob.style.display=s.ops?'flex':'none';
+  if(s.ops)document.getElementById('selOp').innerHTML=s.ops.map(x=>`<option value="${x.id}"${x.id===MSEL.op?' selected':''}>${OP_SELECT_LAB[x.id]||x.lab}</option>`).join('');
+}
+// Texto corto para el desplegable de subfamilia (el lab completo se usa en la descripción).
+const SUB_SELECT_LAB={puertas:'Puertas',gavetero:'Gavetero / Cajonero',fregadero:'Fregadero',placa:'Placa',placah:'Placa horno',rincon:'Rincón',
+  caldera:'Caldera',micro:'Microondas',escurre:'Escurreplatos',campana:'Campana / Grupo',despensero:'Despensero',escobero:'Escobero',horno:'Horno / Micro',
+  puerta:'Puerta',abatible:'Abatible'};
+function etiquetaSelectSub(s){return SUB_SELECT_LAB[s.id]||s.lab;}
+const OP_SELECT_LAB={recto:'Recto',escuadra:'Escuadra',chaflan:'Chaflán',integrada:'Integrada',extraible:'Extraíble',grupo:'Grupo filtrante',sinbaldas:'Sin baldas',medias:'Medias baldas',interior:'Armazón interior'};
+function bMC(){pintarSelectoresArbol();rM();}
+function cambiarFamArbol(v){MSEL.fam=v;const f=arbolFam(v);MSEL.sub=f.subs[0].id;MSEL.op=null;if(f.altos)MSEL.alto=BAJO_ALTO_STICKY;pintarSelectoresArbol();rM();}
+function cambiarAltoBajos(v){MSEL.alto=+v||BAJO_ALTO_DEFECTO;BAJO_ALTO_STICKY=MSEL.alto;rM();}
+function cambiarSubArbol(v){MSEL.sub=v;MSEL.op=null;pintarSelectoresArbol();rM();}
+function cambiarOpArbol(v){MSEL.op=v;rM();}
+// Tras añadir un mueble: se conserva familia y alto (sticky); subfamilia y opción vuelven a la primera.
+function resetSubfamiliaTrasAnadir(){const f=arbolFam(MSEL.fam);MSEL.sub=f.subs[0].id;MSEL.op=null;pintarSelectoresArbol();rM();}
+// Trozo de medidas del nombre de tarifa ("Bajo A.75 An.60" → "A.75 An.60"; "B.Rinc.Esc A.70 90x80" → "A.70 90x80").
+function medidasNomArm(arm){if(!arm)return '';const i=arm.nom.search(/\b(A|An)\.\d/);return i>=0?arm.nom.slice(i):arm.nom;}
+// Descripción del mueble a partir de lo elegido: etiqueta de subfamilia + composición real de puertas/frentes + medidas.
+// Ej.: "Bajo 2 puertas A.75 An.60" · "Bajo 2 gavetas + 1 cajón A.75 An.60" · "Bajo 1 puerta + 2 cajones A.75 An.60"
+//      "Bajo fregadero rincón 2 puertas A.75 90x80" · "Sobrefrigo abatible 1 puerta An.60 A.40" · "Bajo sin puerta A.75 An.60"
+function etiquetaMueble(hoja,arm,puertas,frentes,tar){
+  let lab=hoja?hoja.lab:(arm?arm.nom.split(' ')[0]:'Mueble');
+  if(hoja&&hoja.subId==='fregadero'&&arm&&isRin(arm))lab+=' rincón';
+  let nP=0,nFF=0,gv=0,cj=0;
+  if(tar!=='Sin puerta')(puertas||[]).forEach(p=>{if(!((+p.alto)&&(+p.ancho)))return;if(p.mano==='FF')nFF++;else if(p.mano==='2')nP+=2;else nP++;});
+  (frentes||[]).forEach(f=>{if(!((+f.alto)&&(+f.ancho)))return;if(f.tipo==='GV')gv++;else cj++;});
+  const partes=[];
+  if(nP)partes.push(nP+(nP===1?' puerta':' puertas'));
+  if(nFF)partes.push(nFF+(nFF===1?' frente fijo':' frentes fijos'));
+  if(gv)partes.push(gv+(gv===1?' gaveta':' gavetas'));
+  if(cj)partes.push(cj+(cj===1?' cajón':' cajones'));
+  return `${lab} ${partes.length?partes.join(' + '):'sin puerta'} ${medidasNomArm(arm)}`.trim();
+}
 // Precio armazón: tras unificación de tarifa, los cascos blancos pasan a tener el mismo precio que los de diseños.
 // El acabado sigue siendo informativo (toggle Blanco/Diseños en Proyecto) pero ya no afecta al cálculo.
 // ═════════════════════════ CÁLCULO DE PRECIOS · MUEBLES ═════════════════════════
@@ -2368,7 +2527,7 @@ function pintarFormaTgg(prefijo,valor){
   if(box)box.style.display=(valor==='chaflan')?'grid':'none';
 }
 function rCards(){document.querySelectorAll('.mc').forEach(c=>{const arm=ARM.find(a=>a.id===+c.dataset.id);if(!arm)return;const m=S.gros==='19'?(1+REC_19MM):1;const el=c.querySelector('.mcp span:last-child');if(el)el.textContent=fmt(arm.p*m);});if(SEL)cp();}
-function rM(cat){const m=S.gros==='19'?(1+REC_19MM):1;document.getElementById('mGrid').innerHTML=ARM.filter(a=>a.fam===cat).map(arm=>`<div class="mc" data-id="${arm.id}" onclick="selA(${arm.id},this)"><div class="mcn">${arm.nom}</div><div class="mcp"><span>Precio</span><span>${fmt(arm.p*m)}</span></div><div style="font-size:10px;color:var(--g);margin-top:2px">F.${arm.fon}+p</div></div>`).join('');}
+function rM(){const m=S.gros==='19'?(1+REC_19MM):1;const h=hojaActual();document.getElementById('mGrid').innerHTML=armazonesHoja(h).map(arm=>`<div class="mc" data-id="${arm.id}" onclick="selA(${arm.id},this)"><div class="mcn">${arm.nom}</div><div class="mcp"><span>Precio</span><span>${fmt(arm.p*m)}</span></div><div style="font-size:10px;color:var(--g);margin-top:2px">F.${arm.fon}+p</div></div>`).join('');}
 let MPuertas=[];
 // Lote H — checkbox "Incluir balda" solo visible en bajos fregadero (van SIN balda por defecto).
 // Al mostrarse se resetea desmarcado; el flujo de edición lo restaura después desde meta.baldaFreg.
@@ -2422,9 +2581,10 @@ function selA(id,card){
   }
   document.querySelectorAll('.mc').forEach(c=>c.classList.remove('on'));card.classList.add('on');
   SEL=ARM.find(a=>a.id===id);
+  MHOJA=hojaActual(); // Lote Q: hoja del árbol con la que se elige el armazón (subfamilia, arranque, flags)
   // Carga la config del modelo elegido para el mueble (con 1 modelo, MMODELO=0).
   cargarModeloEnS(MMODELO);
-  document.getElementById('selInf').textContent=SEL.nom;
+  document.getElementById('selInf').textContent=`${MHOJA.lab} · ${SEL.nom}`;
   MARMMAN=null;RARMMAN=null; // Lote M: precio manual de armazón se reinicia al elegir armazón
   if(isRin(SEL)){document.getElementById('addF').style.display='none';document.getElementById('rinF').style.display='block';rRincon();actualizarBaldasManUIRincon(SEL);actualizarBaldaFregUI(SEL,'r');actualizarMediasBaldasUI(SEL,'r');RFrentesCJ=[];renderRFCJ();}
   else{document.getElementById('rinF').style.display='none';document.getElementById('addF').style.display='block';
@@ -2439,8 +2599,13 @@ function selA(id,card){
     MFORMA='ninguna';document.getElementById('mDFD').value='';document.getElementById('mDFI').value='';pintarFormaTgg('m','ninguna');
     const gi=document.getElementById('gInfo');gi.style.display=isGB?'block':'none';if(isGB)gi.textContent='🔧 Gola bajos: armazón se cobra como 75 (aunque sea de 80) · puerta 77 → tramo 90 sin recargo · la gola se suma sola en el presupuesto';
     MDEF={alto:altoPuertaDefecto(SEL,altoArm0),ancho:SEL.anc}; // Lote P
-    MPuertas=[{alto:MDEF.alto,ancho:MDEF.ancho,tir:'on',mano:'D'}];
-    MFrentesCJ=[];
+    // Lote Q: frentes de arranque según la subfamilia (gavetero → 1 gaveta; placa / placa horno → 2 gavetas).
+    const gvIni=()=>({alto:'',ancho:MDEF.ancho,tir:'on',tipo:'GV',fondo:'F50',ss:'off'});
+    if(MHOJA.arranque==='GV'){MPuertas=[];MFrentesCJ=[gvIni()];}
+    else if(MHOJA.arranque==='GV2'){MPuertas=[];MFrentesCJ=[gvIni(),gvIni()];}
+    else{MPuertas=[{alto:MDEF.alto,ancho:MDEF.ancho,tir:'on',mano:MHOJA.abatible?'AB':'D'}];MFrentesCJ=[];}
+    // Lote Q: rincón chaflán de bajos/columnas = regular con forma especial Chaflán (×2) preseleccionada.
+    if(MHOJA.forma){MFORMA=MHOJA.forma;pintarFormaTgg('m',MFORMA);}
     renderMP();renderMFCJ();
     document.getElementById('chkMR').checked=false;document.getElementById('mRegF').style.display='none';
     actualizarBaldasManUI(SEL);
@@ -2481,11 +2646,14 @@ function renderMP(){
       (MPuertas.length>1?`<button class="btn bd2" onclick="delMP(${i})" style="margin-bottom:1px">✕</button>`:'<div></div>')+
       `</div>`+
       // Selector de mano: Izq / Dcha / 2Pta / FF. Se imprime en la hoja de producción para guiar al montaje.
-      `<div style="display:flex;gap:5px;margin-top:7px;align-items:center;flex-wrap:wrap"><span style="font-size:10.5px;color:var(--cd);font-weight:700;text-transform:uppercase;letter-spacing:.4px">Mano P${n}:</span>${btnMano('I','Izq')}${btnMano('D','Dcha')}${btnMano('2','2Pta')}${btnMano('FF','FF')}</div>`;
+      ((MHOJA&&MHOJA.abatible)?
+        // Lote Q: sobrefrigo abatible → sin mano de apertura (mano 'AB'); el herraje abatible va a la hoja de herrajes
+        `<div style="margin-top:7px;font-size:10.5px;color:var(--cd);font-style:italic">Puerta abatible: sin mano de apertura · 1 herraje abatible (medida según tabla, pendiente)</div>`:
+        `<div style="display:flex;gap:5px;margin-top:7px;align-items:center;flex-wrap:wrap"><span style="font-size:10.5px;color:var(--cd);font-weight:700;text-transform:uppercase;letter-spacing:.4px">Mano P${n}:</span>${btnMano('I','Izq')}${btnMano('D','Dcha')}${btnMano('2','2Pta')}${btnMano('FF','FF')}</div>`);
     c.appendChild(d);
   });cp();
 }
-function addMP(){MPuertas.push({alto:MDEF.alto||(SEL?SEL.alt:''),ancho:MDEF.ancho||(SEL?SEL.anc:''),tir:'on',mano:'D'});renderMP();} // Lote P: medida vigente
+function addMP(){MPuertas.push({alto:MDEF.alto||(SEL?SEL.alt:''),ancho:MDEF.ancho||(SEL?SEL.anc:''),tir:'on',mano:(MHOJA&&MHOJA.abatible)?'AB':'D'});renderMP();} // Lote P: medida vigente · Lote Q: abatible sin mano
 function updMP(idx,field,val){if(MPuertas[idx]){MPuertas[idx][field]=val;if(field==='tir'||field==='mano')renderMP();else cp();}}
 function delMP(idx){MPuertas.splice(idx,1);renderMP();}
 
@@ -2677,7 +2845,8 @@ function addM(){
   }
   // La regleta NO suma al precio del mueble (pasa a ser línea CVT independiente, ver más abajo).
   const tot=armP+ptTot+tTot;
-  let desc=SEL.nom+descMedidasArm(SEL,mAltV,mAncV,mFonV);if(pd.length)desc+=` + ${S.tar} [${pd.join(', ')}]`; // Lote P: medidas reales
+  // Lote Q: descripción desde subfamilia + composición real ("Bajo 2 gavetas + 1 cajón A.75 An.60"); cola de tarifa/puertas igual.
+  let desc=etiquetaMueble(MHOJA,SEL,MPuertas,MFrentesCJ,S.tar)+descMedidasArm(SEL,mAltV,mAncV,mFonV);if(pd.length)desc+=` + ${S.tar} [${pd.join(', ')}]`; // Lote P: medidas reales
   // Lote F: anotar forma especial (×2) y, si chaflán, el doble fondo informativo en la descripción.
   if(MFORMA!=='ninguna'){
     desc+=` · ${FORMA_LAB[MFORMA]} ×2`;
@@ -2715,7 +2884,9 @@ function addM(){
     // Lote F
     forma:MFORMA, dobleFondo,
     // Lote M — precio manual del armazón (solo este mueble)
-    armPMan:MARMMAN
+    armPMan:MARMMAN,
+    // Lote Q — hoja del árbol (subfamilia) y flags de producción derivados
+    subfam:snapHoja(MHOJA),sinBaldas:!!(MHOJA&&MHOJA.sinBaldas),abatible:!!(MHOJA&&MHOJA.abatible)
   };
   // Modo edición: si EDIT_ID está activo, sustituye la línea existente. Si no, crea una nueva.
   // Lote J — en alta, si ya existe un mueble IDÉNTICO (misma huella: desc+precio+nota+meta,
@@ -2765,6 +2936,7 @@ function addM(){
   } else {
     flash(fusionado?`✅ Añadido (agrupado: ${fusionado.cnt} uds)`:'✅ Añadido');
     limpiarFormularioMueble(); // Lote O (17-09-2026): tras añadir, formulario en limpio para el siguiente mueble
+    resetSubfamiliaTrasAnadir(); // Lote Q: se conserva familia y alto de bajos; subfamilia/opción a la primera
   }
   recalcularAcumulados();
   uBadge();document.getElementById('aNt').value='';document.getElementById('aCnt').value=1;
@@ -2982,7 +3154,7 @@ function addRin(){
   // La regleta NO suma al precio del mueble (pasa a línea CVT independiente).
   const tot=armP+pt+tt;
   // Descripción: usa nombre del armazón realmente tarifado y añade nota de ancho fabricado.
-  let desc=`${armTar.nom} + ${S.tar} [${pd.join(', ')}]`;
+  let desc=`${etiquetaMueble(MHOJA,armTar,RPuertas,RFrentesCJ,S.tar)} + ${S.tar} [${pd.join(', ')}]`; // Lote Q
   if(ajusteRR.ajustado)desc+=` · ancho real ${anchoRealRR}cm${ajusteRR.supera?' [excede estándar]':''}`;
   // Lote F: forma especial / doble fondo en rincón
   if(RFORMA!=='ninguna'){
@@ -3008,6 +3180,7 @@ function addRin(){
     tarifa:S.tar, modCaj:S.modCaj, modeloId:MMODELO, tb:{...S.tb}, ta:{...S.ta},
     mPuertas:snapPuertas, mFrentesCJ:snapFrentes, regleta,
     esRincon:true,
+    subfam:snapHoja(MHOJA),sinBaldas:!!(MHOJA&&MHOJA.sinBaldas),abatible:false, // Lote Q
     // Lote F
     forma:RFORMA, dobleFondo,
     armPMan:RARMMAN // Lote M
@@ -3683,7 +3856,7 @@ function rGola(){
 //   Pinzas zócalo madera (CVT zócalo): 2/m × longCm/100 (redondeo hacia arriba).
 //   Pinzas zócalo (Varios): igual fórmula con 400cm por tira.
 function calcularHerrajesSueltos(){
-  let patas=0,colgadores=0,baldas=0,soportes=0,pinzasMad=0,pinzasZoc=0,salvasifon=0,mbaldas=0;
+  let patas=0,colgadores=0,baldas=0,soportes=0,pinzasMad=0,pinzasZoc=0,salvasifon=0,mbaldas=0,abatibles=0; // Lote Q: abatibles
   let sopTrad=0,sopAnti=0; // Lote N — soportes de baldas sueltas, por tipo (tradicional / antivuelco)
   const detalle=[];
   LN.forEach(l=>{
@@ -3712,6 +3885,7 @@ function calcularHerrajesSueltos(){
       // · Colgantes: tramo según alto máximo de puerta. Si Sin puerta → baldasMan manual.
       let b=0;
       if(m.fam==='Caldera')b=0;
+      else if(m.sinBaldas)b=0; // Lote Q: bajo placa / placa horno no llevan balda
       // Lote H — bajos fregadero: SIN balda por defecto; 1 si se marcó "Incluir balda" (meta.baldaFreg).
       // Detección por nombre para cubrir también líneas antiguas sin el campo.
       else if(m.esBajo&&(m.nom||'').includes('Freg'))b=m.baldaFreg?1:0;
@@ -3742,10 +3916,12 @@ function calcularHerrajesSueltos(){
       const mb=m.esCol?(m.mediasBaldas||0):0;
       // Lote H — SALVASIFÓN: un accesorio por cada gaveta marcada como salvasifón en el mueble
       const ssN=(m.mFrentesCJ||[]).reduce((acc,f)=>acc+((f.tipo==='GV'&&f.ss==='on'&&(+f.alto)&&(+f.ancho))?1:0),0);
-      patas+=p*c;colgadores+=cg*c;baldas+=b*c;mbaldas+=mb*c;soportes+=(b*sopUd+mb*SOPORTES_MEDIA_BALDA)*c;salvasifon+=ssN*c;
+      // Lote Q — sobrefrigo abatible: 1 herraje abatible por puerta (informativo; medida según tabla pendiente de cargar)
+      const abN=m.abatible?(m.mPuertas||[]).reduce((acc,p)=>acc+(((+p.alto)&&(+p.ancho))?1:0),0):0;
+      patas+=p*c;colgadores+=cg*c;baldas+=b*c;mbaldas+=mb*c;soportes+=(b*sopUd+mb*SOPORTES_MEDIA_BALDA)*c;salvasifon+=ssN*c;abatibles+=abN*c;
       // El indicador combina puertas (manos) + frentes CJ/GV. Si no hay info, vacío.
       const indic=composIndicadorMueble(m.manos,m.frentesIndic);
-      if(p||cg||b||mb||ssN)detalle.push({nom:m.nom,indic,cnt:c,patas:p,colgadores:cg,baldas:b,mbaldas:mb,soportes:b*sopUd+mb*SOPORTES_MEDIA_BALDA});
+      if(p||cg||b||mb||ssN||abN)detalle.push({nom:m.nom,indic,cnt:c,patas:p,colgadores:cg,baldas:b,mbaldas:mb,soportes:b*sopUd+mb*SOPORTES_MEDIA_BALDA});
     } else if(m.tipo==='zocalo_cvt'){
       pinzasMad+=Math.ceil((m.longCm*c)/100*2);
     } else if(m.tipo==='zocalo_varios'){
@@ -3757,12 +3933,12 @@ function calcularHerrajesSueltos(){
       if(n)detalle.push({nom:`Balda suelta ${textoMedidasBalda(m)} · ${BALDA_SOPORTES[m.sop]}`,indic:'',cnt:c,patas:0,colgadores:0,baldas:0,mbaldas:0,soportes:n});
     }
   });
-  return {patas,colgadores,baldas,mbaldas,soportes,sopTrad,sopAnti,pinzasMad,pinzasZoc,salvasifon,detalle};
+  return {patas,colgadores,baldas,mbaldas,soportes,sopTrad,sopAnti,pinzasMad,pinzasZoc,salvasifon,abatibles,detalle};
 }
 // Hoja imprimible de herrajes sueltos. Página informativa para fábrica, no suma al presupuesto.
 function buildHerrajesSueltosHTML(){
   const h=calcularHerrajesSueltos();
-  if(!h.patas&&!h.colgadores&&!h.baldas&&!h.mbaldas&&!h.soportes&&!h.sopTrad&&!h.sopAnti&&!h.pinzasMad&&!h.pinzasZoc&&!h.salvasifon)return '';
+  if(!h.patas&&!h.colgadores&&!h.baldas&&!h.mbaldas&&!h.soportes&&!h.sopTrad&&!h.sopAnti&&!h.pinzasMad&&!h.pinzasZoc&&!h.salvasifon&&!h.abatibles)return '';
   const filas=[
     h.patas?['Patas',h.patas]:null,
     h.colgadores?['Colgadores',h.colgadores]:null,
@@ -3772,6 +3948,7 @@ function buildHerrajesSueltosHTML(){
     h.sopTrad?['Soportes balda suelta (tradicional)',h.sopTrad]:null, // Lote N
     h.sopAnti?['Soportes balda suelta (antivuelco)',h.sopAnti]:null,  // Lote N
     h.salvasifon?['Accesorio salvasifón',h.salvasifon]:null,
+    h.abatibles?['Herraje abatible sobrefrigo (medida s/ tabla)',h.abatibles]:null, // Lote Q
     h.pinzasMad?['Pinzas zócalo de madera',h.pinzasMad]:null,
     h.pinzasZoc?['Pinzas zócalo',h.pinzasZoc]:null
   ].filter(Boolean);
@@ -4106,13 +4283,12 @@ function regenerarLineasGola(){
 let EDIT_ID=null; // id del mueble en edición, o null
 // D2: durante la edición, renderiza la familia del armazón y resalta su tarjeta,
 // para que la compañera vea claramente qué mueble está editando.
-function resaltarTarjetaEdicion(arm){
+// Lote Q: coloca los desplegables en la hoja del mueble (meta.subfam o, en líneas antiguas, deducida del armazón).
+function resaltarTarjetaEdicion(arm,subfam){
   if(!arm)return;
-  document.querySelectorAll('#mCats .cpill').forEach(b=>{
-    const mm=(b.getAttribute('onclick')||'').match(/sMC\(this,'([^']+)'/);
-    b.classList.toggle('on',!!(mm&&mm[1]===arm.fam));
-  });
-  rM(arm.fam);
+  MHOJA=hojaDesdeSnap(subfam)||hojaDesdeArm(arm)||hojaActual();
+  MSEL={fam:MHOJA.famId,alto:MHOJA.alto||MSEL.alto,sub:MHOJA.subId,op:MHOJA.opId};
+  pintarSelectoresArbol();rM();
   const card=document.querySelector('#mGrid .mc[data-id="'+arm.id+'"]');
   if(card)card.classList.add('on');
 }
@@ -4141,7 +4317,7 @@ function iniciarEdicion(id){
   // Cambiar a pestaña Muebles
   goTab('t2');
   if(!SEL){flash('⚠️ Armazón original no encontrado');return;}
-  resaltarTarjetaEdicion(SEL); // D2: marca visual de la tarjeta en edición
+  resaltarTarjetaEdicion(SEL,m.subfam); // D2: marca visual de la tarjeta en edición · Lote Q: y desplegables
   // Cargar formulario según rincón o no
   if(isRin(SEL)){
     document.getElementById('addF').style.display='none';
@@ -4218,7 +4394,7 @@ function iniciarEdicion(id){
     if(!btn.dataset.origLabel)btn.dataset.origLabel=btn.textContent;
     btn.textContent='💾 Guardar cambios';
   });
-  document.getElementById('selInf').textContent=SEL.nom+' — EDITANDO';
+  document.getElementById('selInf').textContent=`${MHOJA?MHOJA.lab+' · ':''}${SEL.nom} — EDITANDO`;
 }
 // Sale del modo edición y devuelve el formulario al estado normal
 function cancelarEdicion(){
@@ -4230,7 +4406,7 @@ function cancelarEdicion(){
 // sin puertas/frentes, sin forma especial ni regleta). Se usa al cancelar una edición
 // y tras GUARDAR un cambio, para evitar duplicar líneas por accidente.
 function limpiarFormularioMueble(){
-  SEL=null;
+  SEL=null;MHOJA=null; // Lote Q
   MPuertas=[];MFrentesCJ=[];RPuertas=[];RFrentesCJ=[];
   MFORMA='ninguna';RFORMA='ninguna';pintarFormaTgg('m','ninguna');pintarFormaTgg('r','ninguna');
   MARMMAN=null;RARMMAN=null; // Lote M
