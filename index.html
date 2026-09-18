@@ -393,10 +393,11 @@ tr:hover td{background:var(--c);}
       </div>
       <div class="qadd">
         <div style="font-family:'Playfair Display',serif;font-size:13px;color:var(--m);font-weight:600;margin-bottom:11px">🚪 Puertas Adicionales</div>
-        <div style="display:grid;grid-template-columns:75px 75px 55px 1fr auto;gap:9px;align-items:end">
+        <!-- Lote R (18-09-2026): orden Ud. – Alto – Ancho – Desc. -->
+        <div style="display:grid;grid-template-columns:55px 75px 75px 1fr auto;gap:9px;align-items:end">
+          <div class="fg"><label>Ud.</label><input type="number" id="qC" value="1" min="1"></div>
           <div class="fg"><label>Alto</label><input type="number" id="qA" min="1" oninput="cqp()"></div>
           <div class="fg"><label>Ancho</label><input type="number" id="qW" min="1" oninput="cqp()"></div>
-          <div class="fg"><label>Ud.</label><input type="number" id="qC" value="1" min="1"></div>
           <div class="fg"><label>Desc.</label><input id="qD" placeholder="Puerta adicional..."></div>
           <button class="btn bp" onclick="addQP()" style="margin-bottom:1px">+</button>
         </div>
@@ -553,6 +554,7 @@ tr:hover td{background:var(--c);}
             <button class="tgb on" id="cvtCost" onclick="setCVTipo('costado',this)">Costado Visto</button>
             <button class="tgb" id="cvtReg" onclick="setCVTipo('regleta',this)">Regleta</button>
             <button class="tgb" id="cvtZoc" onclick="setCVTipo('zocalo',this)">Zócalo</button>
+            <button class="tgb" id="cvtTecho" onclick="setCVTipo('techo',this)">Cierre a techo</button>
           </div>
         </div>
         <!-- Toggle 19/31mm: visible solo si la tarifa CVT enlazada tiene versión 31mm (CVT-4, CVT-6, CVT-7) -->
@@ -753,10 +755,11 @@ tr:hover td{background:var(--c);}
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px">
       <button class="btn bp" onclick="guardarProyecto('PRES')">📄 Guardar como presupuesto</button>
       <button class="btn" style="background:#8a5a2b;color:#fff" onclick="guardarProyecto('PED')">🧾 Guardar como pedido</button>
+      <button class="btn" id="btnGuardarCambios" style="display:none;background:#2e7d4f;color:#fff" onclick="guardarCambiosProyecto()">💾 Guardar cambios</button>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--g)"><input type="checkbox" id="numManualChk"> Nº manual</label>
       <input type="text" id="numManual" placeholder='p.ej. 0007 ó 2026-0007' style="width:160px;border:1px solid var(--cd);background:#fff;color:var(--m);border-radius:6px;padding:7px;font-size:13px">
     </div>
-    <div style="font-size:10.5px;color:var(--g);margin-top:6px">El número se asigna al guardar y reinicia cada año. Presupuestos y pedidos llevan contadores independientes. Un número ya usado no se puede reutilizar.</div>
+    <div style="font-size:10.5px;color:var(--g);margin-top:6px">El número se asigna al guardar y reinicia cada año. Presupuestos y pedidos llevan contadores independientes. Un número ya usado no se puede reutilizar. Con un proyecto cargado, «Guardar cambios» lo sobrescribe con el mismo número; «Guardar como…» crea uno nuevo.</div>
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px">
       <button class="btn bs" onclick="exportarCopia()">⬇ Exportar copia</button>
       <button class="btn bs" onclick="document.getElementById('impFile').click()">⬆ Importar copia</button>
@@ -902,7 +905,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-18.2';
+const APP_BUILD = '2026-09-18.3';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1682,6 +1685,9 @@ function rotuloDoc(){
 function actualizarCabeceraNum(){
   const qel=document.getElementById('qNum');if(qel)qel.textContent=S.qn||'— sin guardar —';
   const pel=document.getElementById('pQN');if(pel)pel.textContent=S.qn?rotuloDoc():'— sin guardar —';
+  // Lote R: "Guardar cambios" solo si el número en curso existe entre los proyectos guardados
+  const bgc=document.getElementById('btnGuardarCambios');
+  if(bgc){const ok=!!S.qn&&lsLeer(LS_PROYECTOS,[]).some(p=>p.qn===S.qn);bgc.style.display=ok?'':'none';if(ok)bgc.textContent='💾 Guardar cambios ('+S.qn+')';}
 }
 
 // Calcula el siguiente número automático del tipo, saltando los ocupados (p.ej. usados a mano).
@@ -1763,6 +1769,24 @@ function guardarProyecto(tipo){
   flash((tipo==='PED'?'🧾 Pedido':'📄 Presupuesto')+' guardado: '+qn);
 }
 
+// Lote R (18-09-2026) — sobrescribe el proyecto cargado con el estado actual, SIN consumir número nuevo.
+// Conserva número y tipo (PRES/PED) del registro original. El contador no se toca.
+function guardarCambiosProyecto(){
+  if(!S.qn){alert('No hay un proyecto cargado. Usa «Guardar como…».');return;}
+  if(!LN.length){alert('No hay líneas que guardar.');return;}
+  const proy=lsLeer(LS_PROYECTOS,[]);
+  const i=proy.findIndex(p=>p.qn===S.qn);
+  if(i<0){alert('El proyecto '+S.qn+' ya no existe en este dispositivo. Usa «Guardar como…».');actualizarCabeceraNum();return;}
+  if(!confirm('¿Sobrescribir '+S.qn+' con los cambios actuales?\nLa versión guardada anterior se pierde.'))return;
+  const tipo=proy[i].tipo||S.tipoDoc||'PRES';
+  proy[i]=construirSnapshotProy(S.qn,tipo);
+  if(!lsGuardar(LS_PROYECTOS,proy))return;
+  lsBorrar(LS_BORRADOR); // igual que guardarProyecto: el borrador queda obsoleto
+  S.tipoDoc=tipo;
+  actualizarCabeceraNum();renderProyectosGuardados();rP();
+  flash('💾 Cambios guardados en '+S.qn);
+}
+
 // Restaura un snapshot completo (proyecto guardado o borrador autoguardado) sobre el estado de trabajo.
 // Extraído de cargarProyecto (Lote G) para reutilizarlo en la recuperación de g5_borrador.
 function restaurarSnapshot(p){
@@ -1823,6 +1847,7 @@ function borrarProyecto(qn){
 function renderProyectosGuardados(){
   const cont=document.getElementById('proyList');if(!cont)return;
   actualizarIndicadorLS(); // Lote G: el indicador se refresca con cada repintado (guardar/borrar/importar)
+  actualizarCabeceraNum(); // Lote R: muestra/oculta «Guardar cambios» (p.ej. tras borrar el proyecto cargado)
   const proy=lsLeer(LS_PROYECTOS,[]).slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
   if(!proy.length){cont.innerHTML='<p style="color:var(--g);font-style:italic;padding:6px 2px;margin:0">Sin proyectos guardados.</p>';return;}
   cont.innerHTML=proy.map(p=>{
@@ -2952,7 +2977,9 @@ function addM(){
 // QUICK PUERTA
 function cqp(){const a=+document.getElementById('qA').value||0,w=+document.getElementById('qW').value||0;if(!a||!w){document.getElementById('qpP').textContent='';return;}const p=gpp(S.tar,a,w);document.getElementById('qpP').textContent=p>0?`${S.tar}: ${fmt(p)}/ud${GPP_NOTA}${S.recargoModelo>0?' (recargo modelo +'+S.recargoModelo+'%)':''}`:'Sin precio para esta medida';}
 function addQP(){const a=+document.getElementById('qA').value||0,w=+document.getElementById('qW').value||0,cnt=+document.getElementById('qC').value||1;if(!a||!w)return;const p=gpp(S.tar,a,w);
-  const ln={sec:'Puertas adicionales',tab:'t2',desc:(gv('qD')||`Puerta ${S.tar} ${a}×${w}`)+(S.recargoModelo>0?` · recargo modelo +${S.recargoModelo}%`:''),cnt,p,nota:(GPP_NOTA||'').trim()};
+  // Lote R (18-09-2026): con descripción escrita se añaden igualmente las medidas (antes se perdían)
+  const dq=gv('qD').trim();
+  const ln={sec:'Puertas adicionales',tab:'t2',desc:(dq?`${dq} (${a}×${w})`:`Puerta ${S.tar} ${a}×${w}`)+(S.recargoModelo>0?` · recargo modelo +${S.recargoModelo}%`:''),cnt,p,nota:(GPP_NOTA||'').trim()};
   const fus=consolidarLN(ln); // Lote J
   if(!fus){ln.id=++LID;LN.push(ln);}
   uBadge();flash(fus?`🚪 Puerta añadida (agrupado: ${fus.cnt} uds)`:'🚪 Puerta añadida');
@@ -3244,13 +3271,16 @@ function tarifaCVTActual(){
   if(CVTESP==='31'&&CVT_CON_31[CVTTAR])return CVT_CON_31[CVTTAR];
   return CVTTAR;
 }
-// Etiquetas legibles para los tres subtipos de CVT
-const CVT_TIPO_NOM={costado:'Costado Visto',regleta:'Regleta',zocalo:'Zócalo'};
+// Etiquetas legibles para los subtipos de CVT.
+// Lote R (18-09-2026): + Cierre a techo. Se tarifa igual que costado/regleta (tarifa CVT del modelo
+// por alto×ancho, medida superior de la tabla) y no genera herrajes (a diferencia del zócalo).
+const CVT_TIPO_NOM={costado:'Costado Visto',regleta:'Regleta',zocalo:'Zócalo',techo:'Cierre a techo'};
 function setCVTipo(tipo,btn){
   CVTTIPO=tipo;
   document.getElementById('cvtCost').classList.toggle('on',tipo==='costado');
   document.getElementById('cvtReg').classList.toggle('on',tipo==='regleta');
   document.getElementById('cvtZoc').classList.toggle('on',tipo==='zocalo');
+  document.getElementById('cvtTecho').classList.toggle('on',tipo==='techo'); // Lote R
   cCVT();
 }
 function setCVTEsp(v,btn){pill(btn,['cvtE19','cvtE31']);CVTESP=v;cCVT();}
@@ -3293,7 +3323,7 @@ function addCVT(){
 function limpiarFormularioCVT(total){
   ['cvtA','cvtW','cvtNt'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const c=document.getElementById('cvtCnt');if(c)c.value=1;
-  if(total){CVTTIPO='costado';['cvtCost','cvtReg','cvtZoc'].forEach(id=>document.getElementById(id)?.classList.toggle('on',id==='cvtCost'));}
+  if(total){CVTTIPO='costado';['cvtCost','cvtReg','cvtZoc','cvtTecho'].forEach(id=>document.getElementById(id)?.classList.toggle('on',id==='cvtCost'));}
   const d=document.getElementById('cvtDes'),t=document.getElementById('cvtTot');
   if(d)d.textContent='Introduce alto y ancho';if(t)t.textContent=fmt(0);
   if(CVTTAR)cCVT();
