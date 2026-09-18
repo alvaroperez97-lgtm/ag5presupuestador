@@ -946,7 +946,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-18.4';
+const APP_BUILD = '2026-09-18.5';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1365,7 +1365,7 @@ const R3D_CTE={
   pataAlto:10, pataDiam:5, pataInset:5,   // patas de plástico negro (alto 10 = zócalo 10)
   golaAlto:REBAJE_PUERTA_GOLA, golaFondo:2.2, // perfil gola U: ocupa los 3 cm que se rebajan a la puerta
   tirLargo:16, tirAlto:1.2, tirSaliente:2.8, tirMargen:3, // tirador genérico (se afinará por modelo en R2)
-  cajLatH:{CJ:8.5,GV:18.5}, cajPared:{IATIRA:1.6,AVYOU:1.2}, cajHolgura:0.6, cajFondoGros:1.6, cajRetranqueo:2, cajBaseHolgura:1.5,
+  cajLatH:{CJ:8.5,GV:18.5}, cajPared:{IATIRA:1.6,AVYOU:1.2}, cajHolgura:0.6, cajFondoGros:1.6, cajRetranqueo:2,
   cajAltoMin:8         // cm: alto mínimo que se supone a un frente sin alto tecleado
 };
 const R3D_COL={costado:'#d9c39a',suelo:'#e2cea6',trav:'#d9c39a',techo:'#ecd9b2',trasera:'#e9dfc9',
@@ -1431,11 +1431,12 @@ function r3dPiezas(sp,conFrentes){
     [[i,i],[W-i,i],[i,F-i],[W-i,F-i]].forEach(([x,z])=>P.push({k:'cyl',x,y:-C.pataAlto,z,r,h:C.pataAlto,col:R3D_COL.pata,st:'#111'}));
   }
   // Frentes cajón/gaveta apilados desde arriba. Alto vacío → se reparte el hueco que dejan los que sí tienen alto.
-  const nVacios=sp.frentes.filter(f=>!f.alto).length;
-  const libre=Math.max(0,A-sp.frentes.reduce((s,f)=>s+f.alto,0));
-  const altoAuto=nVacios?Math.max(C.cajAltoMin,libre/nVacios):0;
   const hg=C.frenteHolgura,g=C.frenteGrosor;
   const lleva=sp.admiteTir, esGola=lleva&&sp.tg.t==='gola', esTir=lleva&&sp.tg.t==='tirador';
+  const reservaGola=f=>(esGola&&f.tir)?C.golaAlto:0; // hueco del perfil gola encima del frente
+  const nVacios=sp.frentes.filter(f=>!f.alto).length;
+  const libre=Math.max(0,A-sp.frentes.reduce((s,f)=>s+f.alto+reservaGola(f),0));
+  const altoAuto=nVacios?Math.max(C.cajAltoMin,libre/nVacios):0;
   const colHerr=r3dColorHerraje(sp.tg.c);
   const herraje=(x,w,top,conTir)=>{ // gola encima del elemento / tirador en su borde superior
     if(!conTir)return;
@@ -1444,17 +1445,20 @@ function r3dPiezas(sp,conFrentes){
   };
   let yTop=A;
   sp.frentes.forEach(f=>{
-    const h=f.alto||altoAuto,w=f.ancho||W,y0=yTop-h;
-    if(conFrentes){box(hg,y0+hg,-g,w-2*hg,h-2*hg,g,R3D_COL.frente);herraje(0,w,yTop,f.tir);}
+    const h=f.alto||altoAuto,w=f.ancho||W,y0=yTop-h-reservaGola(f);
+    if(conFrentes){box(hg,y0+hg,-g,w-2*hg,h-2*hg,g,R3D_COL.frente);herraje(0,w,y0+h,f.tir);}
     // Caja del cajón (siempre: con frentes se ve por arriba, sin frentes se ve la caja vacía)
     const L=f.fondo==='F40'?40:50,pared=C.cajPared[sp.modCaj]||C.cajPared.IATIRA,colCaj=sp.modCaj==='AVYOU'?R3D_COL.cajAVYOU:R3D_COL.cajIATIRA;
-    const x0=t+C.cajHolgura,ow=W-2*t-2*C.cajHolgura,z0=C.cajRetranqueo,yb=y0+C.cajBaseHolgura;
-    const latH=Math.max(3,Math.min(C.cajLatH[f.tipo]||C.cajLatH.CJ,h-3));
-    if(ow>2*pared+2&&L<F){
-      box(x0,yb,z0,pared,latH,L,colCaj,R3D_COL.strokeCaj); box(x0+ow-pared,yb,z0,pared,latH,L,colCaj,R3D_COL.strokeCaj);
-      box(x0+pared,yb,z0,ow-2*pared,C.cajFondoGros,L,R3D_COL.cajFondo,R3D_COL.strokeCaj);
-      box(x0+pared,yb,z0+L-pared,ow-2*pared,latH,pared,colCaj,R3D_COL.strokeCaj);
-      if(f.tipo==='GV'&&h-3>latH+4){const yr=y0+h-4.5;box(x0+pared/2-0.4,yr,z0+2,0.8,0.8,L-4,colCaj,R3D_COL.strokeCaj);box(x0+ow-pared/2-0.4,yr,z0+2,0.8,0.8,L-4,colCaj,R3D_COL.strokeCaj);}
+    const x0=t+C.cajHolgura,ow=W-2*t-2*C.cajHolgura,z0=C.cajRetranqueo,yb=Math.max(y0,0)+t+0.4; // nunca por debajo del suelo (frentes que exceden el alto)
+    const esGV=f.tipo==='GV';
+    const latH=Math.max(3,Math.min(C.cajLatH[f.tipo]||C.cajLatH.CJ,h-(t+0.4)-(t+0.5)-(esGV?1.2:0)));
+    const zTras=sp.tipo==='bajo'?F-C.traseraRemetida-C.traseraGrosor:F-C.traseraGrosor;
+    const Lc=Math.min(L,zTras-0.4-z0); // acortada si el fondo del mueble no admite la guía
+    if(ow>2*pared+2&&Lc>10){
+      box(x0,yb,z0,pared,latH,Lc,colCaj,R3D_COL.strokeCaj); box(x0+ow-pared,yb,z0,pared,latH,Lc,colCaj,R3D_COL.strokeCaj);
+      box(x0+pared,yb,z0,ow-2*pared,C.cajFondoGros,Lc-pared,R3D_COL.cajFondo,R3D_COL.strokeCaj);
+      box(x0+pared,yb,z0+Lc-pared,ow-2*pared,latH,pared,colCaj,R3D_COL.strokeCaj);
+      if(esGV){const yr=yb+latH+0.3;box(x0+pared/2-0.4,yr,z0+2,0.8,0.8,Lc-4,colCaj,R3D_COL.strokeCaj);box(x0+ow-pared/2-0.4,yr,z0+2,0.8,0.8,Lc-4,colCaj,R3D_COL.strokeCaj);}
     }
     yTop=y0;
   });
@@ -1469,42 +1473,79 @@ function r3dPiezas(sp,conFrentes){
   return P;
 }
 
-// ── Proyección ortográfica y pintado (algoritmo del pintor: caras ordenadas de lejos a cerca) ──
+// ── Proyección ortográfica y pintado ──
+// Orden de pintado POR PIEZA (no por cara): dos cajas disjuntas están separadas por al menos un eje; si la dirección
+// de la vista avanza por ese eje, la que queda en el lado de partida tapa a la otra. Con caras sueltas ordenadas por
+// centroide (algoritmo del pintor clásico) la cara exterior del costado, muy larga, quedaba "más lejos" que las cajas
+// de cajón que lleva dentro y éstas se veían a través del costado. Dentro de una caja convexa las caras visibles no se
+// solapan, así que basta ordenar las piezas. Las patas cilíndricas se ordenan por su caja envolvente.
+function r3dAABB(p){return p.k==='box'?[[p.x,p.x+p.w],[p.y,p.y+p.h],[p.z,p.z+p.d]]:[[p.x-p.r,p.x+p.r],[p.y,p.y+p.h],[p.z-p.r,p.z+p.r]];}
+function r3dOrdenar(P,d,prof){
+  const n=P.length,bb=P.map(r3dAABB),desp=Array.from({length:n},()=>[]),grado=new Array(n).fill(0),EPS=1e-6;
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+    let rel=0,sep=false,ok=true; // rel>0: i se pinta antes (queda detrás); rel<0: j antes
+    for(let k=0;k<3&&ok;k++){
+      const a=bb[i][k],b=bb[j][k];let r=0;
+      if(a[1]<=b[0]+EPS)r=d[k]>EPS?-1:(d[k]<-EPS?1:0);      // i en el lado bajo del eje: si la vista avanza hacia +k, i está delante
+      else if(b[1]<=a[0]+EPS)r=d[k]>EPS?1:(d[k]<-EPS?-1:0); // j en el lado bajo
+      else continue;                                          // no separadas en este eje
+      sep=true;
+      if(r===0){ok=false;break;}                              // separadas en un eje perpendicular a la vista: no se tapan
+      if(rel&&rel!==r){ok=false;break;}                       // ejes en desacuerdo: ningún rayo atraviesa las dos
+      rel=r;
+    }
+    if(!ok||!sep||!rel)continue;                              // cruzadas o sin relación: sin restricción
+    if(rel>0){desp[i].push(j);grado[j]++;}else{desp[j].push(i);grado[i]++;}
+  }
+  // Kahn con prioridad "más lejos primero"; si quedara un ciclo (no debería con cajas disjuntas) se rompe por profundidad.
+  const orden=[],pend=new Set();for(let i=0;i<n;i++)pend.add(i);
+  while(pend.size){
+    let mejor=-1;
+    pend.forEach(i=>{if(grado[i]===0&&(mejor<0||prof[i]>prof[mejor]))mejor=i;});
+    if(mejor<0){pend.forEach(i=>{if(mejor<0||prof[i]>prof[mejor])mejor=i;});}
+    pend.delete(mejor);orden.push(mejor);
+    desp[mejor].forEach(j=>{grado[j]--;});
+  }
+  return orden;
+}
 function r3dSVG(sp,vis,Wpx,Hpx){
   const P=r3dPiezas(sp,vis.frentes);
   const ct=Math.cos(vis.th),st=Math.sin(vis.th),cf=Math.cos(vis.ph),sf=Math.sin(vis.ph);
   const pa=sp.patas?R3D_CTE.pataAlto:0;
   const cx=sp.anc/2,cy=(sp.alt-pa)/2,cz=sp.fon/2;
-  const R=Math.sqrt(cx*cx+(sp.alt+pa)*(sp.alt+pa)/4+cz*cz)*1.04||1;
+  const R=Math.sqrt(cx*cx+(sp.alt+pa)*(sp.alt+pa)/4+cz*cz)*1.06||1;
   const s=Math.min(Wpx,Hpx)/(2*R);
   const proy=v=>{const x=(v[0]-cx)*ct+(v[2]-cz)*st,zz=-(v[0]-cx)*st+(v[2]-cz)*ct,y=v[1]-cy;
     return [Wpx/2+x*s,Hpx/2-(y*cf+zz*sf)*s,zz*cf-y*sf];}; // [sx, sy, profundidad (mayor = más lejos)]
   const nCam=n=>{const x=n[0]*ct+n[2]*st,zz=-n[0]*st+n[2]*ct,y=n[1];return [x,y*cf+zz*sf,zz*cf-y*sf];};
+  const dirVista=[-st*cf,-sf,ct*cf]; // dirección en la que crece la profundidad, en coordenadas del mueble
   const L=[-0.35,0.75,-0.55];const Ln=Math.hypot(...L);
-  const sombra=(col,n)=>{const c=nCam(n);const d=Math.max(0,(c[0]*L[0]+c[1]*L[1]+c[2]*L[2])/Ln);const k=0.6+0.4*d;
-    const m=col.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);if(!m)return col;
+  const hex=(col,k)=>{const m=col.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);if(!m)return col;
     return '#'+[1,2,3].map(i=>Math.round(parseInt(m[i],16)*k).toString(16).padStart(2,'0')).join('');};
-  const caras=[];
-  P.forEach(p=>{
+  const sombra=(col,n)=>{const c=nCam(n);const d=Math.max(0,(c[0]*L[0]+c[1]*L[1]+c[2]*L[2])/Ln);return hex(col,0.62+0.38*d);};
+  const r1=v=>Math.round(v*10)/10;
+  const poly=(pts,fill,st,sw)=>`<polygon points="${pts.map(q=>r1(q[0])+','+r1(q[1])).join(' ')}" fill="${fill}" stroke="${st}" stroke-width="${sw}" stroke-linejoin="round"/>`;
+  let svg=`<svg viewBox="0 0 ${Wpx} ${Hpx}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">`;
+  // Sombra suave en el suelo (huella del mueble ampliada 3 cm)
+  const ys=-pa,m=3;
+  svg+=poly([proy([-m,ys,-m]),proy([sp.anc+m,ys,-m]),proy([sp.anc+m,ys,sp.fon+m]),proy([-m,ys,sp.fon+m])],'rgba(74,44,14,.10)','none',0);
+  const prof=P.map(p=>{const b=r3dAABB(p);return proy([(b[0][0]+b[0][1])/2,(b[1][0]+b[1][1])/2,(b[2][0]+b[2][1])/2])[2];});
+  r3dOrdenar(P,dirVista,prof).forEach(i=>{
+    const p=P[i];
     if(p.k==='box'){
       const {x,y,z,w,h,d}=p;
       const V=[[x,y,z],[x+w,y,z],[x+w,y+h,z],[x,y+h,z],[x,y,z+d],[x+w,y,z+d],[x+w,y+h,z+d],[x,y+h,z+d]];
       [[[0,3,2,1],[0,0,-1]],[[4,5,6,7],[0,0,1]],[[0,1,5,4],[0,-1,0]],[[3,7,6,2],[0,1,0]],[[0,4,7,3],[-1,0,0]],[[1,2,6,5],[1,0,0]]].forEach(([idx,n])=>{
-        if(nCam(n)[2]>=0)return; // cara que mira hacia atrás: no se ve
-        const pts=idx.map(i=>proy(V[i]));
-        caras.push({z:pts.reduce((a,q)=>a+q[2],0)/4,pts,col:sombra(p.col,n),st:p.st});
+        if(nCam(n)[2]>=0)return; // cara que mira hacia atrás
+        const fill=sombra(p.col,n);
+        svg+=poly(idx.map(k=>proy(V[k])),fill,hex(fill,0.72),0.6);
       });
     } else { // cilindro (pata): casco convexo de las dos circunferencias proyectadas
       const N=14,pts=[];
-      for(let i=0;i<N;i++){const a=i/N*2*Math.PI,px=p.x+p.r*Math.cos(a),pz=p.z+p.r*Math.sin(a);pts.push(proy([px,p.y,pz]));pts.push(proy([px,p.y+p.h,pz]));}
-      const hull=r3dHull(pts);
-      caras.push({z:pts.reduce((a,q)=>a+q[2],0)/pts.length,pts:hull,col:p.col,st:p.st});
+      for(let k=0;k<N;k++){const a=k/N*2*Math.PI,px=p.x+p.r*Math.cos(a),pz=p.z+p.r*Math.sin(a);pts.push(proy([px,p.y,pz]));pts.push(proy([px,p.y+p.h,pz]));}
+      svg+=poly(r3dHull(pts),p.col,'#111',0.6);
     }
   });
-  caras.sort((a,b)=>b.z-a.z);
-  const r1=v=>Math.round(v*10)/10;
-  let svg=`<svg viewBox="0 0 ${Wpx} ${Hpx}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">`;
-  caras.forEach(c=>{svg+=`<polygon points="${c.pts.map(q=>r1(q[0])+','+r1(q[1])).join(' ')}" fill="${c.col}" stroke="${c.st}" stroke-width="0.8" stroke-linejoin="round"/>`;});
   return svg+'</svg>';
 }
 // Casco convexo 2D (cadena monótona de Andrew) — para las patas cilíndricas.
