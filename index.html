@@ -400,9 +400,11 @@ tr:hover td{background:var(--c);}
       </div>
       <!-- Lote R1 (18-09-2026): vista 3D del mueble seleccionado (solo pantalla). La rellena r3dActualizar() desde cp()/rdsg(). -->
       <div class="pn" id="r3dPanel" style="display:none">
-        <div class="pt">🧊 Vista 3D <span style="font-size:11px;font-weight:400;color:var(--g);font-style:italic;margin-left:6px">arrastra para girar</span></div>
+        <div class="pt">🧊 Vista 3D <span style="font-size:11px;font-weight:400;color:var(--g);font-style:italic;margin-left:6px">arrastra para girar · pellizco o rueda: zoom · dos dedos o botón derecho: mover</span></div>
         <div id="r3dTools" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
           <button class="btn bs" id="r3dContBtn" onclick="r3dToggleFrentes(R3D)" style="font-size:11px;padding:6px 12px">🚪 Ocultar frentes</button>
+          <button class="btn r3dBtn2" onclick="r3dZoom(R3D,R3D_CTE.zoomPaso)" style="font-size:11px;padding:6px 10px" title="Ampliar">🔍＋</button>
+          <button class="btn r3dBtn2" onclick="r3dZoom(R3D,1/R3D_CTE.zoomPaso)" style="font-size:11px;padding:6px 10px" title="Reducir">🔍−</button>
           <button class="btn r3dBtn2" onclick="r3dReset(R3D)" style="font-size:11px;padding:6px 12px">↺ Vista inicial</button>
         </div>
         <div id="r3dCont" class="r3d"></div>
@@ -838,8 +840,10 @@ tr:hover td{background:var(--c);}
     <div class="pt" style="justify-content:space-between"><span style="font-size:13px">🧊 <span id="r3dModalTit"></span></span><button class="btn bd2" onclick="cerrarRender3D()">✕</button></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
       <button class="btn bs" id="r3dModalContBtn" onclick="r3dToggleFrentes(R3DM)" style="font-size:11px;padding:6px 12px">🚪 Ocultar frentes</button>
+      <button class="btn r3dBtn2" onclick="r3dZoom(R3DM,R3D_CTE.zoomPaso)" style="font-size:11px;padding:6px 10px" title="Ampliar">🔍＋</button>
+      <button class="btn r3dBtn2" onclick="r3dZoom(R3DM,1/R3D_CTE.zoomPaso)" style="font-size:11px;padding:6px 10px" title="Reducir">🔍−</button>
       <button class="btn r3dBtn2" onclick="r3dReset(R3DM)" style="font-size:11px;padding:6px 12px">↺ Vista inicial</button>
-      <span style="font-size:11px;color:var(--g);font-style:italic">arrastra para girar</span>
+      <span style="font-size:11px;color:var(--g);font-style:italic">arrastra para girar · pellizco o rueda: zoom · dos dedos o botón derecho: mover</span>
     </div>
     <div id="r3dModalCont" class="r3d"></div>
     <div id="r3dModalCap" style="font-size:11px;color:var(--mm);margin-top:8px;line-height:1.5"></div>
@@ -946,7 +950,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-18.5';
+const APP_BUILD = '2026-09-18.6';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1348,10 +1352,15 @@ const ARM=buildARM();
 // frentes, tirador/gola, grosor o modelo de cajón (se engancha al final de cp()). Desde la pestaña Proyectos
 // el botón 🧊 de cada mueble abre el mismo visor en una ventana sobre la lista. SOLO PANTALLA: no se imprime.
 // Construcciones definidas por Álvaro (18-09-2026) — el resto de familias se dibuja como casco genérico con aviso:
-//   · Bajo puerta y bajo gavetero/cajonero (mismo casco, solo cambian los frentes): 2 costados de alto completo,
-//     suelo entre costados, SIN tapa (travesaños planos delantero y trasero de 12 cm), trasera encajada en ranura
-//     y remetida 5 cm desde atrás, 4 patas cilíndricas de plástico negro. El fregadero y la placa usan de momento
-//     este mismo casco (pendiente de confirmar).
+//   · NORMA DE TODOS LOS BAJOS (Lote R2, 18-09-2026): la BASE va por debajo de los costados, a todo el ancho y
+//     apoyada en las patas; los costados descansan encima (alto = alto del mueble − grosor). Los travesaños de
+//     arriba son INTERIORES (entre costados). Esta norma servirá más adelante para las listas de corte.
+//   · Bajo puerta y bajo gavetero/cajonero (mismo casco, solo cambian los frentes): SIN tapa (travesaños planos
+//     delantero y trasero de 12 cm), trasera encajada en ranura y remetida 5 cm desde atrás, 4 patas cilíndricas
+//     de plástico negro. La placa y la placa horno usan de momento este mismo casco (pendiente de definir).
+//   · Bajo fregadero (Lote R2): paletones delantero y trasero DE CANTO (12 cm de alto), base 5 cm más corta que los
+//     costados (58 → 53) y travesaño de refuerzo de 12 cm de pie sobre el final de la base. SIN trasera. La gaveta
+//     salvasifón se dibuja con el recorte en U por detrás.
 //   · Rincones: pendiente (se muestra el aviso, sin dibujo).
 // Grosor del tablero = el elegido en el proyecto (16 / 19). Puertas y frentes a 19 mm. Frentes de cajón apilados
 // desde arriba (F1 arriba) y puertas debajo, alineadas al suelo (así en bajos con gola el hueco de 3 cm del
@@ -1366,8 +1375,15 @@ const R3D_CTE={
   golaAlto:REBAJE_PUERTA_GOLA, golaFondo:2.2, // perfil gola U: ocupa los 3 cm que se rebajan a la puerta
   tirLargo:16, tirAlto:1.2, tirSaliente:2.8, tirMargen:3, // tirador genérico (se afinará por modelo en R2)
   cajLatH:{CJ:8.5,GV:18.5}, cajPared:{IATIRA:1.6,AVYOU:1.2}, cajHolgura:0.6, cajFondoGros:1.6, cajRetranqueo:2,
-  cajAltoMin:8         // cm: alto mínimo que se supone a un frente sin alto tecleado
+  cajAltoMin:8,        // cm: alto mínimo que se supone a un frente sin alto tecleado
+  // Lote R2 (18-09-2026) — bajo fregadero y zoom
+  fregBaseRecorte:5,   // cm que la base del fregadero es más corta que los costados (58 → 53)
+  fregPaleton:12,      // cm: alto de los paletones de canto (delantero y trasero) del fregadero
+  fregRefuerzo:12,     // cm: alto del travesaño de refuerzo de pie sobre el final de la base
+  ssU:{anc:0.55,fon:0.45}, // recorte en U de la gaveta salvasifón: fracción del ancho interior y del largo del cajón
+  zoomMin:0.5, zoomMax:4, zoomPaso:1.25 // zoom del visor (botones ＋/−, rueda y pellizco)
 };
+const R3D_W=360,R3D_H=300; // viewBox del SVG del visor (px)
 const R3D_COL={costado:'#d9c39a',suelo:'#e2cea6',trav:'#d9c39a',techo:'#ecd9b2',trasera:'#e9dfc9',
   frente:'#f3e3c0',pata:'#262626',cajIATIRA:'#c4c8ce',cajAVYOU:'#474a4f',cajFondo:'#f1ede6',
   stroke:'#8a5a2b',strokeCaj:'#5c5f66',strokeHerr:'#55585d'};
@@ -1380,20 +1396,22 @@ function r3dColorHerraje(nombre){
   return R3D_COL_HERRAJE.aluminio;
 }
 // Un visor = contenedor + ángulos + estado del toggle de frentes. Hay dos: el panel de Muebles y el modal de Proyectos.
-function r3dNuevoVisor(cont){return {cont,th:30*Math.PI/180,ph:22*Math.PI/180,frentes:true,spec:null,drag:null,raf:0};}
+function r3dNuevoVisor(cont){return {cont,th:30*Math.PI/180,ph:22*Math.PI/180,frentes:true,spec:null,drag:null,raf:0,zoom:1,px:0,py:0,pinch:null,ptrs:null};}
 const R3D=r3dNuevoVisor('r3dCont');
 const R3DM=r3dNuevoVisor('r3dModalCont');
 
 // ── Spec: datos mínimos del mueble para dibujarlo (independiente de si vienen del formulario o de una línea) ──
 function r3dSpec(o){
-  const esBajo=esBajoFam(o.arm);
-  return {nombre:o.arm.nom,lab:o.hoja?o.hoja.lab:'',tipo:esBajo?'bajo':'generico',pendiente:!esBajo,
+  const esBajo=esBajoFam(o.arm),esFreg=esBajo&&esFregadero(o.arm)&&!isRin(o.arm); // Lote R2: bajo fregadero regular
+  return {nombre:o.arm.nom,lab:o.hoja?o.hoja.lab:'',tipo:esFreg?'fregadero':(esBajo?'bajo':'generico'),pendiente:!esBajo,
     alt:+o.alt||o.arm.alt,anc:+o.anc||o.arm.anc,fon:+o.fon||(+o.arm.fon),gros:(+o.gros||16)/10,
     puertas:(o.puertas||[]).map(p=>({alto:+p.alto||0,ancho:+p.ancho||0,mano:p.mano||'D',tir:p.tir!=='off'&&(p.mano||'D')!=='FF'})),
-    frentes:(o.frentes||[]).map(f=>({alto:+f.alto||0,ancho:+f.ancho||0,tipo:f.tipo||'CJ',fondo:f.fondo||'F50',tir:f.tir!=='off'})),
+    frentes:(o.frentes||[]).map(f=>({alto:+f.alto||0,ancho:+f.ancho||0,tipo:f.tipo||'CJ',fondo:f.fondo||'F50',tir:f.tir!=='off',ss:(f.tipo||'CJ')==='GV'&&f.ss==='on'})),
     tg:{t:(o.cfg&&o.cfg.t)||'sin',s:(o.cfg&&o.cfg.s)||'',c:(o.cfg&&o.cfg.c)||''},
     admiteTir:admiteTirador(o.tar||'Sin puerta'),modCaj:o.modCaj||'IATIRA',patas:esBajo,sinFrentes:!!o.sinFrentes};
 }
+// Fondo de la base: en el fregadero es 5 cm más corta que los costados (Lote R2); en el resto, el fondo del mueble.
+function r3dFondoBase(sp){return sp.tipo==='fregadero'?Math.max(R3D_CTE.fregBaseRecorte*2,sp.fon-R3D_CTE.fregBaseRecorte):sp.fon;}
 // Spec desde el formulario vivo de la pestaña Muebles (null si no hay armazón o es rincón).
 function r3dSpecFormulario(){
   if(!SEL||isRin(SEL))return null;
@@ -1413,22 +1431,35 @@ function r3dSpecLinea(l){
 // Ejes: x = ancho (izquierda→derecha), y = alto (suelo→arriba), z = fondo (frente→atrás). El frente está en z=0.
 function r3dPiezas(sp,conFrentes){
   const P=[],C=R3D_CTE,t=sp.gros,W=sp.anc,A=sp.alt,F=sp.fon;
+  const esBajoTipo=sp.tipo==='bajo'||sp.tipo==='fregadero',esFreg=sp.tipo==='fregadero',Fb=r3dFondoBase(sp);
   if(sp.sinFrentes)conFrentes=false; // frentes del cliente: se ven las cajas de cajón, nunca los frentes
   const box=(x,y,z,w,h,d,col,st)=>{if(w>0&&h>0&&d>0)P.push({k:'box',x,y,z,w,h,d,col,st:st||R3D_COL.stroke});};
   // Casco
-  box(0,0,0,t,A,F,R3D_COL.costado); box(W-t,0,0,t,A,F,R3D_COL.costado);
-  box(t,0,0,W-2*t,t,F,R3D_COL.suelo);
-  if(sp.tipo==='bajo'){
-    box(t,A-t,0,W-2*t,t,C.travesano,R3D_COL.trav);
-    box(t,A-t,F-C.travesano,W-2*t,t,C.travesano,R3D_COL.trav);
-    box(t+0.1,t,F-C.traseraRemetida-C.traseraGrosor,W-2*t-0.2,A-2*t,C.traseraGrosor,R3D_COL.trasera);
+  if(esBajoTipo){
+    // Lote R2 (18-09-2026) — norma de TODOS los bajos: la base va por debajo de los costados (a todo el ancho) y los
+    // costados apoyan encima; los travesaños de arriba son interiores. Servirá para las listas de corte.
+    box(0,0,0,W,t,Fb,R3D_COL.suelo);
+    box(0,t,0,t,A-t,F,R3D_COL.costado); box(W-t,t,0,t,A-t,F,R3D_COL.costado);
+    if(esFreg){
+      // Bajo fregadero: paletones de canto (12 cm) delante y detrás, base 5 cm más corta (Fb) con travesaño de
+      // refuerzo de 12 cm de pie sobre su final, y SIN trasera (pasan los tubos).
+      box(t,A-C.fregPaleton,0,W-2*t,C.fregPaleton,t,R3D_COL.trav);
+      box(t,A-C.fregPaleton,F-t,W-2*t,C.fregPaleton,t,R3D_COL.trav);
+      box(t,t,Fb-t,W-2*t,C.fregRefuerzo,t,R3D_COL.trav);
+    } else {
+      box(t,A-t,0,W-2*t,t,C.travesano,R3D_COL.trav);
+      box(t,A-t,F-C.travesano,W-2*t,t,C.travesano,R3D_COL.trav);
+      box(t+0.1,t,F-C.traseraRemetida-C.traseraGrosor,W-2*t-0.2,A-2*t,C.traseraGrosor,R3D_COL.trasera);
+    }
   } else {
+    box(0,0,0,t,A,F,R3D_COL.costado); box(W-t,0,0,t,A,F,R3D_COL.costado);
+    box(t,0,0,W-2*t,t,F,R3D_COL.suelo);
     box(t,A-t,0,W-2*t,t,F,R3D_COL.techo);
     box(t+0.1,t,F-C.traseraGrosor,W-2*t-0.2,A-2*t,C.traseraGrosor,R3D_COL.trasera);
   }
   if(sp.patas){
-    const r=C.pataDiam/2,i=C.pataInset;
-    [[i,i],[W-i,i],[i,F-i],[W-i,F-i]].forEach(([x,z])=>P.push({k:'cyl',x,y:-C.pataAlto,z,r,h:C.pataAlto,col:R3D_COL.pata,st:'#111'}));
+    const r=C.pataDiam/2,i=C.pataInset; // van en la base: las traseras se retranquean desde el final de la base
+    [[i,i],[W-i,i],[i,Fb-i],[W-i,Fb-i]].forEach(([x,z])=>P.push({k:'cyl',x,y:-C.pataAlto,z,r,h:C.pataAlto,col:R3D_COL.pata,st:'#111'}));
   }
   // Frentes cajón/gaveta apilados desde arriba. Alto vacío → se reparte el hueco que dejan los que sí tienen alto.
   const hg=C.frenteHolgura,g=C.frenteGrosor;
@@ -1452,12 +1483,25 @@ function r3dPiezas(sp,conFrentes){
     const x0=t+C.cajHolgura,ow=W-2*t-2*C.cajHolgura,z0=C.cajRetranqueo,yb=Math.max(y0,0)+t+0.4; // nunca por debajo del suelo (frentes que exceden el alto)
     const esGV=f.tipo==='GV';
     const latH=Math.max(3,Math.min(C.cajLatH[f.tipo]||C.cajLatH.CJ,h-(t+0.4)-(t+0.5)-(esGV?1.2:0)));
-    const zTras=sp.tipo==='bajo'?F-C.traseraRemetida-C.traseraGrosor:F-C.traseraGrosor;
-    const Lc=Math.min(L,zTras-0.4-z0); // acortada si el fondo del mueble no admite la guía
+    const zTras=sp.tipo==='bajo'?F-C.traseraRemetida-C.traseraGrosor:(esFreg?F-t:F-C.traseraGrosor);
+    let Lc=Math.min(L,zTras-0.4-z0); // acortada si el fondo del mueble no admite la guía
+    if(esFreg&&yb<t+C.fregRefuerzo)Lc=Math.min(Lc,Fb-t-0.4-z0); // fregadero: la gaveta baja no atraviesa el refuerzo
     if(ow>2*pared+2&&Lc>10){
+      const wi=ow-2*pared,gf=C.cajFondoGros,zt=z0+Lc-pared; // ancho interior y plano de la trasera del cajón
       box(x0,yb,z0,pared,latH,Lc,colCaj,R3D_COL.strokeCaj); box(x0+ow-pared,yb,z0,pared,latH,Lc,colCaj,R3D_COL.strokeCaj);
-      box(x0+pared,yb,z0,ow-2*pared,C.cajFondoGros,Lc-pared,R3D_COL.cajFondo,R3D_COL.strokeCaj);
-      box(x0+pared,yb,z0+Lc-pared,ow-2*pared,latH,pared,colCaj,R3D_COL.strokeCaj);
+      // Lote R2 — gaveta salvasifón (solo bajos fregadero): recorte en U centrado por detrás. Se monta con cajas que
+      // no se cruzan: fondo delantero + dos brazos, trasera partida en dos y las tres paredes del recorte.
+      const uW=Math.max(8,wi*C.ssU.anc),uP=Math.max(6,(Lc-pared)*C.ssU.fon),bz=(wi-uW)/2;
+      if(f.ss&&esFreg&&bz>pared+1&&Lc-pared-uP>4){
+        box(x0+pared,yb,z0,wi,gf,Lc-pared-uP,R3D_COL.cajFondo,R3D_COL.strokeCaj);
+        box(x0+pared,yb,zt-uP,bz,gf,uP,R3D_COL.cajFondo,R3D_COL.strokeCaj); box(x0+pared+bz+uW,yb,zt-uP,bz,gf,uP,R3D_COL.cajFondo,R3D_COL.strokeCaj);
+        box(x0+pared,yb,zt,bz,latH,pared,colCaj,R3D_COL.strokeCaj); box(x0+pared+bz+uW,yb,zt,bz,latH,pared,colCaj,R3D_COL.strokeCaj);
+        box(x0+bz,yb+gf,zt-uP,pared,latH-gf,uP,colCaj,R3D_COL.strokeCaj); box(x0+pared+bz+uW,yb+gf,zt-uP,pared,latH-gf,uP,colCaj,R3D_COL.strokeCaj);
+        box(x0+pared+bz,yb+gf,zt-uP-pared,uW,latH-gf,pared,colCaj,R3D_COL.strokeCaj);
+      } else {
+        box(x0+pared,yb,z0,wi,gf,Lc-pared,R3D_COL.cajFondo,R3D_COL.strokeCaj);
+        box(x0+pared,yb,zt,wi,latH,pared,colCaj,R3D_COL.strokeCaj);
+      }
       if(esGV){const yr=yb+latH+0.3;box(x0+pared/2-0.4,yr,z0+2,0.8,0.8,Lc-4,colCaj,R3D_COL.strokeCaj);box(x0+ow-pared/2-0.4,yr,z0+2,0.8,0.8,Lc-4,colCaj,R3D_COL.strokeCaj);}
     }
     yTop=y0;
@@ -1514,9 +1558,9 @@ function r3dSVG(sp,vis,Wpx,Hpx){
   const pa=sp.patas?R3D_CTE.pataAlto:0;
   const cx=sp.anc/2,cy=(sp.alt-pa)/2,cz=sp.fon/2;
   const R=Math.sqrt(cx*cx+(sp.alt+pa)*(sp.alt+pa)/4+cz*cz)*1.06||1;
-  const s=Math.min(Wpx,Hpx)/(2*R);
+  const s=Math.min(Wpx,Hpx)/(2*R)*(vis.zoom||1),ox=Wpx/2+(vis.px||0),oy=Hpx/2+(vis.py||0); // Lote R2: zoom y desplazamiento
   const proy=v=>{const x=(v[0]-cx)*ct+(v[2]-cz)*st,zz=-(v[0]-cx)*st+(v[2]-cz)*ct,y=v[1]-cy;
-    return [Wpx/2+x*s,Hpx/2-(y*cf+zz*sf)*s,zz*cf-y*sf];}; // [sx, sy, profundidad (mayor = más lejos)]
+    return [ox+x*s,oy-(y*cf+zz*sf)*s,zz*cf-y*sf];}; // [sx, sy, profundidad (mayor = más lejos)]
   const nCam=n=>{const x=n[0]*ct+n[2]*st,zz=-n[0]*st+n[2]*ct,y=n[1];return [x,y*cf+zz*sf,zz*cf-y*sf];};
   const dirVista=[-st*cf,-sf,ct*cf]; // dirección en la que crece la profundidad, en coordenadas del mueble
   const L=[-0.35,0.75,-0.55];const Ln=Math.hypot(...L);
@@ -1561,34 +1605,77 @@ function r3dHull(pts){
 // ── Visores ──
 function r3dPintar(vis){
   const cont=document.getElementById(vis.cont);if(!cont||!vis.spec)return;
-  cont.innerHTML=r3dSVG(vis.spec,vis,360,300);
+  cont.innerHTML=r3dSVG(vis.spec,vis,R3D_W,R3D_H);
 }
 function r3dCaption(sp){
   const med=`${fmtCm(sp.anc)}×${fmtCm(sp.alt)}×${fmtCm(sp.fon)} cm`;
   let t=`${sp.lab?sp.lab+' · ':''}${sp.nombre} — ${med} · tablero ${Math.round(sp.gros*10)} mm${sp.patas?' · 4 patas':''}`;
   if(sp.tipo==='bajo')t+=` · trasera a ${R3D_CTE.traseraRemetida} cm`;
+  if(sp.tipo==='fregadero')t+=` · base ${fmtCm(r3dFondoBase(sp))} cm · sin trasera`;
   if(sp.sinFrentes)t+=' · puertas y frentes del cliente';
   return esc(t);
 }
 function r3dToggleFrentes(vis){vis.frentes=!vis.frentes;r3dPintarBotones(vis);r3dPintar(vis);}
-function r3dReset(vis){vis.th=30*Math.PI/180;vis.ph=22*Math.PI/180;r3dPintar(vis);}
+function r3dReset(vis){vis.th=30*Math.PI/180;vis.ph=22*Math.PI/180;vis.zoom=1;vis.px=0;vis.py=0;r3dPintar(vis);}
+// Lote R2 (18-09-2026) — zoom. Amplía alrededor del punto [sx,sy] del viewBox (por defecto el centro): lo que hay bajo
+// el dedo o el cursor se queda quieto. Los botones ＋/− amplían hacia el centro. px/py = desplazamiento en px del viewBox.
+function r3dZoomA(vis,factor,sx,sy){
+  const z0=vis.zoom||1,z=Math.max(R3D_CTE.zoomMin,Math.min(R3D_CTE.zoomMax,z0*factor));if(z===z0)return;
+  const cx=sx==null?R3D_W/2:sx,cy=sy==null?R3D_H/2:sy;
+  vis.px=(vis.px||0)-(cx-R3D_W/2-(vis.px||0))*(z/z0-1);
+  vis.py=(vis.py||0)-(cy-R3D_H/2-(vis.py||0))*(z/z0-1);
+  vis.zoom=z;
+}
+function r3dZoom(vis,factor){r3dZoomA(vis,factor);r3dPintar(vis);}
+// px de pantalla → px del viewBox (el SVG se estira al ancho del contenedor). k = factor de conversión.
+function r3dEscalaSVG(vis){const cont=document.getElementById(vis.cont),svg=cont&&cont.querySelector('svg'),r=(svg||cont).getBoundingClientRect();return {r,k:r.width?R3D_W/r.width:1};}
+function r3dPuntoSVG(vis,clientX,clientY){const {r,k}=r3dEscalaSVG(vis);return {sx:(clientX-r.left)*k,sy:(clientY-r.top)*k,k};}
 function r3dPintarBotones(vis){
   const b=document.getElementById(vis.cont+'Btn');if(!b)return;
   const sinFr=!!(vis.spec&&vis.spec.sinFrentes);b.disabled=sinFr;b.style.opacity=sinFr?'.5':'';
   b.textContent=sinFr?'🚪 Frentes del cliente (no se dibujan)':(vis.frentes?'🚪 Ocultar frentes':'🚪 Mostrar frentes');
 }
 // Giro arrastrando (pointer events: funciona igual con dedo y ratón). Se instala una sola vez por contenedor.
+// Lote R2 (18-09-2026): zoom con pellizco (dos dedos) o rueda del ratón; desplazar con dos dedos, botón derecho o
+// Mayús + arrastrar. Con un dedo se sigue girando aunque haya zoom.
 function r3dInstalarGiro(vis){
   const cont=document.getElementById(vis.cont);if(!cont||cont.dataset.giro)return;cont.dataset.giro='1';
-  cont.addEventListener('pointerdown',e=>{vis.drag={x:e.clientX,y:e.clientY,th:vis.th,ph:vis.ph};cont.setPointerCapture(e.pointerId);e.preventDefault();});
+  vis.ptrs=new Map();
+  const pinza=()=>{ // arranca (o rearranca) el gesto de dos dedos con los punteros activos
+    const [a,b]=[...vis.ptrs.values()];
+    vis.pinch={d:Math.hypot(b.x-a.x,b.y-a.y)||1,mx:(a.x+b.x)/2,my:(a.y+b.y)/2,zoom:vis.zoom||1,px:vis.px||0,py:vis.py||0};vis.drag=null;
+  };
+  cont.addEventListener('pointerdown',e=>{
+    vis.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});try{cont.setPointerCapture(e.pointerId);}catch(_){}e.preventDefault();
+    if(vis.ptrs.size>=2){pinza();return;}
+    vis.drag={x:e.clientX,y:e.clientY,th:vis.th,ph:vis.ph,px:vis.px||0,py:vis.py||0,mover:e.button===2||e.shiftKey};
+  });
   cont.addEventListener('pointermove',e=>{
-    if(!vis.drag)return;
-    vis.th=vis.drag.th-(e.clientX-vis.drag.x)*0.6*Math.PI/180;
-    vis.ph=Math.max(-25*Math.PI/180,Math.min(80*Math.PI/180,vis.drag.ph+(e.clientY-vis.drag.y)*0.4*Math.PI/180));
+    const p=vis.ptrs.get(e.pointerId);if(!p)return;p.x=e.clientX;p.y=e.clientY;
+    if(vis.pinch&&vis.ptrs.size>=2){
+      // Primero se arrastra con el punto medio (al zoom inicial) y luego se amplía alrededor de ese punto medio.
+      const [a,b]=[...vis.ptrs.values()],d=Math.hypot(b.x-a.x,b.y-a.y)||1,mx=(a.x+b.x)/2,my=(a.y+b.y)/2,q=r3dPuntoSVG(vis,mx,my);
+      vis.zoom=vis.pinch.zoom;vis.px=vis.pinch.px+(mx-vis.pinch.mx)*q.k;vis.py=vis.pinch.py+(my-vis.pinch.my)*q.k;
+      r3dZoomA(vis,d/vis.pinch.d,q.sx,q.sy);
+    } else if(vis.drag){
+      if(vis.drag.mover){const k=r3dEscalaSVG(vis).k;vis.px=vis.drag.px+(e.clientX-vis.drag.x)*k;vis.py=vis.drag.py+(e.clientY-vis.drag.y)*k;}
+      else {
+        vis.th=vis.drag.th-(e.clientX-vis.drag.x)*0.6*Math.PI/180;
+        vis.ph=Math.max(-25*Math.PI/180,Math.min(80*Math.PI/180,vis.drag.ph+(e.clientY-vis.drag.y)*0.4*Math.PI/180));
+      }
+    } else return;
     if(!vis.raf)vis.raf=requestAnimationFrame(()=>{vis.raf=0;r3dPintar(vis);});
   });
-  const fin=()=>{vis.drag=null;};
+  const fin=e=>{
+    vis.ptrs.delete(e.pointerId);
+    if(vis.ptrs.size>=2){pinza();return;}
+    vis.pinch=null;
+    if(vis.ptrs.size===1){const [p]=[...vis.ptrs.values()];vis.drag={x:p.x,y:p.y,th:vis.th,ph:vis.ph,px:vis.px||0,py:vis.py||0,mover:false};} // queda un dedo: sigue girando sin salto
+    else vis.drag=null;
+  };
   cont.addEventListener('pointerup',fin);cont.addEventListener('pointercancel',fin);
+  cont.addEventListener('contextmenu',e=>e.preventDefault()); // botón derecho = desplazar, sin menú contextual
+  cont.addEventListener('wheel',e=>{e.preventDefault();const q=r3dPuntoSVG(vis,e.clientX,e.clientY);r3dZoomA(vis,e.deltaY<0?R3D_CTE.zoomPaso:1/R3D_CTE.zoomPaso,q.sx,q.sy);r3dPintar(vis);},{passive:false});
 }
 // Panel de la pestaña Muebles: se llama al final de cp() y de rdsg(). Sin armazón → oculto. Rincón → solo aviso.
 function r3dActualizar(){
