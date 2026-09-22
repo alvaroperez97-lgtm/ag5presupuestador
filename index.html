@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+[Resource from GitHub at repo://alvaroperez97-lgtm/ag5presupuestador/sha/e49d7c4bb566a3a4db25934af33a465a16d1116c/contents/index.html] <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -950,7 +950,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-18.6';
+const APP_BUILD = '2026-09-22.1';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1016,14 +1016,16 @@ const LS_BORRADOR  ='g5_borrador';   // snapshot del trabajo en curso (autoguard
 
 // Medidas estándar de cajón/gaveta herraje. Por modelo, fondo y tipo.
 // Se usa para mapear el ancho del FRENTE al ancho del HERRAJE (medida estándar superior).
+// Lote S (22-09-2026): F.40 tiene las MISMAS 11 medidas que F.50 (PDF 2021 pág. 50). Antes faltaban
+// 35/45/100/120 en cajón y 35/40/45/60/80/100/120 en gaveta y se cobraba la medida superior.
 const MED_CJ={
   IATIRA:{
     F50:{CJ:[30,35,40,45,50,60,70,80,90,100,120], GV:[30,35,40,45,50,60,70,80,90,100,120]},
-    F40:{CJ:[30,40,50,60,70,80,90],               GV:[30,50,70,90]}
+    F40:{CJ:[30,35,40,45,50,60,70,80,90,100,120], GV:[30,35,40,45,50,60,70,80,90,100,120]}
   },
   AVYOU:{
     F50:{CJ:[30,35,40,45,50,60,70,80,90,100,120], GV:[30,35,40,45,50,60,70,80,90,100,120]},
-    F40:{CJ:[30,40,50,60,70,80,90],               GV:[30,50,70,90]}
+    F40:{CJ:[30,35,40,45,50,60,70,80,90,100,120], GV:[30,35,40,45,50,60,70,80,90,100,120]}
   }
 };
 // Devuelve la medida estándar inmediatamente superior, o null si supera el máximo (120).
@@ -1998,12 +2000,14 @@ const EC=[
 const VR=[
   {c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.50 M-30',p:39.89},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.50 M-35',p:40.45},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.50 M-40',p:41.03},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.50 M-45',p:41.61},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.50 M-50',p:42.19},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.50 M-60',p:43.45},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.50 M-70',p:44.49},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.50 M-80',p:46.57},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.50 M-90',p:48.55},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.50 M-100',p:54.63},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.50 M-120',p:62.24},
   {c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.50 M-30',p:46.85},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.50 M-35',p:47.36},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.50 M-40',p:47.49},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.50 M-45',p:48.69},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.50 M-50',p:49.35},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.50 M-60',p:50.86},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.50 M-70',p:51.87},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.50 M-80',p:52.96},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.50 M-90',p:54.85},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.50 M-100',p:60.95},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.50 M-120',p:72.95},
-  {c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-30',p:38.14},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-40',p:39.27},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-50',p:40.43},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-60',p:41.69},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-70',p:42.72},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-80',p:44.82},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-90',p:46.79},
-  {c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-30',p:44.57},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-50',p:47.06},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-70',p:49.58},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-90',p:52.57},
+  // Lote S (22-09-2026): F.40 completo, 11 medidas (PDF 2021 pág. 50)
+  {c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-30',p:38.14},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-35',p:38.70},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-40',p:39.27},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-45',p:39.86},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-50',p:40.43},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-60',p:41.69},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-70',p:42.72},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-80',p:44.82},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-90',p:46.79},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-100',p:55.11},{c:'Cajones I.ATIRA',n:'Cajón I.ATIRA F.40 M-120',p:60.73},
+  {c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-30',p:44.57},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-35',p:45.08},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-40',p:45.78},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-45',p:46.40},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-50',p:47.06},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-60',p:48.57},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-70',p:49.58},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-80',p:50.67},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-90',p:52.57},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-100',p:61.90},{c:'Cajones I.ATIRA',n:'Gaveta I.ATIRA F.40 M-120',p:71.44},
   {c:'Cajones AV YOU',n:'Cajón AV YOU F.50 M-30',p:51.89},{c:'Cajones AV YOU',n:'Cajón AV YOU F.50 M-35',p:52.45},{c:'Cajones AV YOU',n:'Cajón AV YOU F.50 M-40',p:53.03},{c:'Cajones AV YOU',n:'Cajón AV YOU F.50 M-45',p:53.61},{c:'Cajones AV YOU',n:'Cajón AV YOU F.50 M-50',p:54.19},{c:'Cajones AV YOU',n:'Cajón AV YOU F.50 M-60',p:55.45},{c:'Cajones AV YOU',n:'Cajón AV YOU F.50 M-70',p:56.49},{c:'Cajones AV YOU',n:'Cajón AV YOU F.50 M-80',p:58.57},{c:'Cajones AV YOU',n:'Cajón AV YOU F.50 M-90',p:60.55},{c:'Cajones AV YOU',n:'Cajón AV YOU F.50 M-100',p:66.63},{c:'Cajones AV YOU',n:'Cajón AV YOU F.50 M-120',p:74.24},
   {c:'Cajones AV YOU',n:'Gaveta AV YOU F.50 M-30',p:58.85},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.50 M-35',p:59.36},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.50 M-40',p:59.49},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.50 M-45',p:60.69},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.50 M-50',p:61.35},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.50 M-60',p:62.86},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.50 M-70',p:63.87},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.50 M-80',p:64.96},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.50 M-90',p:66.85},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.50 M-100',p:72.95},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.50 M-120',p:84.95},
-  {c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-30',p:50.14},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-40',p:51.27},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-50',p:52.43},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-60',p:53.69},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-70',p:54.72},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-80',p:56.82},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-90',p:58.79},
-  {c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-30',p:56.57},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-50',p:59.06},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-70',p:61.58},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-90',p:64.57},
+  // Lote S (22-09-2026): F.40 completo, 11 medidas (= I.ATIRA + 12,00)
+  {c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-30',p:50.14},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-35',p:50.70},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-40',p:51.27},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-45',p:51.86},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-50',p:52.43},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-60',p:53.69},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-70',p:54.72},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-80',p:56.82},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-90',p:58.79},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-100',p:67.11},{c:'Cajones AV YOU',n:'Cajón AV YOU F.40 M-120',p:72.73},
+  {c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-30',p:56.57},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-35',p:57.08},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-40',p:57.78},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-45',p:58.40},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-50',p:59.06},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-60',p:60.57},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-70',p:61.58},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-80',p:62.67},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-90',p:64.57},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-100',p:73.90},{c:'Cajones AV YOU',n:'Gaveta AV YOU F.40 M-120',p:83.44},
   {c:'Accesorios',n:'Abatible Blum Free A.20-45 max An.60',p:30.06},{c:'Accesorios',n:'Abatible Blum Free A.20-45 + Push Tip-On',p:45.06},{c:'Accesorios',n:'Abatible Blum Free Forte A.35-65 max An.90',p:49.20},{c:'Accesorios',n:'Abatible Blum Free Forte A.35-65 + Push Tip-On',p:64.20},{c:'Accesorios',n:'Botellero Extraíble 15 (52x11x48)',p:84.00},{c:'Accesorios',n:'Botellero Extraíble 20 (52x16x48)',p:116.49},{c:'Accesorios',n:'Botellero/Verdulero Extraíble 30',p:148.38},
   {c:'Accesorios',n:'Cubertero cajón 470mm An.30-40',p:19.28},{c:'Accesorios',n:'Cubertero cajón 470mm An.45',p:21.08},{c:'Accesorios',n:'Cubertero cajón 470mm An.50',p:23.69},{c:'Accesorios',n:'Cubertero cajón 470mm An.60',p:24.81},{c:'Accesorios',n:'Cubertero cajón 470mm An.70',p:47.25},{c:'Accesorios',n:'Cubertero cajón 470mm An.80',p:48.93},{c:'Accesorios',n:'Cubertero cajón 470mm An.90-100',p:50.61},
   {c:'Accesorios',n:'Cubertero Bambú Nogal 400-600mm',p:39.26},{c:'Accesorios',n:'Cubertero Bambú Nogal 700-900mm',p:50.16},
