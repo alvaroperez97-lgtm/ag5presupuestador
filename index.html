@@ -950,7 +950,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-22.1';
+const APP_BUILD = '2026-09-22.2';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -964,11 +964,13 @@ const FACTOR_FORMA_ESP   = 2;     // ×2 armazón por forma especial (chaflán /
 // Suplementos fijos
 const SUP_UNERO_REBAJ    = 22.50; // +22,50 ptos/puerta uñero rebajado DM22 (sólo puertas lacadas)
 const GOLA_HALF_STRIP    = 41.15; // Gola media tira (también usado en GT2)
-// Lote H — Gaveta salvasifón (solo bajos fregadero y solo herraje I.ATIRA; AV YOU pendiente de tarifa):
-//   · ancho ≤ 90  → precio cerrado gaveta+accesorio (PRECIO_GV_SALVASIFON)
-//   · ancho > 90  → gaveta correspondiente + SUP_SALVASIFON
-const PRECIO_GV_SALVASIFON = 65.17; // gaveta + accesorio salvasifón hasta An.90 (€/ud)
-const SUP_SALVASIFON       = 14.31; // suplemento sobre la gaveta correspondiente si ancho > 90 (€/ud)
+// Lote T (22-09-2026) — Gaveta salvasifón (solo bajos fregadero), I.ATIRA y AV YOU:
+//   gaveta correspondiente (modelo, fondo y medida) + SUP_SALVASIFON, sea cual sea la medida.
+//   Sustituye a la regla del Lote H (≤ 90 → 65,17 cerrado; > 90 → gaveta + 14,31; AV YOU bloqueado).
+const SUP_SALVASIFON       = 11.00; // suplemento salvasifón sobre la gaveta (€/ud)
+// Lote T (22-09-2026) — Tirador Stock en ancho no estándar: tramo superior + 3,00 ptos
+// (TSV de tiradores: "para anchos no estándar incrementar 3,00 puntos"). Coincidencia EXACTA contra TD.an.
+const SUP_TIR_STOCK_NO_STD = 3.00;  // €/ud tirador
 // Lote J — "Puerta del cliente" en accesorios extraíbles y abatibles Blum: cuando el mueble
 // no lleva puerta nuestra hay que montar la puerta que aporta el cliente sobre el accesorio.
 // Recargo FIJO en €/ud; no le afectan ×2/+30%/+15% (esos son recargos de armazón).
@@ -1036,10 +1038,8 @@ function medidaSupCajon(modelo,tipo,fondo,ancho){
   return null;
 }
 // Devuelve {precio, descripcion} del herraje cajón/gaveta o null si fuera de rango / no encontrado.
-// Lote H — 5º parámetro ss (salvasifón, solo gavetas de bajos fregadero):
-//   · solo I.ATIRA (AV YOU pendiente de tarifa → null)
-//   · medida ≤ 90 → precio cerrado PRECIO_GV_SALVASIFON (gaveta + accesorio)
-//   · medida > 90 → gaveta correspondiente + SUP_SALVASIFON
+// 5º parámetro ss (salvasifón, solo gavetas de bajos fregadero) — Lote T:
+//   · I.ATIRA y AV YOU, cualquier medida → gaveta correspondiente + SUP_SALVASIFON
 function precioCajonHerraje(modelo,tipo,fondo,anchoFrente,ss){
   const med=medidaSupCajon(modelo,tipo,fondo,anchoFrente);
   if(med==null)return null;
@@ -1049,8 +1049,6 @@ function precioCajonHerraje(modelo,tipo,fondo,anchoFrente,ss){
   const cat='Cajones '+modName;
   const nom=`${tipoName} ${modName} ${fondoName} M-${med}`;
   if(ss&&tipo==='GV'){
-    if(modelo!=='IATIRA')return null; // salvasifón AV YOU pendiente de tarifa
-    if(med<=90)return {precio:PRECIO_GV_SALVASIFON,descripcion:`Gaveta Salvasifón ${modName} ${fondoName} M-${med}`,ss:true};
     const item=VR.find(v=>v.c===cat&&v.n===nom);
     return item?{precio:+(item.p+SUP_SALVASIFON).toFixed(2),descripcion:nom+' + Salvasifón',ss:true}:null;
   }
@@ -1162,7 +1160,13 @@ let GPP_NOTA='',GPP_BASE=0; // GPP_BASE: precio de tarifa antes de suplementos (
 function gtp(tipo,ancho){
   const d=TD[tipo];if(!d)return 0;
   let i=d.an.findIndex(a=>a>=ancho);if(i<0)i=d.an.length-1;
-  return d.p[i]||0;
+  return (d.p[i]||0)+supTirNoStd(tipo,ancho);
+}
+// Lote T — suplemento por ancho no estándar del tirador (solo Tirador Stock).
+// Ej.: puerta An.57 → tramo 60 (13,91) + 3,00 = 16,91; puerta An.60 → 13,91.
+function supTirNoStd(tipo,ancho){
+  const d=TD[tipo];if(!d||tipo!=='tirador-stock'||!(ancho>0))return 0;
+  return d.an.includes(+ancho)?0:SUP_TIR_STOCK_NO_STD;
 }
 function gap(ancho){
   let i=GA.an.findIndex(a=>a>=ancho);if(i<0)i=GA.an.length-1;
@@ -1798,7 +1802,7 @@ function editarPrecioDes(inp){
   const refrescar=()=>{if(esR)rdsg();else cp();};
   if(!(nuevo>=0)){flash('⚠️ Precio no válido');refrescar();return;}
   const puertas=esR?RPuertas:MPuertas,frentes=esR?RFrentesCJ:MFrentesCJ;
-  let tipo=null,clave=null,etq='',actual=null,setMan=null,clearMan=null;
+  let tipo=null,clave=null,etq='',actual=null,setMan=null,clearMan=null,supTir=0; // Lote T: supTir = suplemento no estándar del tirador (no se guarda en tarifa)
   if(t==='arm'){
     const arm=esR?RD_ARM:CP_ARM;if(!arm)return;
     tipo='arm';clave=arm.nom;etq=`armazón ${arm.nom}`;actual=arm.p;
@@ -1811,14 +1815,14 @@ function editarPrecioDes(inp){
   } else if(t==='tir'||t==='ftir'){
     const it=(t==='tir'?puertas:frentes)[i];if(!it)return;
     const w=+it.ancho||0,cfg=isBajo(SEL)?S.tb:S.ta;
-    if(cfg.t==='tirador'&&cfg.s){const c=tarifaClaveTir(cfg.s,w);tipo='tir';clave=c.key;etq=`${TD[cfg.s].d} An.${c.an}`;actual=TD[cfg.s].p[c.i];}
+    if(cfg.t==='tirador'&&cfg.s){const c=tarifaClaveTir(cfg.s,w);tipo='tir';clave=c.key;etq=`${TD[cfg.s].d} An.${c.an}`;supTir=supTirNoStd(cfg.s,w);actual=TD[cfg.s].p[c.i]+supTir;} // Lote T: +3,00 no estándar
     else if(cfg.t==='gola'){const c=tarifaClaveGa(w);tipo='ga';clave=c.key;etq=`gola altos An.${c.an}`;actual=GA.p[c.i];}
     setMan=()=>{it.tMan=nuevo;};clearMan=()=>{delete it.tMan;};
   } else return;
   // Escribir el precio de tarifa vigente = quitar el manual (sin preguntar)
   if(actual!=null&&Math.abs(actual-nuevo)<0.005){clearMan();refrescar();return;}
-  if(clave&&confirm(`¿Guardar ${fmt(nuevo)} en la tarifa para ${etq}?\n\nACEPTAR: se guarda en la tarifa de este dispositivo (antes ${actual!=null?fmt(actual):'sin precio'}) y vale para todos los muebles a partir de ahora.\nCANCELAR: solo cambia en este mueble.`)){
-    if(tarifaGuardar(tipo,clave,nuevo,etq)){clearMan();flash('💾 Tarifa actualizada: '+etq);}
+  if(clave&&confirm(`¿Guardar ${fmt(nuevo-supTir)} en la tarifa para ${etq}?${supTir?`\n(ancho no estándar: el +${fmt(supTir)} se sigue sumando aparte)`:''}\n\nACEPTAR: se guarda en la tarifa de este dispositivo (antes ${actual!=null?fmt(actual-supTir):'sin precio'}) y vale para todos los muebles a partir de ahora.\nCANCELAR: solo cambia en este mueble.`)){
+    if(tarifaGuardar(tipo,clave,+(nuevo-supTir).toFixed(2),etq)){clearMan();flash('💾 Tarifa actualizada: '+etq);} // Lote T: la tarifa guarda el tramo sin el +3,00
   } else {
     setMan();
     if(!clave)flash('Medida fuera de tabla: el precio queda solo en este mueble');
@@ -2020,7 +2024,7 @@ const VR=[
   {c:'Tiras y Cornisas',n:'T-5 Tira Corniluz/Regleta (3050×50×19)',p:33.65},{c:'Tiras y Cornisas',n:'T-5 Tira Cornisa Recta Rechapada (3050×70×30)',p:34.80},{c:'Tiras y Cornisas',n:'T-5 Tira Cornisa Rech. Moldurada (3600×90)',p:71.74},
   {c:'Tiras y Cornisas',n:'T-6 Tira Corniluz/Regleta (3050×50×19)',p:41.20},{c:'Tiras y Cornisas',n:'T-6 Tira Cornisa Recta Rechapada (3050×70×30)',p:34.80},{c:'Tiras y Cornisas',n:'T-6 Tira Cornisa Rech. Moldurada (3600×90)',p:96.87},
   {c:'Tiras y Cornisas',n:'T-7B Tira Cornisa Moldurada Lacada (350×9)',p:96.06},{c:'Tiras y Cornisas',n:'T-7B Tira Corniluz/Regleta Moldurada Lacada (305×5)',p:52.97},{c:'Tiras y Cornisas',n:'T-7B Tira Corniluz/Regleta Lisa (305×3×5)',p:44.15},
-  {c:'Varios',n:'Cajón Bajo Zócalo 60x50 c/freno',p:91.50},{c:'Varios',n:'Compás Duo Níquel',p:13.49},{c:'Varios',n:'Cremalleras en Armazón',p:9.00},{c:'Varios',n:'Integrar Costado Visto',p:4.50},{c:'Varios',n:'Sistema Push en Puertas',p:10.50},{c:'Varios',n:'Laterales Campana INOX 33x23',p:21.00},{c:'Varios',n:'Laterales Campana Blancos 33x23',p:14.28},{c:'Varios',n:'Laterales Campana INOX 33x90',p:70.65},{c:'Varios',n:'Laterales Campana Blancos 33x90',p:52.50},{c:'Varios',n:'Cajeos en Encimeras',p:30.00},{c:'Varios',n:'Vaciado Puerta Vitrina',p:20.48},{c:'Varios',n:'Gaveta Salvasifón hasta An.90',p:PRECIO_GV_SALVASIFON}
+  {c:'Varios',n:'Cajón Bajo Zócalo 60x50 c/freno',p:91.50},{c:'Varios',n:'Compás Duo Níquel',p:13.49},{c:'Varios',n:'Cremalleras en Armazón',p:9.00},{c:'Varios',n:'Integrar Costado Visto',p:4.50},{c:'Varios',n:'Sistema Push en Puertas',p:10.50},{c:'Varios',n:'Laterales Campana INOX 33x23',p:21.00},{c:'Varios',n:'Laterales Campana Blancos 33x23',p:14.28},{c:'Varios',n:'Laterales Campana INOX 33x90',p:70.65},{c:'Varios',n:'Laterales Campana Blancos 33x90',p:52.50},{c:'Varios',n:'Cajeos en Encimeras',p:30.00},{c:'Varios',n:'Vaciado Puerta Vitrina',p:20.48},{c:'Varios',n:'Suplemento Salvasifón (sobre gaveta)',p:SUP_SALVASIFON}
 ];
 
 // INIT
@@ -3124,7 +3128,6 @@ function renderMFCJ(){
       const ssOn=f.ss==='on';
       ssHtml=`<span style="font-size:10.5px;color:var(--cd);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-left:10px">Salvasifón:</span>`+
         `<button class="tgb${ssOn?' on':''}" onclick="updMFCJ(${i},'ss','${ssOn?'off':'on'}')" style="padding:4px 10px;font-size:11px">${ssOn?'✅ Sí':'No'}</button>`;
-      if(ssOn&&S.modCaj!=='IATIRA')ssHtml+=`<span style="font-size:10px;color:#e57373;font-style:italic">⚠️ solo cajón I.ATIRA (AV YOU pendiente)</span>`;
     }
     const d=document.createElement('div');
     d.style.cssText='background:rgba(255,255,255,.07);border-radius:6px;padding:9px;margin-bottom:8px';
@@ -3210,7 +3213,6 @@ function cp(){
       const her=precioCajonHerraje(S.modCaj,f.tipo,f.fondo||'F50',w,ssEf);
       if(her)lines.push(`  ↳ ${her.descripcion}: ${fmt(her.precio)}`);
       else if(w>120)lines.push(`  ⚠️ Cajón > 120 cm — no permitido`);
-      else if(ssEf&&S.modCaj!=='IATIRA')lines.push(`  ⚠️ Salvasifón solo disponible con cajón I.ATIRA`);
     }
   });
   let rPreg=0;
@@ -3240,9 +3242,8 @@ function addM(){
     const f=MFrentesCJ[i];const a=+f.alto||0,w=+f.ancho||0;
     if(!a||!w)continue;
     if(w>120){flash(`⚠️ Frente cajón F${i+1}: ${w}cm > 120cm, no permitido`);return;}
-    // Lote H — salvasifón: solo con cajón I.ATIRA (AV YOU pendiente de tarifa)
+    // Lote T — salvasifón válido con I.ATIRA y AV YOU (gaveta + SUP_SALVASIFON)
     const ssEf=f.tipo==='GV'&&f.ss==='on'&&admiteSalvasifon(SEL);
-    if(ssEf&&S.modCaj!=='IATIRA'){flash(`⚠️ Frente F${i+1}: salvasifón solo disponible con cajón I.ATIRA (AV YOU pendiente)`);return;}
     const her=precioCajonHerraje(S.modCaj,f.tipo,f.fondo||'F50',w,ssEf);
     if(!her){flash(`⚠️ Frente F${i+1}: no hay cajón ${S.modCaj} ${f.tipo} ${f.fondo} disponible para ${w}cm`);return;}
   }
