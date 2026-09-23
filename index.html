@@ -227,7 +227,7 @@ tr:hover td{background:var(--c);}
       <div class="fg"><label>Grosor armazón (global)</label><div class="tgg"><button class="tgb on" id="b16" onclick="setGros('16',this)">16mm</button><button class="tgb" id="b19" onclick="setGros('19',this)">19mm (+15%)</button></div></div>
       <!-- Lote D1 (22-09-2026): color de armazón del catálogo de tableros de la app de corte (de él sale el grosor de la
            trasera: 8 mm, Textil 10) y alto de patas 10/15. Solo 3D y despiece: NO tocan precios. -->
-      <div class="fg"><label>Color armazón (catálogo corte)</label><select class="di" id="selColorArm" onchange="setColorArm(this.value)" style="min-width:190px"></select><div id="colorArmInfo" style="font-size:10px;color:var(--g);margin-top:3px"></div></div>
+      <div class="fg"><label>Color armazón</label><select class="di" id="selColorArm" onchange="setColorArm(this.value)" style="min-width:190px"></select><div id="colorArmInfo" style="font-size:10px;color:var(--g);margin-top:3px"></div></div>
       <div class="fg"><label>Patas (alto)</label><div class="tgg"><button class="tgb on" id="bPat10" onclick="setPatas('10',this)">10 cm</button><button class="tgb" id="bPat15" onclick="setPatas('15',this)">15 cm</button></div></div>
     </div>
     <!-- Selector de modelo en foco para edición (visible solo con >1 modelo) -->
@@ -966,27 +966,27 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-22.4';
+const APP_BUILD = '2026-09-23.1';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
 const REC_MEDIDA_NO_STD  = 0.30;  // (Lote L: YA NO SE APLICA a puertas/costados — van siempre al tramo superior sin recargo. Se conserva la constante por compatibilidad)
 const ALTO_BAJO_GOLA     = 80;    // Lote L: bajos con gola se fabrican de 80 pero se tarifan como Bajos 75 (sin +30%)
 const REBAJE_PUERTA_GOLA = 3;     // Lote P: en bajos con gola la puerta mide alto de armazón − 3 (80 → 77) por el perfil
-// Lote D1 (22-09-2026) — catálogo de melaminas de la app de corte (TARIFA_PRECARGADA de ag5corte, leída el 22-09-2026,
-// build corte 2026-09-18.1): [nombre EXACTO, grosores disponibles (mm), con veta]. Sin precios: aquí no se factura
-// tablero. El nombre tiene que coincidir letra a letra con el de corte porque allí el canto se enlaza por nombre y los
-// grupos de despiece se casan por nombre + grosor. Si corte cambia el catálogo, se actualiza esta lista a mano (las dos
-// apps acabarán siendo una sola). El DM no está: nunca es armazón.
+// Lote D1 (22-09-2026) · D1b (23-09-2026) — colores de ARMAZÓN que trabaja AG5 (Álvaro, 23-09-2026): Blanco Soft,
+// Gris Claro, Gris Antracita, Roble Skin, Textil Claro y Textil Oscuro. Cada uno con su nombre EXACTO de tablero en la
+// app de corte (TARIFA_PRECARGADA de ag5corte, build 2026-09-18.1), porque allí el tablero se casa por nombre + grosor y
+// el canto por nombre: [nombre corte, grosores que hay en el catálogo de corte (mm), con veta, nombre en el taller].
+// En corte el Textil claro es «Textil Coral» y el oscuro «Textil Cactus». Sin precios: aquí no se factura tablero. Si
+// cambian los colores o el catálogo de corte, se actualiza esta lista a mano (las dos apps acabarán siendo una sola).
 const CAT_TABLEROS=[
-  ['Blanco Soft III',[10,16,19,30],false],['Cerezo Duero',[10,16],true],['Gris Antracita',[8,16,19],false],
-  ['Gris Claro',[8,16,19],false],['Haya Top',[10,16,19],true],['Magnolia Kompac',[5,10,16,19],true],
-  ['Maple Jalón',[10,16],true],['Oregón Siena',[10,16,19],true],['Oregón Toscano',[19],true],
-  ['Roble Skin',[8,16,19],true],['Roble Tiffany',[5,10,16,19,30],true],['Textil Cactus',[8,10,16,19],false],
-  ['Textil Coral',[8,10,16,19],false]
+  ['Blanco Soft III',[10,16,19,30],false,'Blanco Soft'],['Gris Claro',[8,16,19],false,'Gris Claro'],
+  ['Gris Antracita',[8,16,19],false,'Gris Antracita'],['Roble Skin',[8,16,19],true,'Roble Skin'],
+  ['Textil Coral',[8,10,16,19],false,'Textil Claro'],['Textil Cactus',[8,10,16,19],false,'Textil Oscuro']
 ];
-// Trasera del casco: melamina del color del armazón, 8 mm; en Textil Cactus y Textil Coral 10 mm (Álvaro, 22-09-2026;
-// «en el futuro también 8»). Sin color elegido se supone 8. La trasera NO lleva canto (Álvaro, 22-09-2026).
+// Trasera del casco: melamina del color del armazón, 8 mm; en Textil Claro y Oscuro (Coral y Cactus en corte) 10 mm
+// (Álvaro, 22 y 23-09-2026; «en unos meses pasará a ser de 8 también»: entonces TRASERA_GROSOR_TEXTIL = 8). Sin color
+// elegido se supone 8. La trasera NO lleva canto (Álvaro, 22-09-2026).
 const TRASERA_GROSOR=8, TRASERA_GROSOR_TEXTIL=10; // mm
 const CANTO_ARMAZON=0.8;                          // mm: canto de todas las piezas del casco (Álvaro, 22-09-2026)
 const PATAS_ALTOS=['10','15'];                    // cm: altos de pata que se eligen en el proyecto (mecanizado a 6,5 del borde)
@@ -997,7 +997,7 @@ function avisoColorArm(color,gros){
   const t=tableroCatalogo(color);if(!t)return '';
   const av=[];const g=+gros||16,tr=grosorTrasera(color);
   if(!t[1].includes(g))av.push(`no existe en ${g} mm en el catálogo de corte`);
-  if(!t[1].includes(tr))av.push(`no tiene ${tr} mm para la trasera (tiene ${t[1].filter(x=>x<16).join('/')||'ninguno fino'})`);
+  if(!t[1].includes(tr))av.push(`falta el tablero de ${tr} mm en la BBDD de corte (darlo de alta allí antes de exportar el despiece)`);
   return av.join(' · ');
 }
 const REC_LACA_NO_STD    = 0.20;  // +20% color laca no estándar (T-7A/7B/CVT-7)
@@ -2798,7 +2798,7 @@ function setColorArm(v){S.colorArm=tableroCatalogo(v)?v:'';pintarColorArm();if(S
 function setPatas(v,btn){S.patas=PATAS_ALTOS.includes(String(v))?String(v):'10';if(btn)pill(btn,['bPat10','bPat15']);else pintarPatas();if(SEL&&!isRin(SEL))cp();}
 function pintarColorArm(){
   const sel=document.getElementById('selColorArm');if(!sel)return;
-  if(!sel.options.length||sel.options.length!==CAT_TABLEROS.length+1)sel.innerHTML=`<option value="">— sin elegir —</option>`+CAT_TABLEROS.map(t=>`<option value="${esc(t[0])}">${esc(t[0])}</option>`).join('');
+  if(!sel.options.length||sel.options.length!==CAT_TABLEROS.length+1)sel.innerHTML=`<option value="">— sin elegir —</option>`+CAT_TABLEROS.map(t=>`<option value="${esc(t[0])}">${esc(t[3]||t[0])}${t[3]&&t[3]!==t[0]?` (${esc(t[0])} en corte)`:''}</option>`).join('');
   sel.value=S.colorArm||'';
   const inf=document.getElementById('colorArmInfo');
   if(inf){const av=avisoColorArm(S.colorArm,S.gros);inf.textContent=S.colorArm?`Trasera ${grosorTrasera(S.colorArm)} mm del mismo color${av?' · ⚠️ '+av:''}`:'Sin color: la trasera se supone de 8 mm y el despiece sale sin material';}
