@@ -184,6 +184,11 @@ tr:hover td{background:var(--c);}
 .r3dModal{position:fixed;inset:0;background:rgba(42,26,10,.55);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
 .r3dBox{background:var(--b);border-radius:10px;padding:16px 18px;max-width:480px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.35);max-height:95vh;overflow-y:auto;}
 .r3dBtn2{background:var(--c);color:var(--m);border:1.5px solid var(--cd);}
+/* Lote U (23-09-2026) — resumen de medidas del mueble (toca para abrir «📐 Medidas especiales») */
+.medRes{font-size:11.5px;color:rgba(232,215,185,.9);background:rgba(255,255,255,.06);border:1px dashed rgba(196,151,58,.5);border-radius:6px;padding:7px 9px;margin-bottom:10px;cursor:pointer;line-height:1.45;}
+.medRes.esp{background:rgba(196,151,58,.28);border:1.5px solid var(--dc);color:#fff;font-weight:700;}
+.medRes:empty{display:none;}
+#btnMedEsp:disabled{opacity:.45;cursor:default;}
 @media print{.r3dModal,#r3dPanel{display:none!important;}}
 @media(max-width:900px){.l2{grid-template-columns:1fr!important;}}
 </style>
@@ -400,6 +405,9 @@ tr:hover td{background:var(--c);}
           <div class="fg" id="selAltoBox" style="display:none"><label>Alto</label><select class="di dsel" id="selAlto" onchange="cambiarAltoBajos(this.value)"></select></div>
           <div class="fg"><label>Subfamilia</label><select class="di dsel" id="selSub" onchange="cambiarSubArbol(this.value)"></select></div>
           <div class="fg" id="selOpBox" style="display:none"><label>Opción</label><select class="di dsel" id="selOp" onchange="cambiarOpArbol(this.value)"></select></div>
+          <!-- Lote U (23-09-2026): medidas especiales del mueble elegido (alto/ancho/fondo, ancho real del rincón recto y cajeo
+               viga/columna). Sustituye a los campos de medida del panel y al selector de forma especial. -->
+          <div class="fg"><label>&nbsp;</label><button class="btn bs" id="btnMedEsp" onclick="abrirMedidasEsp()" disabled style="font-size:11px;padding:7px 12px;white-space:nowrap">📐 Medidas especiales</button></div>
         </div>
         <div class="mgr" id="mGrid"></div>
       </div>
@@ -438,20 +446,12 @@ tr:hover td{background:var(--c);}
         <div id="muebleModeloSel" style="display:none;margin-bottom:11px"></div>
         <div id="addF" style="display:none">
           <div id="gInfo" style="display:none;background:rgba(155,122,42,.2);border:1px solid var(--d);border-radius:6px;padding:8px;margin-bottom:10px;font-size:11px;color:var(--dc)"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:10px">
-            <div class="fg"><label>Alto armz.</label><input type="number" id="mAlt" min="1" oninput="seguirMedidaArm('alto')"></div>
-            <div class="fg"><label>Ancho armz.</label><input type="number" id="mAnc" min="1" oninput="seguirMedidaArm('ancho')"></div>
-            <div class="fg"><label>Fondo armz.</label><input type="number" id="mFon" min="1" oninput="cp()"></div>
-          </div>
-          <!-- Lote F: forma especial (×2 armazón) + doble fondo informativo en chaflanes -->
-          <div class="fg" style="margin-bottom:10px"><label>Forma especial (×2 armazón)</label>
-            <div class="tgg" id="mFormaTgg" style="margin-top:4px;flex-wrap:wrap">
-              <button class="tgb on" onclick="setMForma('ninguna',this)" style="padding:6px 12px;font-size:11px">Ninguna</button>
-              <button class="tgb" onclick="setMForma('chaflan',this)" style="padding:6px 12px;font-size:11px">Chaflán</button>
-              <button class="tgb" onclick="setMForma('viga',this)" style="padding:6px 12px;font-size:11px">Cajeo viga</button>
-              <button class="tgb" onclick="setMForma('columna',this)" style="padding:6px 12px;font-size:11px">Cajeo columna</button>
-            </div>
-          </div>
+          <!-- Lote U (23-09-2026): las medidas del armazón se cambian en la ventana «📐 Medidas especiales». Los campos siguen
+               aquí, ocultos, porque guardan el valor que leen cp(), addM() y el 3D. Sin selector de forma especial: el chaflán
+               lo pone el árbol y el cajeo viga/columna se marca en la ventana (×2 automático). -->
+          <div style="display:none"><input type="number" id="mAlt"><input type="number" id="mAnc"><input type="number" id="mFon"></div>
+          <div id="mMedRes" class="medRes" onclick="abrirMedidasEsp()"></div>
+          <!-- Lote F: doble fondo informativo en chaflanes (sale solo cuando el árbol marca chaflán) -->
           <div id="mDobleFondoBox" style="display:none;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px;background:rgba(196,151,58,.12);border:1px solid rgba(196,151,58,.35);border-radius:6px;padding:9px">
             <div class="fg"><label>Fondo dcho (info)</label><input type="number" id="mDFD" min="1" placeholder="cm" oninput="cp()"></div>
             <div class="fg"><label>Fondo izq (info)</label><input type="number" id="mDFI" min="1" placeholder="cm" oninput="cp()"></div>
@@ -513,20 +513,13 @@ tr:hover td{background:var(--c);}
         </div>
         <div id="rinF" style="display:none">
           <div style="font-size:11px;color:var(--dc);margin-bottom:10px;font-style:italic">Rincón: configura puertas y regleta</div>
-          <div id="rRRecAnchoBox" style="display:none;background:rgba(196,151,58,.10);border:1px solid rgba(196,151,58,.35);border-radius:6px;padding:10px;margin-bottom:10px">
-            <div class="fg"><label>Ancho real del mueble (cm)</label><input type="number" id="rRRecAncho" placeholder="dejar vacío si es estándar" oninput="rdsg()"><div style="font-size:10.5px;color:rgba(232,215,185,.75);margin-top:3px;font-style:italic" id="rRRecAnchoInfo">Si difiere del estándar, se tarifa con la medida estándar inmediatamente superior.</div></div>
-          </div>
+          <!-- Lote U (23-09-2026): el ancho real del rincón recto y el cajeo viga/columna se ponen en «📐 Medidas especiales».
+               El ancho real sigue guardado en este campo oculto (vacío = estándar), que leen rdsg(), addRin() y el 3D. -->
+          <div style="display:none"><input type="number" id="rRRecAncho"></div>
+          <div id="rMedRes" class="medRes" onclick="abrirMedidasEsp()"></div>
           <div id="rinP"></div>
           <button class="btn bs" onclick="addRP()" style="font-size:11px;padding:5px 12px;margin-bottom:10px">+ Añadir puerta</button>
-          <!-- Lote F: forma especial (×2 armazón) también en rincón (cajeo viga/columna aplica a todo el catálogo). -->
-          <div class="fg" style="margin-bottom:10px"><label>Forma especial (×2 armazón)</label>
-            <div class="tgg" id="rFormaTgg" style="margin-top:4px;flex-wrap:wrap">
-              <button class="tgb on" onclick="setRForma('ninguna',this)" style="padding:6px 12px;font-size:11px">Ninguna</button>
-              <button class="tgb" onclick="setRForma('chaflan',this)" style="padding:6px 12px;font-size:11px">Chaflán</button>
-              <button class="tgb" onclick="setRForma('viga',this)" style="padding:6px 12px;font-size:11px">Cajeo viga</button>
-              <button class="tgb" onclick="setRForma('columna',this)" style="padding:6px 12px;font-size:11px">Cajeo columna</button>
-            </div>
-          </div>
+          <!-- Lote U: sin selector de forma especial (el cajeo viga/columna va en «📐 Medidas especiales») -->
           <div id="rDobleFondoBox" style="display:none;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px;background:rgba(196,151,58,.12);border:1px solid rgba(196,151,58,.35);border-radius:6px;padding:9px">
             <div class="fg"><label>Fondo dcho (info)</label><input type="number" id="rDFD" min="1" placeholder="cm" oninput="rdsg()"></div>
             <div class="fg"><label>Fondo izq (info)</label><input type="number" id="rDFI" min="1" placeholder="cm" oninput="rdsg()"></div>
@@ -869,6 +862,32 @@ tr:hover td{background:var(--c);}
   </div>
 </div>
 
+<!-- Lote U (23-09-2026): ventana «📐 Medidas especiales» del mueble en curso (normal o rincón). Solo pantalla. -->
+<div id="medEspModal" class="r3dModal" onclick="if(event.target===this)cerrarMedidasEsp()">
+  <div class="r3dBox">
+    <div class="pt" style="justify-content:space-between"><span style="font-size:13px">📐 Medidas especiales</span><button class="btn bd2" onclick="cerrarMedidasEsp()">✕</button></div>
+    <div id="medEspTit" style="font-size:12px;color:var(--mm);font-weight:700;margin-bottom:10px"></div>
+    <div id="medEspCampos" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:12px">
+      <div class="fg" id="meAltBox"><label>Alto (cm)</label><input type="number" id="meAlt" min="1" step="0.1" oninput="pintarAvisoMedEsp()" onkeydown="if(event.key==='Enter')aplicarMedidasEsp()"></div>
+      <div class="fg" id="meAncBox"><label id="meAncLab">Ancho (cm)</label><input type="number" id="meAnc" min="1" step="0.1" oninput="pintarAvisoMedEsp()" onkeydown="if(event.key==='Enter')aplicarMedidasEsp()"></div>
+      <div class="fg" id="meFonBox"><label>Fondo (cm)</label><input type="number" id="meFon" min="1" step="0.1" oninput="pintarAvisoMedEsp()" onkeydown="if(event.key==='Enter')aplicarMedidasEsp()"></div>
+    </div>
+    <div class="fg" id="meFormaBox" style="margin-bottom:12px"><label>Cajeo (armazón ×2)</label>
+      <div class="tgg" id="meFormaTgg" style="margin-top:4px;flex-wrap:wrap">
+        <button class="tgb" data-forma="ninguna" onclick="setMeForma('ninguna')" style="padding:6px 12px;font-size:11px">Sin cajeo</button>
+        <button class="tgb" data-forma="viga" onclick="setMeForma('viga')" style="padding:6px 12px;font-size:11px">Cajeo viga</button>
+        <button class="tgb" data-forma="columna" onclick="setMeForma('columna')" style="padding:6px 12px;font-size:11px">Cajeo columna</button>
+      </div>
+    </div>
+    <div id="medEspAviso" style="font-size:11.5px;line-height:1.55;color:var(--mm);background:var(--c);border-radius:6px;padding:8px 10px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      <button class="btn r3dBtn2" onclick="medEspVolverTarifa()" style="font-size:11px;padding:7px 12px">↺ Medidas de tarifa</button>
+      <button class="btn bs" onclick="cerrarMedidasEsp()" style="font-size:11px;padding:7px 12px">Cancelar</button>
+      <button class="btn bp" onclick="aplicarMedidasEsp()" style="font-size:11px;padding:7px 14px">✅ Aplicar</button>
+    </div>
+  </div>
+</div>
+
 <!-- WORKSHEET (print only) -->
 <div id="ws" class="ws-print">
   <div id="wsContent"></div>
@@ -972,7 +991,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-23.8';
+const APP_BUILD = '2026-09-23.9';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1071,6 +1090,11 @@ const PATAS_RIN_RECTO          = 5;    // rincones rectos: 4 en las esquinas + 1
 // Lote R7 (23-09-2026) — bajo rincón escuadra y rincón fregadero (misma construcción, Álvaro).
 const RIN_ESC_REFUERZO         = 12;   // cm: refuerzo en L de la esquina trasera, 12 × 12 (un paletón de 12 y otro de 12 − t)
 const RIN_ESC_CAJEO_HOLGURA    = 0.1;  // cm: holgura del cajeo de la balda alrededor del refuerzo (12 → 12,1)
+// Lote U (23-09-2026) — medidas por defecto de las puertas (Álvaro). Columnas y semicolumnas: puertas una encima de otra;
+// desde 61 cm de ancho se hacen 4 (dos filas de 2Pta). Rincón escuadra: la puerta que abre primero mide 2 cm menos que
+// el frente de su brazo (regla del R7: frente = brazo − fondo).
+const COL_ANCHO_4_PUERTAS      = 61;   // cm: columnas/semicolumnas desde este ancho arrancan con 4 puertas
+const RIN_ESC_PUERTA_CORTA     = 2;    // cm: la puerta del escuadra que abre primero, más corta que su frente
 const PATAS_RIN_ESC            = 8;    // 6 esquinas de la L + 1 en el centro de cada frente interior
 const BALDA_DESC_ANCHO_TAR     = 3.2;  // la tarifa indexa por ancho de mueble = ancho de balda + 3,2 (costados de 16)
 const BALDA_SUP_FALSEADA_CANTO = 10;   // € por balda falseada con algún canto
@@ -1880,6 +1904,7 @@ function r3dSpec(o){
     admiteTir:admiteTirador(o.tar||'Sin puerta'),modCaj:o.modCaj||'IATIRA',patas:esBajo,sinFrentes:!!o.sinFrentes,
     // Lote R5 — piezas del casco cambiadas en el 3D, grosor (cm) y nombre del material de puerta del modelo
     piezas:piezasLimpias(o.piezas),gPuerta:grosorPiezaPuerta(o.cvt)/10,cvtPuerta:o.cvt||null,matPuerta:o.matPuerta||'',
+    apiladas:puertasApiladas(o.arm), // Lote U: columnas y semicolumnas, puertas una encima de otra
     rincon:isRin(o.arm),nPatas:tipo==='rinRec'?PATAS_RIN_RECTO:(tipo==='rinEsc'?PATAS_RIN_ESC:4)}; // Lote R6 · R7
   if(sp.rincon)sp.frentes=[]; // Lote R7: los rincones no llevan cajones ni gavetas (Álvaro, 23-09-2026)
   if(tipo==='rinEsc'){sp.escH=brazoIzqEsc(o.arm);sp.fonVis=sp.escH;sp.primero=o.abrePrimero==='P2'?'P2':(o.abrePrimero==='P1'?'P1':'');} // Lote R7
@@ -2068,15 +2093,26 @@ function r3dPiezas(sp,conFrentes,est){
   }
   if(conFrentes&&tipo!=='rinEsc'){
     let x=(rin&&rin.pw)?xLado(rin.pw):0; // Lote R6
+    // Lote U (23-09-2026) — columnas y semicolumnas: puertas una encima de otra, P1 arriba, apiladas desde el techo y cada
+    // una con su perfil de gola encima si lo lleva; una fila 2Pta son dos puertas lado a lado. Si las medidas no caben en
+    // el alto, el dibujo las encoge en proporción (solo el dibujo: la columna aún no tiene construcción propia).
+    let yFila=yTop,esc=1,hAutoFila=0;
+    if(sp.apiladas){
+      const res=sp.puertas.reduce((s,p)=>s+((esGola&&p.tir)?C.golaAlto:0),0),hs=sp.puertas.reduce((s,p)=>s+(p.alto||0),0);
+      const nVac=sp.puertas.filter(p=>!p.alto).length;hAutoFila=nVac?Math.max(1,(yTop-res-hs)/nVac):0;
+      const tot=hs+hAutoFila*nVac;if(tot>0&&tot>yTop-res)esc=Math.max(0.1,(yTop-res)/tot);
+    }
     sp.puertas.forEach((p,i)=>{
-      const n=p.mano==='2'?2:1,h=p.alto||(yTop-((esGola&&p.tir)?C.golaAlto:0)),w=p.ancho||(W/sp.puertas.length)/n,abrible=p.mano!=='FF'&&p.mano!=='AB'; // Lote R4: con gola, alto auto = hueco − 3
+      const n=p.mano==='2'?2:1,abrible=p.mano!=='FF'&&p.mano!=='AB';
+      let h=p.alto||(yTop-((esGola&&p.tir)?C.golaAlto:0)),w=p.ancho||(W/sp.puertas.length)/n,y0=0; // Lote R4: con gola, alto auto = hueco − 3
+      if(sp.apiladas){h=(p.alto||hAutoFila)*esc;w=p.ancho||W/n;y0=yFila-h-((esGola&&p.tir)?C.golaAlto:0);yFila=y0;x=0;} // Lote U
       for(let j=0;j<n;j++){
         const key='p'+i+(n>1?'_'+j:''),dcha=n===2?j===1:p.mano!=='I';
         const tope=(rin&&esTir&&p.tir)?Math.min(C.puertaAbre,180-Math.atan2(C.tirSaliente,Math.max(0.1,(w-Math.min(C.tirLargo,Math.max(4,w-4)))/2-hg))*180/Math.PI-1):C.puertaAbre; // Lote R8
         const ang=abrible?abierto(key)*tope*Math.PI/180:0;
         const rot=ang>1e-4?{ang:dcha?ang:-ang,px:dcha?x+w-hg:x+hg,pz:-g}:null;
-        box(x+hg,hg,-g,w-2*hg,h-2*hg,g,R3D_COL.frente,null,abrible?{key,rot}:{rot});
-        herraje(x,w,h,p.tir,rot,0);x+=w;
+        box(x+hg,y0+hg,-g,w-2*hg,h-2*hg,g,R3D_COL.frente,null,abrible?{key,rot}:{rot});
+        herraje(x,w,y0+h,p.tir,rot,0);x+=w; // Lote U: y0 = 0 salvo en columnas (puertas apiladas)
       }
     });
     // Lote R6 — regleta vista del rincón recto: material de puerta, en el plano de las puertas y pegada a su canto de
@@ -3838,21 +3874,18 @@ function altoPuertaDefecto(arm,altoArm){
 // del armazón, solo se arrastran las puertas/frentes que siguen en la medida por defecto; las tocadas a
 // mano no se pisan. Se fija en selA / iniciarEdicion y se va actualizando en seguirMedidaArm.
 let MDEF={alto:0,ancho:0};
-function seguirMedidaArm(campo){
+// Lote U (23-09-2026): se llama al aplicar «📐 Medidas especiales» con el alto y el ancho a la vez. Las puertas se
+// vuelven a repartir (las tocadas a mano se respetan) y los frentes que seguían en el ancho por defecto lo siguen (Lote P).
+function seguirMedidaArm(){
   if(!SEL){cp();return;}
-  const v=+document.getElementById(campo==='alto'?'mAlt':'mAnc').value||0;
-  if(!v){cp();return;} // campo vacío o 0: no propagar, solo recalcular
-  let cambio=false;
-  if(campo==='alto'){
-    const nuevo=altoPuertaDefecto(SEL,v);
-    MPuertas.forEach(p=>{if(+p.alto===MDEF.alto){p.alto=nuevo;cambio=true;}});
-    MDEF.alto=nuevo;
-  } else {
-    MPuertas.forEach(p=>{if(+p.ancho===MDEF.ancho){p.ancho=v;cambio=true;}});
-    MFrentesCJ.forEach(f=>{if(+f.ancho===MDEF.ancho){f.ancho=v;cambio=true;}});
-    MDEF.ancho=v;
+  const alt=+document.getElementById('mAlt').value||0,anc=+document.getElementById('mAnc').value||0;
+  if(alt)MDEF.alto=altoPuertaDefecto(SEL,alt);
+  if(anc&&anc!==MDEF.ancho){
+    MFrentesCJ.forEach(f=>{if(+f.ancho===MDEF.ancho)f.ancho=anc;});
+    if(MPUERTAS_ARR)MPuertas=puertasArranque(SEL,anc); // columna sin tocar que pasa de 60 a 61+: 4 puertas (o al revés)
+    MDEF.ancho=anc;
   }
-  if(cambio){renderMP();renderMFCJ();}else cp();
+  repartirPuertas();renderMP();renderMFCJ();
 }
 // Lote P — medidas reales del armazón para la descripción del presupuesto, solo si difieren de la tarjeta:
 // "Bajo A.70 An.60 (72×57×50)". Así la línea refleja exactamente lo elegido (y lo editado después).
@@ -3882,31 +3915,105 @@ function notaRecargoArm(opts,forma){
   if(S.gros==='19')t+=' +15%(19mm)';
   return t;
 }
-// Selección de forma especial en cada modal. El doble fondo (inputs dcho/izq) solo se muestra en chaflán.
-function setMForma(v,btn){
-  MFORMA=v;
-  document.querySelectorAll('#mFormaTgg .tgb').forEach(b=>b.classList.remove('on'));
-  if(btn)btn.classList.add('on');
-  document.getElementById('mDobleFondoBox').style.display=(v==='chaflan')?'grid':'none';
-  cp();
-}
-function setRForma(v,btn){
-  RFORMA=v;
-  document.querySelectorAll('#rFormaTgg .tgb').forEach(b=>b.classList.remove('on'));
-  if(btn)btn.classList.add('on');
-  document.getElementById('rDobleFondoBox').style.display=(v==='chaflan')?'grid':'none';
-  rdsg();
-}
-// Restaura visualmente el toggle de forma especial al valor dado (uso en selección/edición).
+// Forma especial (MFORMA / RFORMA: 'ninguna'|'chaflan'|'viga'|'columna'). Lote U (23-09-2026): sin selector en los
+// paneles (antes setMForma / setRForma). El chaflán lo pone el árbol (rincón chaflán de bajos y columnas) y el cajeo
+// viga/columna se marca en «📐 Medidas especiales». Aquí se pinta el doble fondo del chaflán y el resumen de medidas.
 function pintarFormaTgg(prefijo,valor){
-  const tgg=document.getElementById(prefijo+'FormaTgg');if(!tgg)return;
-  tgg.querySelectorAll('.tgb').forEach(b=>{
-    const oc=b.getAttribute('onclick')||'';
-    const m=oc.match(/set[MR]Forma\('([^']+)'/);
-    b.classList.toggle('on',!!(m&&m[1]===valor));
-  });
   const box=document.getElementById(prefijo+'DobleFondoBox');
   if(box)box.style.display=(valor==='chaflan')?'grid':'none';
+  pintarResumenMedidas();
+}
+// ── Lote U (23-09-2026) — ventana «📐 Medidas especiales» ──
+// El mueble se elige con las medidas de tarifa (desplegables + tarjetas); aquí se cambian para hacerlo a medida. La app
+// pone sola el recargo con las reglas de siempre (armazonAnchoSuperior / calcOptsArm / gap2):
+//  · ancho distinto → ancho estándar inmediatamente superior, sin +30 % (An.50 a 57 → An.60);
+//  · alto o fondo no estándar → +30 % (Bajo A.75 An.60: 57,19 → 74,35 con alto 72);
+//  · cajeo viga / cajeo columna → ×2, excluyente con el +30 % (57,19 → 114,38, también con alto 72);
+//  · 19 mm → +15 % encima de todo.
+// En rincones el alto y el fondo no se cambian: ancho real (solo rincón recto) y cajeo. Se aplica al pulsar «Aplicar».
+let MEFORMA='ninguna'; // cajeo elegido en la ventana
+function medEspTarifa0(){ // medidas de tarifa del mueble en curso (bajo con gola: se fabrica de 80)
+  const isGB=S.tb.t==='gola'&&esBajoFam(SEL)&&!isRin(SEL);
+  return {alt:isGB?ALTO_BAJO_GOLA:SEL.alt,anc:SEL.anc,fon:+SEL.fon};
+}
+function abrirMedidasEsp(){
+  if(!SEL){flash('⚠️ Elige primero el mueble en la tarifa');return;}
+  const $=id=>document.getElementById(id),rin=isRin(SEL),rr=rin&&esBajoOColRinRec(SEL),forma=rin?RFORMA:MFORMA;
+  $('medEspTit').textContent=(MHOJA&&MHOJA.lab?MHOJA.lab+' · ':'')+SEL.nom;
+  $('meAltBox').style.display=rin?'none':'';$('meFonBox').style.display=rin?'none':'';
+  $('meAncLab').textContent=rr?'Ancho real (cm)':'Ancho (cm)';
+  $('medEspCampos').style.display=(!rin||rr)?'grid':'none';
+  if(rin)$('meAnc').value=+$('rRRecAncho').value||SEL.anc;
+  else{const t=medEspTarifa0();$('meAlt').value=+$('mAlt').value||t.alt;$('meAnc').value=+$('mAnc').value||t.anc;$('meFon').value=+$('mFon').value||t.fon;}
+  MEFORMA=(forma==='viga'||forma==='columna')?forma:'ninguna';
+  $('meFormaBox').style.display=forma==='chaflan'?'none':''; // chaflán del árbol: ya lleva ×2
+  pintarMeForma();pintarAvisoMedEsp();
+  $('medEspModal').style.display='flex';
+}
+function cerrarMedidasEsp(){const m=document.getElementById('medEspModal');if(m)m.style.display='none';}
+function setMeForma(v){MEFORMA=v;pintarMeForma();pintarAvisoMedEsp();}
+function pintarMeForma(){document.querySelectorAll('#meFormaTgg .tgb').forEach(b=>b.classList.toggle('on',b.dataset.forma===MEFORMA));}
+function medEspVolverTarifa(){
+  if(!SEL)return;const $=id=>document.getElementById(id);
+  if(isRin(SEL))$('meAnc').value=SEL.anc;
+  else{const t=medEspTarifa0();$('meAlt').value=t.alt;$('meAnc').value=t.anc;$('meFon').value=t.fon;}
+  MEFORMA='ninguna';pintarMeForma();pintarAvisoMedEsp();
+}
+// Aviso en vivo de lo que aplicará la app (mismas funciones que cp() y rdsg()).
+function pintarAvisoMedEsp(){
+  const $=id=>document.getElementById(id),av=$('medEspAviso');if(!SEL||!av)return;
+  const forma=((isRin(SEL)?RFORMA:MFORMA)==='chaflan')?'chaflan':MEFORMA,t=[];
+  if(isRin(SEL)){
+    if(esBajoOColRinRec(SEL)){const a=r1(+$('meAnc').value||SEL.anc),aj=armazonRRectoTarifa(SEL,a);
+      if(a!==SEL.anc)t.push(`Ancho real ${fmtCm(a)} → se tarifa como ${aj.arm.nom}${aj.supera?' (supera la tarifa)':''}`);}
+    t.push(forma!=='ninguna'?`${FORMA_LAB[forma]}: armazón ×2`:'Sin cajeo: sin recargo de forma');
+  } else {
+    const t0=medEspTarifa0(),alt=r1(+$('meAlt').value||t0.alt),anc=r1(+$('meAnc').value||t0.anc),fon=r1(+$('meFon').value||t0.fon);
+    const aj=armazonAnchoSuperior(SEL,anc),o=calcOptsArm(refArmazon(aj.arm),alt,fon,forma);
+    if(anc!==SEL.anc)t.push(`Ancho ${fmtCm(anc)} → se tarifa como ${aj.arm.nom}${aj.supera?' (supera la tarifa)':''}, sin recargo`);
+    if(o.esEspecial)t.push(`${FORMA_LAB[forma]}: armazón ×2${(o.altoNoStd||o.fondoNoStd)?' (no se suma el +30 %)':''}`);
+    else if(o.altoNoStd||o.fondoNoStd){const q=[o.altoNoStd&&'alto',o.fondoNoStd&&'fondo'].filter(Boolean).join(' y ');
+      t.push(q.charAt(0).toUpperCase()+q.slice(1)+' no estándar: armazón +30 %');}
+    if(!t.length)t.push('Medidas de tarifa: sin recargo');
+  }
+  if(S.gros==='19')t.push('Tablero de 19: +15 % encima, como siempre');
+  av.innerHTML=t.map(x=>'· '+x).join('<br>');
+}
+function aplicarMedidasEsp(){
+  if(!SEL){cerrarMedidasEsp();return;}
+  const $=id=>document.getElementById(id),num=id=>{const x=+$(id).value;return x>0?r1(x):0;};
+  if(isRin(SEL)){
+    if(esBajoOColRinRec(SEL)){const a=num('meAnc');$('rRRecAncho').value=(a&&a!==SEL.anc)?a:'';} // vacío = estándar
+    if(RFORMA!=='chaflan')RFORMA=MEFORMA;
+    cerrarMedidasEsp();pintarFormaTgg('r',RFORMA);rdsg();return;
+  }
+  const t=medEspTarifa0();
+  $('mAlt').value=num('meAlt')||t.alt;$('mAnc').value=num('meAnc')||t.anc;$('mFon').value=num('meFon')||t.fon;
+  if(MFORMA!=='chaflan')MFORMA=MEFORMA;
+  cerrarMedidasEsp();pintarFormaTgg('m',MFORMA);seguirMedidaArm();
+}
+// Resumen en el panel (toca para abrir la ventana) y estado del botón de la fila de desplegables. Resaltado si el
+// mueble va a medida o con cajeo.
+function pintarResumenMedidas(){
+  const $=id=>document.getElementById(id),b=$('btnMedEsp');if(b)b.disabled=!SEL;
+  const mr=$('mMedRes'),rr=$('rMedRes');
+  if(!SEL){if(mr)mr.innerHTML='';if(rr)rr.innerHTML='';cerrarMedidasEsp();return;}
+  const toca='<span style="font-weight:400;opacity:.8"> — toca para cambiar</span>';
+  if(isRin(SEL)){
+    if(!rr)return;
+    const esRR=esBajoOColRinRec(SEL),ar=+$('rRRecAncho').value||0,p=[];
+    if(esRR&&ar>0&&ar!==SEL.anc)p.push('ancho real '+fmtCm(ar));
+    if(RFORMA!=='ninguna')p.push((FORMA_LAB[RFORMA]||'forma especial')+' ×2');
+    rr.className='medRes'+(p.length?' esp':'');
+    rr.innerHTML=p.length?`📐 Medida especial: ${p.join(' · ')}${toca}`:`📐 Medidas de tarifa<span style="font-weight:400;opacity:.8"> — toca para ${esRR?'poner el ancho real o un cajeo':'marcar un cajeo'}</span>`;
+    return;
+  }
+  if(!mr)return;
+  const t=medEspTarifa0(),alt=+$('mAlt').value||t.alt,anc=+$('mAnc').value||t.anc,fon=+$('mFon').value||t.fon;
+  const esp=alt!==t.alt||anc!==t.anc||fon!==t.fon||MFORMA==='viga'||MFORMA==='columna';
+  const forma=MFORMA!=='ninguna'?' · '+(FORMA_LAB[MFORMA]||'forma especial')+' ×2':'';
+  mr.className='medRes'+(esp?' esp':'');
+  mr.innerHTML=`📐 ${esp?'Medida especial':'Medidas de tarifa'}: A ${fmtCm(alt)} × An ${fmtCm(anc)} × F ${fmtCm(fon)}${forma}${toca}`;
 }
 function rCards(){document.querySelectorAll('.mc').forEach(c=>{const arm=ARM.find(a=>a.id===+c.dataset.id);if(!arm)return;const m=S.gros==='19'?(1+REC_19MM):1;const el=c.querySelector('.mcp span:last-child');if(el)el.textContent=fmt(arm.p*m);});if(SEL)cp();}
 function rM(){const m=S.gros==='19'?(1+REC_19MM):1;const h=hojaActual();document.getElementById('mGrid').innerHTML=armazonesHoja(h).map(arm=>`<div class="mc" data-id="${arm.id}" onclick="selA(${arm.id},this)"><div class="mcn">${arm.nom}</div><div class="mcp"><span>Precio</span><span>${fmt(arm.p*m)}</span></div><div style="font-size:10px;color:var(--g);margin-top:2px">F.${arm.fon}+p</div></div>`).join('');}
@@ -4027,7 +4134,8 @@ function selA(id,card){
     if(MHOJA.arranque==='GV'){MPuertas=[];MFrentesCJ=[gvIni()];}
     else if(MHOJA.arranque==='GV2'){MPuertas=[];MFrentesCJ=[gvIni(),gvIni()];}
     else if(MHOJA.arranque==='HORNO'){MHORNO='60';MPuertas=[];MFrentesCJ=[frenteHornoIni(altoArm0)];} // Lote R3: placa horno → 1 cajón bajo el horno
-    else{MPuertas=[{alto:MDEF.alto,ancho:MDEF.ancho,tir:'on',mano:MHOJA.abatible?'AB':'D'}];MFrentesCJ=[];}
+    else{MPuertas=puertasArranque(SEL,SEL.anc);MFrentesCJ=[];} // Lote U: columnas/semicolumnas, 2 puertas apiladas (4 desde 61)
+    MPUERTAS_ARR=!['GV','GV2','HORNO'].includes(MHOJA.arranque);repartirPuertas(); // Lote U: puertas rellenas con su medida
     if(MHOJA.arranque!=='HORNO')MHORNO='60';
     pintarHornoUI(); // Lote R3
     // Lote Q: rincón chaflán de bajos/columnas = regular con forma especial Chaflán (×2) preseleccionada.
@@ -4065,9 +4173,12 @@ function renderMP(){
     // FF (frente fijo) nunca lleva tirador: forzamos tir=off internamente para el cálculo y ocultamos el selector
     const esFF=mano==='FF';
     const btnMano=(v,lab)=>`<button class="tgb${mano===v?' on':''}" onclick="updMP(${i},'mano','${v}')" style="padding:4px 10px;font-size:11px">${lab}</button>`;
-    d.innerHTML=`<div style="display:grid;grid-template-columns:75px 75px auto auto;gap:8px;align-items:end">`+
-      `<div class="fg"><label>Alto P${n}</label><input type="number" value="${p.alto||''}" placeholder="${SEL?SEL.alt:70}" oninput="updMP(${i},'alto',this.value)"></div>`+
-      `<div class="fg"><label>Ancho P${n}</label><input type="number" value="${p.ancho||''}" placeholder="${SEL?SEL.anc:60}" oninput="updMP(${i},'ancho',this.value)"></div>`+
+    // Lote U — columnas/semicolumnas: puertas una encima de otra; se dice cuál es cada una (P1 arriba, como en el 3D).
+    const posAp=(SEL&&puertasApiladas(SEL)&&MPuertas.length>1)?(i===0?'arriba':(i===MPuertas.length-1?'abajo':'en medio')):'';
+    d.innerHTML=(posAp?`<div style="font-size:10.5px;color:var(--dc);font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">P${n} · ${posAp}${mano==='2'?' (2 puertas)':''}</div>`:'')+
+      `<div style="display:grid;grid-template-columns:75px 75px auto auto;gap:8px;align-items:end">`+
+      `<div class="fg"><label>Alto P${n}</label><input type="number" id="mpA${i}" value="${p.alto||''}" placeholder="${SEL?SEL.alt:70}" oninput="updMP(${i},'alto',this.value)" onchange="finMP(${i},'alto')"></div>`+
+      `<div class="fg"><label>Ancho P${n}</label><input type="number" id="mpW${i}" value="${p.ancho||''}" placeholder="${SEL?SEL.anc:60}" oninput="updMP(${i},'ancho',this.value)" onchange="finMP(${i},'ancho')"></div>`+
       (esFF?`<div class="fg"><label>Tirador</label><div style="margin-top:4px;font-size:11px;color:#999;font-style:italic;padding:6px 8px">— FF sin tirador —</div></div>`:
         htmlToggleTir('updMP',i,p.tir))+
       (MPuertas.length>1?`<button class="btn bd2" onclick="delMP(${i})" style="margin-bottom:1px">✕</button>`:'<div></div>')+
@@ -4080,9 +4191,75 @@ function renderMP(){
     c.appendChild(d);
   });cp();
 }
-function addMP(){MPuertas.push({alto:MDEF.alto||(SEL?SEL.alt:''),ancho:MDEF.ancho||(SEL?SEL.anc:''),tir:'on',mano:(MHOJA&&MHOJA.abatible)?'AB':'D'});renderMP();} // Lote P: medida vigente · Lote Q: abatible sin mano
-function updMP(idx,field,val){if(MPuertas[idx]){MPuertas[idx][field]=val;if(field==='tir'||field==='mano')renderMP();else cp();}}
-function delMP(idx){MPuertas.splice(idx,1);renderMP();}
+function addMP(){MPuertas.push({alto:'',ancho:'',tir:'on',mano:(MHOJA&&MHOJA.abatible)?'AB':'D'});MPUERTAS_ARR=false;repartirPuertas();renderMP();} // Lote U: medida por reparto · Lote Q: abatible sin mano
+function updMP(idx,field,val){
+  const p=MPuertas[idx];if(!p)return;p[field]=val;
+  if(field==='tir'){renderMP();return;}
+  MPUERTAS_ARR=false; // Lote U: las puertas ya no son las de arranque
+  if(field==='mano'){repartirPuertas();renderMP();return;} // 2Pta ↔ 1 puerta cambia el reparto
+  if(field==='alto'||field==='ancho'){
+    p[field==='alto'?'_mA':'_mW']=String(val).trim()!==''; // Lote U: tecleado = a mano; vacío = vuelve a automático
+    repartirPuertas({i:idx,c:field});refrescarCamposPuertas(idx,field);
+  }
+  cp();
+}
+function delMP(idx){MPuertas.splice(idx,1);MPUERTAS_ARR=false;repartirPuertas();renderMP();}
+// Lote U — al salir de un campo que se ha dejado vacío, se rellena con su medida automática.
+function finMP(idx,campo){const p=MPuertas[idx];if(p&&String(p[campo]??'').trim()===''){repartirPuertas();renderMP();}}
+
+// ── Lote U (23-09-2026) — medida por defecto de las puertas del mueble normal (Álvaro) ──
+// Cada puerta sale rellena y se puede cambiar. Lo tecleado a mano se respeta (_mA / _mW: alto / ancho a mano, solo en el
+// formulario; no se guarda en la línea) y lo que queda se reparte entre las puertas sin tocar:
+//  · Muebles normales: una junto a otra. Ancho = ancho del mueble ÷ nº de puertas (2Pta cuenta 2); alto = alto de puerta
+//    por defecto (bajos con gola, −3). Bajo 80: 1 puerta 75×80; 2 puertas 75×40 + 75×40; P1 a mano en 45 → P2 35.
+//  · Columnas y semicolumnas: una encima de otra, P1 arriba. Alto = alto del mueble ÷ nº de filas; ancho entero, o ÷ 2 si
+//    la fila es 2Pta. Arrancan con 2 puertas y desde 61 de ancho (COL_ANCHO_4_PUERTAS) con 4 (dos filas 2Pta):
+//    Columna A.205 An.60 → 102,5×60 + 102,5×60; An.80 → dos filas 2Pta de 102,5×40.
+// Redondeo a décima; lo que sobra del redondeo va a la última puerta automática (100 en 3 → 33,3 + 33,3 + 33,4).
+let MPUERTAS_ARR=false; // true mientras las puertas sean las de arranque sin tocar (cambiar el ancho puede rehacerlas)
+function puertasApiladas(arm){return !!arm&&esColumnaFam(arm)&&!isRin(arm);}
+function puertasArranque(arm,anc){
+  const nueva=m=>({alto:'',ancho:'',tir:'on',mano:m});
+  if(puertasApiladas(arm)){const m=((+anc)||arm.anc)>=COL_ANCHO_4_PUERTAS?'2':'D';return [nueva(m),nueva(m)];}
+  return [nueva((MHOJA&&MHOJA.abatible)?'AB':'D')];
+}
+// excepto = {i, c}: campo que se está tecleando (no se le escribe encima).
+function repartirPuertas(excepto){
+  if(!SEL||isRin(SEL)||!MPuertas.length)return;
+  const A=+MDEF.alto||0,W=+MDEF.ancho||0;if(!A||!W)return;
+  const hojas=p=>p.mano==='2'?2:1,fila=()=>1;
+  const poner=(i,campo,v)=>{if(!(excepto&&excepto.i===i&&excepto.c===campo))MPuertas[i][campo]=v;};
+  // Reparte 'total' entre las puertas automáticas del campo; peso = hojas de la puerta (ancho) o 1 por fila (alto).
+  const repartir=(campo,flag,total,peso)=>{
+    const auto=[];let fijo=0,pesoTot=0,pesoAuto=0;
+    MPuertas.forEach((p,i)=>{const w=peso(p);pesoTot+=w;if(p[flag])fijo+=(+p[campo]||0)*w;else{auto.push(i);pesoAuto+=w;}});
+    if(!auto.length)return;
+    let resto=total-fijo;if(resto<=0.05)resto=total*pesoAuto/pesoTot; // lo tecleado ya llena el mueble: reparto simple
+    let usado=0;
+    auto.forEach((i,k)=>{const w=peso(MPuertas[i]),v=k<auto.length-1?r1(resto/pesoAuto):r1((resto-usado)/w);usado+=v*w;poner(i,campo,v);});
+  };
+  if(puertasApiladas(SEL)){
+    repartir('alto','_mA',A,fila);
+    MPuertas.forEach((p,i)=>{if(!p._mW)poner(i,'ancho',r1(W/hojas(p)));});
+  } else {
+    MPuertas.forEach((p,i)=>{if(!p._mA)poner(i,'alto',A);});
+    repartir('ancho','_mW',W,hojas);
+  }
+}
+// Escribe en pantalla las medidas repartidas sin repintar la puerta que se está tecleando (así no pierde el foco).
+function refrescarCamposPuertas(idx,campo){
+  MPuertas.forEach((p,i)=>['alto','ancho'].forEach(c=>{
+    if(i===idx&&c===campo)return;
+    const el=document.getElementById((c==='alto'?'mpA':'mpW')+i),v=(p[c]===''||p[c]==null)?'':String(p[c]);
+    if(el&&el.value!==v)el.value=v;}));
+}
+// Al editar una línea: lo que coincide con el reparto automático sigue siendo automático; lo demás se da por tecleado.
+function marcarManualesPuertas(){
+  const ref=MPuertas.map(p=>Object.assign({},p,{_mA:false,_mW:false})),bak=MPuertas;
+  MPuertas=ref;repartirPuertas();MPuertas=bak;
+  MPuertas.forEach((p,i)=>{const q=ref[i];
+    p._mA=(+p.alto>0)&&Math.abs(+p.alto-(+q.alto||0))>0.05;p._mW=(+p.ancho>0)&&Math.abs(+p.ancho-(+q.ancho||0))>0.05;});
+}
 
 // FRENTES CAJÓN/GAVETA (modal normal). Array paralelo a MPuertas.
 // Cada frente: {alto, ancho, tipo:'CJ'|'GV', tir:'on'|'off', fondo:'F50'|'F40'}
@@ -4121,6 +4298,7 @@ function delMFCJ(idx){MFrentesCJ.splice(idx,1);renderMFCJ();}
 function togMR(){document.getElementById('mRegF').style.display=document.getElementById('chkMR').checked?'grid':'none';cp();}
 function cp(){
   if(!SEL)return;
+  pintarResumenMedidas(); // Lote U
   const tarEf=tarEfectiva(); // Lote R1b
   // Lote F: re-tarificación por ancho. Si el ancho tecleado ≠ ancho de la tarjeta, se tarifa con el
   // armazón hermano de ancho estándar inmediatamente superior (p.ej. selecciona An.50, teclea 57 → An.60).
@@ -4411,7 +4589,7 @@ let RPuertas=[]; // [{alto,ancho,tir}]
 
 // Lote R7 — rincones escuadra / fregadero: qué puerta abre primero ('P1' brazo izquierdo | 'P2' brazo derecho). Obligatorio.
 let RPRIMERO='';
-function setRPrimero(v){RPRIMERO=v==='P2'?'P2':(v==='P1'?'P1':'');pintarRPrimero();rdsg();}
+function setRPrimero(v){RPRIMERO=v==='P2'?'P2':(v==='P1'?'P1':'');repartirPuertasEsc();pintarRPrimero();renderRinP();} // Lote U: la que abre primero, 2 cm menos
 function pintarRPrimero(){
   const box=document.getElementById('rPrimeroBox');if(box)box.style.display=(SEL&&isRin(SEL)&&esRinEsc(SEL))?'block':'none';
   const b1=document.getElementById('bPrimP1'),b2=document.getElementById('bPrimP2');
@@ -4424,13 +4602,9 @@ function rRincon(){
   const fc=document.getElementById('rFrentesCJC');if(fc)fc.innerHTML='';
   // Reset forma especial del rincón
   RFORMA='ninguna';const rdfd=document.getElementById('rDFD'),rdfi=document.getElementById('rDFI');if(rdfd)rdfd.value='';if(rdfi)rdfi.value='';pintarFormaTgg('r','ninguna');
-  // Mostrar/ocultar el campo "Ancho real" para bajos/columnas rincón recto.
-  const box=document.getElementById('rRRecAnchoBox');
-  if(box){
-    box.style.display=esBajoOColRinRec(SEL)?'block':'none';
-    const inp=document.getElementById('rRRecAncho');if(inp)inp.value='';
-  }
-  addRP();if(esRinEsc(SEL))addRP(); // Lote R7: el rincón escuadra lleva 2 puertas, una por brazo
+  // Lote U: el «Ancho real» del rincón recto se pone en «📐 Medidas especiales» (campo oculto que leen rdsg() y addRin()).
+  const inpRR=document.getElementById('rRRecAncho');if(inpRR)inpRR.value='';
+  addRP();if(esRinEsc(SEL)){addRP();repartirPuertasEsc();renderRinP();} // Lote R7: una puerta por brazo · Lote U: medidas calculadas
   pintarRPrimero();renderRFCJ();
 }
 function renderRinP(){
@@ -4444,8 +4618,8 @@ function renderRinP(){
     const d=document.createElement('div');
     d.style.cssText='background:rgba(255,255,255,.07);border-radius:6px;padding:9px;margin-bottom:8px';
     d.innerHTML=`<div style="display:grid;grid-template-columns:80px 80px auto auto;gap:8px;align-items:end">`+
-      `<div class="fg"><label>Alto P${n}</label><input type="number" value="${p.alto||''}" placeholder="70" oninput="updRP(${i},'alto',this.value)"></div>`+
-      `<div class="fg"><label>Ancho P${n}</label><input type="number" value="${p.ancho||''}" placeholder="60" oninput="updRP(${i},'ancho',this.value)"></div>`+
+      `<div class="fg"><label>Alto P${n}</label><input type="number" id="rpA${i}" value="${p.alto||''}" placeholder="70" oninput="updRP(${i},'alto',this.value)" onchange="finRP(${i},'alto')"></div>`+
+      `<div class="fg"><label>Ancho P${n}</label><input type="number" id="rpW${i}" value="${p.ancho||''}" placeholder="60" oninput="updRP(${i},'ancho',this.value)" onchange="finRP(${i},'ancho')"></div>`+
       (esFF?`<div class="fg"><label>Tirador</label><div style="margin-top:4px;font-size:11px;color:#999;font-style:italic;padding:6px 8px">— FF sin tirador —</div></div>`:
         htmlToggleTir('updRP',i,p.tir))+
       `<button class="btn bd2" onclick="delRP(${i})" style="margin-bottom:1px">✕</button>`+
@@ -4456,7 +4630,30 @@ function renderRinP(){
   rdsg();
 }
 function addRP(){RPuertas.push({alto:'',ancho:'',tir:'on',mano:'D'});renderRinP();}
-function updRP(idx,field,val){if(RPuertas[idx]){RPuertas[idx][field]=val;if(field==='mano'||field==='tir')renderRinP();else rdsg();}}
+function updRP(idx,field,val){if(RPuertas[idx]){RPuertas[idx][field]=val;
+  if(field==='alto'||field==='ancho')RPuertas[idx][field==='alto'?'_mA':'_mW']=String(val).trim()!==''; // Lote U: tecleado = a mano
+  if(field==='mano'||field==='tir')renderRinP();else rdsg();}}
+// Lote U — escuadra: al salir de un campo vacío, vuelve a su medida calculada.
+function finRP(idx,campo){const p=RPuertas[idx];if(p&&SEL&&esRinEsc(SEL)&&String(p[campo]??'').trim()===''){repartirPuertasEsc();renderRinP();}}
+// Lote U (23-09-2026) — puertas del rincón escuadra y del rincón fregadero calculadas por la app, como se acordó en el R7:
+// una por brazo; cada una mide el frente de su brazo (brazo − fondo) y la que abre primero RIN_ESC_PUERTA_CORTA menos.
+// Alto = alto del mueble. B.Rinc.Esc A.75 90×80 F.58 con P2 primero → P1 75×32, P2 75×20. En el rincón recto la puerta
+// se sigue tecleando (Álvaro). Lo tecleado a mano no se pisa.
+function repartirPuertasEsc(){
+  if(!SEL||!isRin(SEL)||!esRinEsc(SEL))return;
+  const F=+SEL.fon||0,frente=[brazoIzqEsc(SEL)-F,(+SEL.anc||0)-F],A=altoPuertaDefecto(SEL,SEL.alt);
+  RPuertas.slice(0,2).forEach((p,i)=>{
+    if(!p._mA)p.alto=A;
+    if(!p._mW)p.ancho=Math.max(0,r1(frente[i]-(RPRIMERO===(i===0?'P1':'P2')?RIN_ESC_PUERTA_CORTA:0)));
+  });
+}
+function marcarManualesEsc(){
+  if(!SEL||!esRinEsc(SEL))return;
+  const ref=RPuertas.map(p=>Object.assign({},p,{_mA:false,_mW:false})),bak=RPuertas;
+  RPuertas=ref;repartirPuertasEsc();RPuertas=bak;
+  RPuertas.forEach((p,i)=>{const q=ref[i];
+    p._mA=(+p.alto>0)&&Math.abs(+p.alto-(+q.alto||0))>0.05;p._mW=(+p.ancho>0)&&Math.abs(+p.ancho-(+q.ancho||0))>0.05;});
+}
 function delRP(idx){RPuertas.splice(idx,1);renderRinP();}
 
 // FRENTES CAJÓN/GAVETA (modal rincón).
@@ -4498,6 +4695,7 @@ function sincRegletaRincon(){
 function togR(){const c=document.getElementById('chkR').checked;document.getElementById('rinRF').style.display=c?'grid':'none';rdsg();}
 function rdsg(){
   if(!SEL)return;
+  pintarResumenMedidas(); // Lote U
   sincRegletaRincon(); // Lote R6
   pintarRPrimero(); // Lote R7
   // Ancho real manual para bajos/columnas rincón recto: tarifica con armazón estándar superior.
@@ -5839,17 +6037,13 @@ function iniciarEdicion(id){
   if(isRin(SEL)){
     document.getElementById('addF').style.display='none';
     document.getElementById('rinF').style.display='block';
-    // Mostrar/ocultar caja de ancho real para rincón recto bajo/columna y restaurar valor
-    const box=document.getElementById('rRRecAnchoBox');
-    if(box){
-      box.style.display=esBajoOColRinRec(SEL)?'block':'none';
-      const inp=document.getElementById('rRRecAncho');
-      if(inp)inp.value=m.anchoReal||'';
-    }
+    // Lote U: ancho real del rincón recto (se cambia en «📐 Medidas especiales»; el campo va oculto)
+    const inpRR=document.getElementById('rRRecAncho');if(inpRR)inpRR.value=m.anchoReal||'';
     RPuertas=m.mPuertas.map(p=>({...p}));
     // Lote R7: los rincones no llevan cajones ni gavetas; una línea antigua que los traiga los pierde al guardar
     RFrentesCJ=[];if((m.mFrentesCJ||[]).some(f=>(+f.alto)&&(+f.ancho)))flash('⚠️ Los rincones no llevan cajones ni gavetas: se quitan al guardar');
     RPRIMERO=m.abrePrimero||'';
+    marcarManualesEsc(); // Lote U: en el escuadra, lo que no coincide con el cálculo se da por tecleado
     MPIEZAS=piezasLimpias(m.piezas); // Lote R8: piezas del casco de la línea
     renderRinP();renderRFCJ();
     // Lote F: restaurar forma especial / doble fondo del rincón
@@ -5885,6 +6079,7 @@ function iniciarEdicion(id){
     document.getElementById('mDFD').value=(m.dobleFondo&&m.dobleFondo.dcho)||'';
     document.getElementById('mDFI').value=(m.dobleFondo&&m.dobleFondo.izq)||'';
     MPuertas=m.mPuertas.map(p=>({...p}));
+    marcarManualesPuertas();MPUERTAS_ARR=false; // Lote U: lo que no coincide con el reparto automático queda a mano
     MFrentesCJ=(m.mFrentesCJ||[]).map(f=>({...f}));
     MHORNO=(m.horno==='45')?'45':'60';pintarHornoUI(); // Lote R3
     MPIEZAS=piezasLimpias(m.piezas); // Lote R5: piezas del casco de la línea
@@ -5936,6 +6131,7 @@ function limpiarFormularioMueble(){
   MHORNO='60';pintarHornoUI(); // Lote R3
   MPIEZAS={};cerrarMenuPieza(); // Lote R5
   MDEF={alto:0,ancho:0}; // Lote P
+  MPUERTAS_ARR=false;pintarResumenMedidas(); // Lote U: resumen vacío y botón de medidas especiales desactivado
   // Vaciar contenedores de puertas/frentes (modal normal y rincón)
   ['mPuertasC','mFrentesCJC','rinP','rFrentesCJC'].forEach(idc=>{const c=document.getElementById(idc);if(c)c.innerHTML='';});
   // Lote H: ocultar y desmarcar checkboxes de balda fregadero
