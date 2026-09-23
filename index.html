@@ -1,4 +1,4 @@
-[Resource from GitHub at repo://alvaroperez97-lgtm/ag5presupuestador/sha/e49d7c4bb566a3a4db25934af33a465a16d1116c/contents/index.html] <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -27,6 +27,7 @@ header{background:var(--m);color:var(--c);padding:10px 20px;display:flex;align-i
 .btnUpd:hover{background:#3b9142;} .btnUpd:disabled{opacity:.7;cursor:default;}
 .btnNew{background:var(--dc);color:var(--m);} .btnNew:hover{background:#d9ab4a;} /* Lote O: Nuevo proyecto */
 #appBuildLbl{font-size:10px;color:var(--cd);opacity:.85;white-space:nowrap;}
+#btnUpd{display:none;} #btnUpd.hay{display:inline-block;} /* Lote R4: oculto hasta que se detecta un build publicado más nuevo */
 nav{background:var(--mm);display:flex;padding:0 16px;overflow-x:auto;}
 .tb{background:none;border:none;color:var(--cd);padding:13px 20px;cursor:pointer;font-family:'Lato',sans-serif;font-size:13px;font-weight:700;transition:all .2s;border-bottom:3px solid transparent;white-space:nowrap;}
 .tb:hover{color:#fff;} .tb.on{color:var(--dc);border-bottom-color:var(--dc);background:rgba(255,255,255,.06);}
@@ -194,7 +195,7 @@ tr:hover td{background:var(--c);}
     <div class="he"><strong>Almacén Grupo 5</strong>Cañada Aguilera 63 · 47155 Santovenia de Pisuerga (Valladolid)<br>📞 983 268 328 / 671 817 579 · <a href="mailto:oficina@almacengrupocinco.es">oficina@almacengrupocinco.es</a></div>
   </div>
   <div class="hq"><span id="qNum">PRES-000001</span>Presupuesto Cocinas
-    <div class="hb"><small id="appBuildLbl"></small><button class="btnUpd btnNew" onclick="nuevoP()" title="Vacía cliente, modelos, líneas y formularios para empezar un proyecto nuevo">🆕 Nuevo proyecto</button><button class="btnUpd" id="btnUpd" onclick="actualizarApp()" title="Recarga la app para aplicar la última versión subida">🔄 Actualizar</button></div>
+    <div class="hb"><small id="appBuildLbl"></small><button class="btnUpd btnNew" onclick="nuevoP()" title="Vacía cliente, modelos, líneas y formularios para empezar un proyecto nuevo">🆕 Nuevo proyecto</button><button class="btnUpd" id="btnUpd" onclick="actualizarApp()" title="Hay una versión nueva publicada: recarga la app para aplicarla">🔄 Nueva versión</button></div>
   </div>
 </header>
 <nav>
@@ -966,7 +967,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-23.2';
+const APP_BUILD = '2026-09-23.3';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1419,7 +1420,14 @@ const R3D_CTE={
   frenteGrosor:1.9,    // cm: puertas y frentes
   frenteHolgura:0.15,  // cm que se quita a cada borde de puerta/frente para que se vean las juntas
   pataAlto:10, pataDiam:5, pataInset:5,   // patas de plástico negro: alto por defecto (el proyecto elige 10/15, S.patas); Ø y retranqueo [supuesto]
-  golaAlto:REBAJE_PUERTA_GOLA, golaFondo:2.2, // perfil gola U: ocupa los 3 cm que se rebajan a la puerta
+  golaAlto:REBAJE_PUERTA_GOLA, // perfil gola: ocupa los 3 cm que se rebajan a la puerta
+  // Lote R4 (23-09-2026) — la gola es un HUECO, no un listón: se dibuja dentro del grosor del frente (entre la cara de la
+  // puerta y el casco) con fondo en sombra, ala superior enrasada con la cara de los frentes y, en golas intermedias
+  // (entre dos frentes, perfil en C), ala inferior corta. El canto superior de la puerta queda a la vista como suelo del
+  // hueco, que es por donde se coge. Medidas [supuesto], solo dibujo.
+  golaChapa:0.2,       // cm: espesor de la chapa de aluminio del perfil
+  golaAlaInf:0.6,      // cm: fondo del ala inferior del perfil en C (golas intermedias)
+  golaSombra:0.45,     // factor de oscurecimiento del fondo del hueco respecto al color del perfil
   tirLargo:16, tirAlto:1.2, tirSaliente:2.8, tirMargen:3, // tirador genérico (se afinará por modelo en R2)
   cajLatH:{CJ:8.5,GV:18.5}, cajPared:{IATIRA:1.6,AVYOU:1.2}, cajHolgura:0.6, cajFondoGros:1.6, cajRetranqueo:2,
   cajAltoMin:8,        // cm: alto mínimo que se supone a un frente sin alto tecleado
@@ -1637,6 +1645,9 @@ const R3D_COL={costado:'#d9c39a',suelo:'#e2cea6',trav:'#d9c39a',techo:'#ecd9b2',
 // Color de tirador / gola a partir del nombre del color elegido (informativo). Por defecto aluminio.
 const R3D_COL_HERRAJE={blanco:'#f2f2f2',negro:'#2b2b2b',aluminio:'#b8bcc2',plata:'#c9ccd1',inox:'#c9ccd1',cromo:'#d6d9de',
   bronce:'#8c6a3f',grafito:'#4a4d52',antracita:'#3c3f44',gris:'#8f9398',oro:'#c9a44a',dorado:'#c9a44a'};
+// Lote R4: oscurece un color #rrggbb (k<1) — fondo en sombra del hueco de la gola.
+function r3dOscurecer(col,k){const m=String(col).match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);if(!m)return col;
+  return '#'+[1,2,3].map(i=>Math.round(parseInt(m[i],16)*k).toString(16).padStart(2,'0')).join('');}
 function r3dColorHerraje(nombre){
   const k=String(nombre||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   for(const c in R3D_COL_HERRAJE)if(k.includes(c))return R3D_COL_HERRAJE[c];
@@ -1728,7 +1739,14 @@ function r3dPiezas(sp,conFrentes,est){
   // gola encima del elemento (fija al casco) / tirador en su borde superior (gira o se desplaza con la puerta o el frente)
   const herraje=(x,w,top,conTir,rot,dz)=>{
     if(!conTir)return;
-    if(esGola)box(x,top,-C.golaFondo,w,C.golaAlto,C.golaFondo,colHerr,R3D_COL.strokeHerr);
+    if(esGola){
+      // Lote R4 — perfil hueco (ver R3D_CTE): tres cajas que se tocan y no se cruzan, todas en la franja de 3 cm encima
+      // del frente y dentro del grosor de los frentes (z de −g a 0), fijas al casco aunque el frente se abra.
+      const e=C.golaChapa,H=C.golaAlto,interm=top+H<A-0.01; // intermedia: queda otro frente encima (perfil en C)
+      box(x,top,-e,w,H,e,r3dOscurecer(colHerr,C.golaSombra),R3D_COL.strokeHerr);   // fondo del hueco, en sombra
+      box(x,top+H-e,-g,w,e,g-e,colHerr,R3D_COL.strokeHerr);                         // ala superior, enrasada con los frentes
+      if(interm)box(x,top,-Math.min(C.golaAlaInf,g-e)-e,w,e,Math.min(C.golaAlaInf,g-e),colHerr,R3D_COL.strokeHerr); // ala inferior corta
+    }
     else if(esTir){
       const L=Math.min(C.tirLargo,Math.max(4,w-4));
       // Con la puerta girando, el tirador va pegado a su cara exterior: se le dice al orden de pintado qué puerta es
@@ -1787,7 +1805,7 @@ function r3dPiezas(sp,conFrentes,est){
   if(conFrentes){
     let x=0;
     sp.puertas.forEach((p,i)=>{
-      const n=p.mano==='2'?2:1,h=p.alto||yTop,w=p.ancho||(W/sp.puertas.length)/n,abrible=p.mano!=='FF'&&p.mano!=='AB';
+      const n=p.mano==='2'?2:1,h=p.alto||(yTop-((esGola&&p.tir)?C.golaAlto:0)),w=p.ancho||(W/sp.puertas.length)/n,abrible=p.mano!=='FF'&&p.mano!=='AB'; // Lote R4: con gola, alto auto = hueco − 3
       for(let j=0;j<n;j++){
         const key='p'+i+(n>1?'_'+j:''),dcha=n===2?j===1:p.mano!=='I';
         const ang=abrible?abierto(key)*C.puertaAbre*Math.PI/180:0;
@@ -2400,6 +2418,31 @@ function init(){
   setInterval(autoGuardarBorrador,AUTOSAVE_MS);
   // Lote K — versión visible en la cabecera
   const bl=document.getElementById('appBuildLbl');if(bl)bl.textContent='v'+APP_BUILD;
+  // Lote R4 — el botón de actualizar solo aparece si hay un build publicado más nuevo que el cargado
+  setTimeout(comprobarVersionNueva,3000);
+  setInterval(comprobarVersionNueva,VERSION_CHECK_MS);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')comprobarVersionNueva();});
+}
+// Lote R4 (23-09-2026) — detección de versión nueva. Antes el botón «🔄 Actualizar» estaba siempre a la vista y parecía
+// que la app nunca quedaba al día. Ahora se lee el index.html publicado (misma web, sin caché: el service worker es
+// red-primero) y se compara su APP_BUILD con el cargado. Solo si el publicado es MÁS NUEVO se enseña el botón.
+// Sin red, o si el publicado es igual o anterior, el botón sigue oculto.
+const VERSION_CHECK_MS = 15*60*1000; // cada 15 min, además de al arrancar y al volver a la pestaña
+// Compara builds AAAA-MM-DD.N por partes numéricas ("2026-09-23.10" > "2026-09-23.2"). >0 si a es más nuevo que b.
+function compararBuild(a,b){
+  const pa=String(a).split(/[-.]/).map(Number),pb=String(b).split(/[-.]/).map(Number);
+  for(let i=0;i<Math.max(pa.length,pb.length);i++){const d=(pa[i]||0)-(pb[i]||0);if(d)return d;}
+  return 0;
+}
+function comprobarVersionNueva(){
+  if(typeof fetch!=='function')return;
+  fetch('./index.html',{cache:'no-store'}).then(r=>r.ok?r.text():'').then(txt=>{
+    const m=txt&&txt.match(/const APP_BUILD\s*=\s*'([^']+)'/);
+    const b=document.getElementById('btnUpd');if(!m||!b)return;
+    const nueva=compararBuild(m[1],APP_BUILD)>0;
+    b.classList.toggle('hay',nueva);
+    b.title=nueva?`Publicada la versión ${m[1]} (tienes ${APP_BUILD}): pulsa para cargarla`:'';
+  }).catch(()=>{});
 }
 // Lote K — "🔄 Actualizar": guarda el borrador en curso (se ofrece recuperar al arrancar) y recarga.
 // El service worker es red-primero (cache:'no-store'), así que la recarga trae el index.html
