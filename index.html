@@ -991,7 +991,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-23.9';
+const APP_BUILD = '2026-09-23.10';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -2096,23 +2096,27 @@ function r3dPiezas(sp,conFrentes,est){
     // Lote U (23-09-2026) — columnas y semicolumnas: puertas una encima de otra, P1 arriba, apiladas desde el techo y cada
     // una con su perfil de gola encima si lo lleva; una fila 2Pta son dos puertas lado a lado. Si las medidas no caben en
     // el alto, el dibujo las encoge en proporción (solo el dibujo: la columna aún no tiene construcción propia).
+    // Lote U2: con gola, un solo perfil por columna, encima de la fila de abajo (perfil en C entre las dos puertas; con una
+    // sola puerta queda arriba, como en los bajos). Las filas de encima no llevan gola.
     let yFila=yTop,esc=1,hAutoFila=0;
+    const nFil=sp.puertas.length,golaCol=sp.apiladas&&esGola&&sp.puertas.some(p=>p.tir),resFila=i=>(golaCol&&i===nFil-1)?C.golaAlto:0;
     if(sp.apiladas){
-      const res=sp.puertas.reduce((s,p)=>s+((esGola&&p.tir)?C.golaAlto:0),0),hs=sp.puertas.reduce((s,p)=>s+(p.alto||0),0);
+      const res=golaCol?C.golaAlto:0,hs=sp.puertas.reduce((s,p)=>s+(p.alto||0),0);
       const nVac=sp.puertas.filter(p=>!p.alto).length;hAutoFila=nVac?Math.max(1,(yTop-res-hs)/nVac):0;
       const tot=hs+hAutoFila*nVac;if(tot>0&&tot>yTop-res)esc=Math.max(0.1,(yTop-res)/tot);
     }
     sp.puertas.forEach((p,i)=>{
       const n=p.mano==='2'?2:1,abrible=p.mano!=='FF'&&p.mano!=='AB';
       let h=p.alto||(yTop-((esGola&&p.tir)?C.golaAlto:0)),w=p.ancho||(W/sp.puertas.length)/n,y0=0; // Lote R4: con gola, alto auto = hueco − 3
-      if(sp.apiladas){h=(p.alto||hAutoFila)*esc;w=p.ancho||W/n;y0=yFila-h-((esGola&&p.tir)?C.golaAlto:0);yFila=y0;x=0;} // Lote U
+      if(sp.apiladas){h=(p.alto||hAutoFila)*esc;w=p.ancho||W/n;y0=yFila-h-resFila(i);yFila=y0;x=0;} // Lote U · U2
+      const conHerr=(sp.apiladas&&esGola)?resFila(i)>0:p.tir; // Lote U2: la gola de la columna solo sobre la fila de abajo
       for(let j=0;j<n;j++){
         const key='p'+i+(n>1?'_'+j:''),dcha=n===2?j===1:p.mano!=='I';
         const tope=(rin&&esTir&&p.tir)?Math.min(C.puertaAbre,180-Math.atan2(C.tirSaliente,Math.max(0.1,(w-Math.min(C.tirLargo,Math.max(4,w-4)))/2-hg))*180/Math.PI-1):C.puertaAbre; // Lote R8
         const ang=abrible?abierto(key)*tope*Math.PI/180:0;
         const rot=ang>1e-4?{ang:dcha?ang:-ang,px:dcha?x+w-hg:x+hg,pz:-g}:null;
         box(x+hg,y0+hg,-g,w-2*hg,h-2*hg,g,R3D_COL.frente,null,abrible?{key,rot}:{rot});
-        herraje(x,w,y0+h,p.tir,rot,0);x+=w; // Lote U: y0 = 0 salvo en columnas (puertas apiladas)
+        herraje(x,w,y0+h,conHerr,rot,0);x+=w; // Lote U: y0 = 0 salvo en columnas (puertas apiladas)
       }
     });
     // Lote R6 — regleta vista del rincón recto: material de puerta, en el plano de las puertas y pegada a su canto de
@@ -3867,7 +3871,10 @@ function refArmazon(arm){
 // Lote P (18-09-2026) — Alto de puerta por defecto para un alto de armazón: en bajos con gola la puerta
 // pierde el perfil (80 → 77); en el resto, puerta = alto del armazón.
 function altoPuertaDefecto(arm,altoArm){
-  const golaBajo=S.tb.t==='gola'&&!!arm&&esBajoFam(arm)&&!isRin(arm);
+  // Lote U2 (23-09-2026, Álvaro): también columnas y semicolumnas (no rincón) con gola de bajos. Llevan UNA gola y sus
+  // puertas suman el alto − 3, el hueco de apertura: Columna A.205 → 202 (2 puertas de 101). El perfil mide 57 de alto
+  // × 25 de grueso; el hueco visto es de 3 cm y cada puerta monta unos 1,4 cm sobre el perfil para poder tirar de ella.
+  const golaBajo=S.tb.t==='gola'&&!!arm&&(esBajoFam(arm)||esColumnaFam(arm))&&!isRin(arm);
   return golaBajo?altoArm-REBAJE_PUERTA_GOLA:altoArm;
 }
 // Lote P — medidas "por defecto" vigentes de puertas/frentes en el modal regular. Al teclear alto/ancho
@@ -4128,6 +4135,7 @@ function selA(id,card){
     // Reset forma especial al elegir mueble nuevo
     MFORMA='ninguna';document.getElementById('mDFD').value='';document.getElementById('mDFI').value='';pintarFormaTgg('m','ninguna');
     const gi=document.getElementById('gInfo');gi.style.display=isGB?'block':'none';if(isGB)gi.textContent='🔧 Gola bajos: armazón se cobra como 75 (aunque sea de 80) · puerta 77 → tramo 90 sin recargo · la gola se suma sola en el presupuesto';
+    if(!isGB&&S.tb.t==='gola'&&puertasApiladas(SEL)){gi.style.display='block';gi.textContent='🔧 Gola: una sola por columna · las puertas suman el alto − 3 (hueco de apertura) · la gola se suma sola en el presupuesto';} // Lote U2
     MDEF={alto:altoPuertaDefecto(SEL,altoArm0),ancho:SEL.anc}; // Lote P
     // Lote Q: frentes de arranque según la subfamilia (gavetero → 1 gaveta; placa / placa horno → 2 gavetas).
     const gvIni=()=>({alto:'',ancho:MDEF.ancho,tir:'on',tipo:'GV',fondo:'F50',ss:'off'});
@@ -4214,7 +4222,8 @@ function finMP(idx,campo){const p=MPuertas[idx];if(p&&String(p[campo]??'').trim(
 //    por defecto (bajos con gola, −3). Bajo 80: 1 puerta 75×80; 2 puertas 75×40 + 75×40; P1 a mano en 45 → P2 35.
 //  · Columnas y semicolumnas: una encima de otra, P1 arriba. Alto = alto del mueble ÷ nº de filas; ancho entero, o ÷ 2 si
 //    la fila es 2Pta. Arrancan con 2 puertas y desde 61 de ancho (COL_ANCHO_4_PUERTAS) con 4 (dos filas 2Pta):
-//    Columna A.205 An.60 → 102,5×60 + 102,5×60; An.80 → dos filas 2Pta de 102,5×40.
+//    Columna A.205 An.60 → 102,5×60 + 102,5×60; An.80 → dos filas 2Pta de 102,5×40. Con gola de bajos (Lote U2) las
+//    puertas suman el alto − 3 (altoPuertaDefecto): 101 + 101.
 // Redondeo a décima; lo que sobra del redondeo va a la última puerta automática (100 en 3 → 33,3 + 33,3 + 33,4).
 let MPUERTAS_ARR=false; // true mientras las puertas sean las de arranque sin tocar (cambiar el ancho puede rehacerlas)
 function puertasApiladas(arm){return !!arm&&esColumnaFam(arm)&&!isRin(arm);}
@@ -5955,13 +5964,19 @@ function recalcularAcumulados(){
     const cfg=ladoBajo?(m.tb||S.tb):(m.ta||S.ta);
     if(cfg.t!=='gola')return; // este lado del mueble no usa gola
     const color=cfg.c||'';
+    // Lote U2 (23-09-2026, Álvaro) — columnas y semicolumnas (no rincón): UNA gola por columna. Las puertas van una
+    // encima de otra y el perfil intermedio sirve a todas: cuenta una vez el ancho de la fila más ancha.
+    // Columna 60 con 2 puertas → 60 cm (no 120); columna 80 con dos filas 2Pta de 40 → 80 cm.
+    const golaUnica=!!m.esCol&&!m.esRincon;let anchoCol=0;
     m.mPuertas.forEach(p=>{
       const a=+p.alto||0,w=+p.ancho||0;if(!a||!w)return;
       const mano=p.mano||'D';const mult=(mano==='2')?2:1;
       const llevaTir=(mano!=='FF')&&p.tir!=='off';if(!llevaTir)return;
       if(!ladoBajo)add(color,'at',(p.tMan!=null?+p.tMan:gap(w))*mult*cnt); // Lote M: precio manual de gola altos
+      else if(golaUnica)anchoCol=Math.max(anchoCol,w*mult);
       else add(color,'ml',w*mult*cnt);
     });
+    if(anchoCol>0)add(color,'ml',anchoCol*cnt); // Lote U2
     (m.mFrentesCJ||[]).forEach(f=>{
       const a=+f.alto||0,w=+f.ancho||0;if(!a||!w)return;if(f.tir==='off')return;
       if(!ladoBajo)add(color,'at',(f.tMan!=null?+f.tMan:gap(w))*cnt);
