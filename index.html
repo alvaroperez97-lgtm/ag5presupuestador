@@ -969,7 +969,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-23.5';
+const APP_BUILD = '2026-09-23.6';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -4172,7 +4172,7 @@ function renderRFCJ(){
       htmlToggleTir('updRFCJ',i,f.tir)+
       `<button class="btn bd2" onclick="delRFCJ(${i})" style="margin-bottom:1px">✕</button>`+
       `</div>`+
-      `<div style="display:flex;gap:5px;margin-top:7px;align-items:center;flex-wrap:wrap"><span style="font-size:10.5px;color:var(--cd);font-weight:700;text-transform:uppercase;letter-spacing:.4px">Tipo F${n}:</span>${btnTipo('CJ','CJ')}${btnTipo('GV','GV')}<span style="font-size:10.5px;color:var(--cd);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-left:10px">Fondo:</span>${btnFondo('F50','F.50')}${btnFondo('F40','F.40')}</div>`;
+      `<div style="display:flex;gap:5px;margin-top:7px;align-items:center;flex-wrap:wrap"><span style="font-size:10.5px;color:var(--cd);font-weight:700;text-transform:uppercase;letter-spacing:.4px">Tipo F${n}:</span>${btnTipo('CJ','CJ')}${tipo==='GV'?btnTipo('GV','GV ⚠️'):''}<span style="font-size:10.5px;color:var(--cd);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-left:10px">Fondo:</span>${btnFondo('F50','F.50')}${btnFondo('F40','F.40')}</div>`;
     c.appendChild(d);
   });
   rdsg();
@@ -4263,6 +4263,8 @@ function addRin(){
   for(let i=0;i<RFrentesCJ.length;i++){
     const f=RFrentesCJ[i];const a=+f.alto||0,w=+f.ancho||0;
     if(!a||!w)continue;
+    // Lote R6b (23-09-2026, Álvaro): los rincones no llevan gavetas. Una línea antigua con GV hay que pasarla a CJ.
+    if((f.tipo||'CJ')==='GV'){flash(`⚠️ Frente F${i+1}: los rincones no llevan gavetas — cámbialo a cajón (CJ)`);return;}
     if(w>120){flash(`⚠️ Frente cajón F${i+1}: ${w}cm > 120cm, no permitido`);return;}
     const her=precioCajonHerraje(S.modCaj,f.tipo,f.fondo||'F50',w);
     if(!her){flash(`⚠️ Frente F${i+1}: no hay cajón ${S.modCaj} ${f.tipo} ${f.fondo} disponible para ${w}cm`);return;}
