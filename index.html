@@ -969,7 +969,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-23.4';
+const APP_BUILD = '2026-09-23.5';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1060,6 +1060,11 @@ const BALDA_REC_19MM   = REC_19MM;
 const BALDA_DESC_FONDO         = 3.5;  // cm que se descuentan al fondo del mueble
 const BALDA_FONDO_F58          = 51.5; // fondo de balda en bajos / columnas de F.58
 const BALDA_FONDO_SFRIGO       = 41.5; // fondo de balda en sobre frigo
+// Lote R6 (23-09-2026) — bajo rincón recto (Álvaro): casco del bajo puerta + ciego de melamina interior y regleta vista.
+const BALDA_DESC_RINCON        = 0.7;  // cm: las baldas de un mueble rincón son el fondo estándar − 7 mm (F.58 → 50,8)
+const RIN_CIEGO_DESC           = 11.6; // cm: ciego = ancho exterior − puertas − 116 mm (cálculo fijo, con 16 y con 19)
+const RIN_REGLETA_ANCHO        = 20;   // cm: regleta vista (material de puerta) por defecto; se cambia si piden regleta completa
+const PATAS_RIN_RECTO          = 5;    // rincones rectos: 4 en las esquinas + 1 en la línea de bisagras (antes 6)
 const BALDA_DESC_ANCHO_TAR     = 3.2;  // la tarifa indexa por ancho de mueble = ancho de balda + 3,2 (costados de 16)
 const BALDA_SUP_FALSEADA_CANTO = 10;   // € por balda falseada con algún canto
 const BALDA_SUP_FALSEADA_SIN   = 5;    // € por balda falseada sin canto
@@ -1422,7 +1427,7 @@ const ARM=buildARM();
 //   · Bajo fregadero (Lote R2): paletones delantero y trasero DE CANTO (12 cm de alto), base 5 cm más corta que los
 //     costados (58 → 53) y travesaño de refuerzo de 12 cm de pie sobre el final de la base. SIN trasera. La gaveta
 //     salvasifón se dibuja con el recorte en U por detrás.
-//   · Rincones: pendiente (se muestra el aviso, sin dibujo).
+//   · Rincones: pendiente (se muestra el aviso, sin dibujo), salvo el bajo rincón recto (Lote R6: CONSTR.rinRec).
 // Grosor del tablero = el elegido en el proyecto (16 / 19). Puertas y frentes a 19 mm. Frentes de cajón apilados
 // desde arriba (F1 arriba) y puertas debajo, alineadas al suelo (así en bajos con gola el hueco de 3 cm del
 // perfil queda arriba). Cajón I.ATIRA plateado; AV YOU antracita y de pared más fina. Fondo de cajón F.50 / F.40.
@@ -1512,16 +1517,30 @@ const CONSTR=(()=>{
   const trasVista=(c,y,h,z)=>({x:c.tL+0.1,y,z,w:c.Wi-0.2,h,d:c.tr,col:'trasera'});
   const fondoBaldaFija=c=>(c.hornoAbajo&&c.yB+c.th('baldaFija')>c.A-c.C.paleton)?c.Fb-c.th('palTras'):c.Fb; // placa horno, ver comentario de la pieza
   const costados=(f1,f2)=>[cost('cI','izquierdo',f1,false),cost('cD','derecho',f2||f1,true)];
-  return {
-    bajo:{lab:'Bajo puerta / gavetero / cajonero',pendiente:false,piezas:[
+  // Casco del bajo puerta (18-09-2026). Lote R6: en una función para reutilizarlo tal cual en el bajo rincón recto.
+  const cascoBajo=()=>[
       base('18-09-2026',{L:2,A:2}),...costados('18-09-2026'),
       plano('palDel','delantero, arriba, enrasado al frente','18-09-2026',(c,e)=>({x:c.tL,y:c.A-e,z:0,w:c.Wi,h:e,d:c.C.travesano})),
       plano('palTras','trasero, arriba, enrasado atrás','18-09-2026',(c,e)=>({x:c.tL,y:c.A-e,z:c.F-c.C.travesano,w:c.Wi,h:e,d:c.C.travesano})),
       trasera({pos:'en ranura, cara trasera a 5 del fondo',estado:'confirmado',fecha:'22-09-2026',
         corte:c=>({largo:c.A-Math.max(c.tb,c.th('palTras')),ancho:c.trAncho}),
-        cajas:c=>[trasVista(c,c.tb,c.A-c.tb-c.th('palTras'),c.F-c.C.traseraRemetida-c.tr)]}),
-      balda('Lote N')],
-      huecos:c=>{const z=c.F-c.C.traseraRemetida-c.tr;return {zCaja:z,zBalda:z,yHueco:c.A-c.tTop};}},
+        cajas:c=>[trasVista(c,c.tb,c.A-c.tb-c.th('palTras'),c.F-c.C.traseraRemetida-c.tr)]})];
+  const huecosBajo=c=>{const z=c.F-c.C.traseraRemetida-c.tr;return {zCaja:z,zBalda:z,yHueco:c.A-c.tTop};};
+  return {
+    bajo:{lab:'Bajo puerta / gavetero / cajonero',pendiente:false,piezas:[...cascoBajo(),balda('Lote N')],huecos:huecosBajo},
+    // Lote R6 (23-09-2026) — Bajo rincón recto (Álvaro): el casco del bajo puerta más un CIEGO de melamina interior que
+    // cierra la parte del mueble que no lleva puerta. Ciego: del color del armazón, enrasado delante con el casco, entre la
+    // base y el paletón delantero (A − 2t: 71,8 en A.75 con 16), pegado al costado del lado ciego; ancho = ancho EXTERIOR
+    // (el real si lo teclean) − puertas − 11,6 (fijo). Lado: el de las bisagras (mano D → ciego a la derecha). Canto solo en
+    // el largo que se ve al abrir la puerta; veta vertical. Delante, pegada a la puerta, va la regleta vista de 20 (material
+    // de puerta, línea CVT aparte: no es pieza del casco) sobre la que giran las bisagras. 5 patas. Baldas: fondo − 7 mm.
+    rinRec:{lab:'Bajo rincón recto',pendiente:false,piezas:[...cascoBajo(),
+      {id:'ciego',nombre:'Ciego',pos:'interior, enrasado delante, entre la base y el paletón delantero, pegado al costado del lado ciego',
+        estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',cuando:c=>c.cW>0,
+        corte:c=>({largo:c.A-c.tb-c.th('palDel'),ancho:c.cW}),cantos:{L:1,A:0},
+        cajas:c=>[{x:c.cX,y:c.tb,z:0,w:c.cW,h:c.A-c.tb-c.th('palDel'),d:c.th('ciego'),col:'costado'}]},
+      balda('23-09-2026')],
+      huecos:c=>Object.assign(huecosBajo(c),{zBaldaMin:c.cW>0?c.th('ciego'):0})},
     fregadero:{lab:'Bajo fregadero',pendiente:false,piezas:[
       base('22-09-2026',{L:2,A:2},'por debajo de los costados, 5 más corta (53), enrasada delante'),...costados('18-09-2026'),
       canto('palDel','delantero, arriba, enrasado al frente','18-09-2026',(c,e)=>({x:c.tL,y:c.A-c.C.paleton,z:0,w:c.Wi,h:c.C.paleton,d:e,obst:[c.A-c.C.paleton,c.A,0,e]})),
@@ -1591,8 +1610,13 @@ function constrCtx(sp){
   // Lote R5 — piezas cambiadas en el 3D: pz = {clave: 'x' eliminada | 'p' material de puerta}. g = grosor de la puerta (cm).
   const pz=sp.piezas||{},g=sp.gPuerta||GROSOR_PIEZA_PUERTA/10,th=id=>(id&&pz[id]==='p')?g:t;
   const tL=th('cI'),tR=th('cD'),tb=th('base'),bx0=pz.cI==='p'?g:0;
-  return {A,W,F,Fb,t,tr:sp.tr||grosorTrasera('')/10,yB,hornoAbajo,fonBalda:fondoBaldaMueble(sp.fam,F),C,
-    pz,g,th,tL,tR,tb,Wi:W-tL-tR,bx0,bW:W-bx0-(pz.cD==='p'?g:0),trAncho:W-Math.max(tL,tR),tTop:Math.max(th('palDel'),th('palTras'))};
+  // Lote R6 — bajo rincón recto: ciego de ancho W − puertas − 11,6 (cW, 0 si no hay puertas con ancho), del lado de las
+  // bisagras (cDer), en x = cX. xLo / xHi = hueco libre entre costados (y ciego) para las cajas de cajón.
+  const rin=sp.tipo==='rinRec'?sp.rin:null,cDer=!rin||rin.der;
+  const cW=rin&&rin.pw>0?Math.max(0,Math.min(r1(W-rin.pw-RIN_CIEGO_DESC),W-tL-tR)):0;
+  return {A,W,F,Fb,t,tr:sp.tr||grosorTrasera('')/10,yB,hornoAbajo,fonBalda:fondoBaldaMueble(sp.fam,F,!!sp.rincon),C,
+    pz,g,th,tL,tR,tb,Wi:W-tL-tR,bx0,bW:W-bx0-(pz.cD==='p'?g:0),trAncho:W-Math.max(tL,tR),tTop:Math.max(th('palDel'),th('palTras')),
+    cW,cDer,cX:cDer?W-tR-cW:tL,xLo:(cW>0&&!cDer)?tL+cW:tL,xHi:(cW>0&&cDer)?W-tR-cW:W-tR};
 }
 function constrTabla(tipo){return CONSTR[tipo]||CONSTR.generico;}
 // Piezas de la tabla que van en este casco (filtra `cuando`).
@@ -1602,7 +1626,7 @@ function constrPiezas(tabla,c){return tabla.piezas.filter(pz=>!pz.cuando||pz.cua
 // puerta: armazón ×2 una vez + línea CVT por pieza)}. Clave = id de la pieza en CONSTR; en las baldas 'balda#n'. Vive en
 // MPIEZAS (formulario) y en meta.piezas (línea: snapshot de edición y proyecto guardado). La trasera solo se elimina.
 const ETQ_PIEZA={cI:'Costado izquierdo',cD:'Costado derecho',base:'Base',palDel:'Paletón delantero',palTras:'Paletón trasero',
-  refuerzo:'Paletón de refuerzo',travPlaca:'Travesaño delantero',trasera:'Trasera',baldaFija:'Balda fija',balda:'Balda'};
+  refuerzo:'Paletón de refuerzo',travPlaca:'Travesaño delantero',trasera:'Trasera',baldaFija:'Balda fija',balda:'Balda',ciego:'Ciego'};
 const PIEZA_ESTADO_LAB={x:'eliminada',p:'material de puerta'};
 function etqPieza(clave){const [id,k]=String(clave).split('#');return (ETQ_PIEZA[id]||id)+(k!=null?' '+(+k+1):'');}
 function piezasLimpias(pz){const o={};Object.keys(pz||{}).forEach(k=>{if(pz[k]==='x'||pz[k]==='p')o[k]=pz[k];});return o;}
@@ -1697,7 +1721,8 @@ function despieceCasco(sp,ud,ref){
   });
   return out;
 }
-// Despiece de una línea de mueble del presupuesto (null si no es mueble o es rincón: construcción pendiente).
+// Despiece de una línea de mueble del presupuesto (null si no es mueble o es rincón: construcción pendiente; el bajo rincón
+// recto sí se despieza desde el Lote R6).
 function despieceLinea(l){
   const sp=r3dSpecLinea(l);if(!sp)return null;
   return despieceCasco(sp,l.cnt,l.id);
@@ -1762,7 +1787,7 @@ const R3DM=r3dNuevoVisor('r3dModalCont');
 function r3dSpec(o){
   const esBajo=esBajoFam(o.arm),esFreg=esBajo&&esFregadero(o.arm)&&!isRin(o.arm); // Lote R2: bajo fregadero regular
   const sub=o.hoja?o.hoja.subId:''; // Lote R3: bajos placa por subfamilia (placap puertas · placa gavetas/cajones · placah horno)
-  const tipo=esFreg?'fregadero':(esBajo?(['placap','placa','placah'].includes(sub)?sub:'bajo'):'generico');
+  const tipo=esFreg?'fregadero':(esBajoRinRecto(o.arm)?'rinRec':(esBajo?(['placap','placa','placah'].includes(sub)?sub:'bajo'):'generico')); // Lote R6
   const sp={nombre:o.arm.nom,lab:o.hoja?o.hoja.lab:'',fam:o.arm.fam,sub,tipo,pendiente:!esBajo,
     horno:o.horno==='45'?'45':'60',nBaldas:Math.max(0,+o.nBaldas||0), // Lote R3
     alt:+o.alt||o.arm.alt,anc:+o.anc||o.arm.anc,fon:+o.fon||(+o.arm.fon),gros:(+o.gros||16)/10,
@@ -1778,16 +1803,35 @@ function r3dSpec(o){
     tg:{t:(o.cfg&&o.cfg.t)||'sin',s:(o.cfg&&o.cfg.s)||'',c:(o.cfg&&o.cfg.c)||''},
     admiteTir:admiteTirador(o.tar||'Sin puerta'),modCaj:o.modCaj||'IATIRA',patas:esBajo,sinFrentes:!!o.sinFrentes,
     // Lote R5 — piezas del casco cambiadas en el 3D, grosor (cm) y nombre del material de puerta del modelo
-    piezas:piezasLimpias(o.piezas),gPuerta:grosorPiezaPuerta(o.cvt)/10,cvtPuerta:o.cvt||null,matPuerta:o.matPuerta||''};
+    piezas:piezasLimpias(o.piezas),gPuerta:grosorPiezaPuerta(o.cvt)/10,cvtPuerta:o.cvt||null,matPuerta:o.matPuerta||'',
+    rincon:isRin(o.arm),nPatas:tipo==='rinRec'?PATAS_RIN_RECTO:4}; // Lote R6
+  if(tipo==='rinRec')sp.rin=rinRectoGeo(sp.puertas,sp.frentes,o.regletaAncho); // Lote R6
   sp.piezas=piezasFiltrar(sp); // solo las claves que existen en este casco
   return sp;
+}
+// Lote R6 — geometría del bajo rincón recto a partir de sus puertas: pw = ancho total de puertas (2Pta cuenta doble; sin
+// puertas con ancho, el frente más ancho), der = ciego y regleta a la derecha (mano D: bisagras a la derecha, que es donde
+// va la regleta sobre la que giran) salvo mano I, rw = ancho de regleta, hReg = alto de regleta (= alto de puerta).
+function rinRectoGeo(puertas,frentes,rw){
+  const pts=(puertas||[]).filter(p=>(+p.ancho)>0);
+  let pw=pts.reduce((s,p)=>s+(+p.ancho)*(p.mano==='2'?2:1),0);
+  if(!pw)pw=(frentes||[]).reduce((m,f)=>Math.max(m,+f.ancho||0),0);
+  const p0=pts[0]||(puertas||[])[0];
+  return {pw,der:!p0||p0.mano!=='I',rw:(+rw>0)?+rw:RIN_REGLETA_ANCHO,hReg:(puertas||[]).reduce((m,p)=>Math.max(m,+p.alto||0),0)};
 }
 // Fondo de la base: en fregaderos y bajos placa es 5 cm más corta que los costados (58 → 53, Lotes R2/R3); en el resto, el fondo.
 function r3dBaseCorta(sp){return ['fregadero','placap','placa','placah'].includes(sp.tipo);}
 function r3dFondoBase(sp){return r3dBaseCorta(sp)?Math.max(R3D_CTE.baseRecorte*2,sp.fon-R3D_CTE.baseRecorte):sp.fon;}
 // Spec desde el formulario vivo de la pestaña Muebles (null si no hay armazón o es rincón).
 function r3dSpecFormulario(){
-  if(!SEL||isRin(SEL))return null;
+  if(!SEL)return null;
+  if(isRin(SEL)){
+    // Lote R6 — bajo rincón recto: formulario de rincón (puertas, frentes, ancho real, regleta). Sin edición de piezas (R5).
+    if(!esBajoRinRecto(SEL))return null;
+    return r3dSpec({arm:SEL,hoja:MHOJA,alt:SEL.alt,anc:(+document.getElementById('rRRecAncho')?.value||0)||SEL.anc,fon:SEL.fon,
+      puertas:RPuertas,frentes:RFrentesCJ,cfg:S.tb,tar:S.tar,modCaj:S.modCaj,gros:S.gros,sinFrentes:false,
+      nBaldas:nBaldasMueble({fam:SEL.fam,nom:SEL.nom,esBajo:true}),regletaAncho:+document.getElementById('rRW')?.value||RIN_REGLETA_ANCHO});
+  }
   return r3dSpec({arm:SEL,hoja:MHOJA,alt:document.getElementById('mAlt').value,anc:document.getElementById('mAnc').value,
     fon:document.getElementById('mFon').value,puertas:MPuertas,frentes:MFrentesCJ,cfg:isBajo(SEL)?S.tb:S.ta,tar:tarEfectiva(),modCaj:S.modCaj,gros:S.gros,sinFrentes:MFRCLI,
     horno:MHORNO,nBaldas:nBaldasMueble(metaBaldasFormulario()), // Lote R3
@@ -1796,9 +1840,9 @@ function r3dSpecFormulario(){
 // Spec desde la meta de una línea ya presupuestada (botón 🧊 de Proyectos).
 function r3dSpecLinea(l){
   const m=l&&l.meta;if(!m||m.tipo!=='mueble')return null;
-  const arm=ARM.find(a=>a.id===(m.armIdSeleccionado||m.armId));if(!arm||isRin(arm))return null;
+  const arm=ARM.find(a=>a.id===(m.armIdSeleccionado||m.armId));if(!arm||(isRin(arm)&&!esBajoRinRecto(arm)))return null; // Lote R6
   const hoja=hojaDesdeSnap(m.subfam)||hojaDesdeArm(arm);
-  return r3dSpec({arm,hoja,alt:m.alt,anc:m.anc,fon:m.fon,puertas:m.mPuertas||[],frentes:m.mFrentesCJ||[],
+  return r3dSpec({arm,hoja,alt:m.alt,anc:(isRin(arm)&&m.anchoReal)||m.anc,fon:m.fon,regletaAncho:m.regleta&&m.regleta.ancho,/* Lote R6: ancho real */puertas:m.mPuertas||[],frentes:m.mFrentesCJ||[],
     cfg:isBajo(arm)?m.tb:m.ta,tar:m.tarifa,modCaj:m.modCaj||S.modCaj,gros:S.gros,sinFrentes:!!m.frentesCliente,
     horno:m.horno,nBaldas:nBaldasMueble(m), // Lote R3
     // Lote R5 — CVT y color de puerta del modelo de la línea (como la regleta)
@@ -1819,7 +1863,7 @@ function r3dPiezas(sp,conFrentes,est){
   const box=(x,y,z,w,h,d,col,st,ex)=>{if(w>0&&h>0&&d>0)P.push(Object.assign({k:'box',x,y,z,w,h,d,col,st:st||R3D_COL.stroke},ex||{}));};
   const abierto=k=>{const e=E[k];return e?Math.max(0,Math.min(1,+e.v||0)):0;};
   const obst=[]; // obstáculos delante [y0,y1,z0,z1] a todo el ancho: las cajas de cajón se recortan en alto para no cruzarlos
-  let zCaja,zBalda,yHueco=A-t,yB=0; // fondo máximo de cajas y baldas · techo del hueco para baldas · cara inferior de la balda del horno
+  let zCaja,zBalda,yHueco=A-t,yB=0,zBaldaMin=0; // fondo máximo de cajas y baldas · techo del hueco para baldas · cara inferior de la balda del horno · Lote R6: delante de la balda (ciego)
   // Casco — Lote D1 (22-09-2026): las piezas salen de la TABLA DE CONSTRUCCIÓN (CONSTR, arriba), la misma que lee el
   // despiece. Aquí solo se colocan las cajas y se recogen los obstáculos y los huecos (fondo de cajas y baldas, techo del
   // hueco de baldas, balda fija del horno). Cambiar cómo se construye un casco = tocar la tabla, no esta función.
@@ -1831,11 +1875,14 @@ function r3dPiezas(sp,conFrentes,est){
     const tabla=constrTabla(tipo);
     constrPiezas(tabla,cx).forEach(pz=>{if(!pz.cajas)return;const st=(pz.id&&cx.pz[pz.id])||'';
       pz.cajas(cx).forEach(b=>{box(b.x,b.y,b.z,b.w,b.h,b.d,colPz(st,R3D_COL[b.col]||R3D_COL.costado),null,editPz&&pz.id?{key:'pz:'+pz.id}:null);if(b.obst)obst.push(b.obst);});});
-    const hu=tabla.huecos(cx);zCaja=hu.zCaja;zBalda=hu.zBalda;yHueco=hu.yHueco;yB=cx.yB;
+    const hu=tabla.huecos(cx);zCaja=hu.zCaja;zBalda=hu.zBalda;yHueco=hu.yHueco;yB=cx.yB;zBaldaMin=hu.zBaldaMin||0;
   }
   if(sp.patas){
     const r=C.pataDiam/2,i=C.pataInset,pa=sp.pataAlto||C.pataAlto; // Lote D1: alto 10/15 del proyecto; van en la base: las traseras se retranquean desde el final de la base
-    [[i,i],[W-i,i],[i,Fb-i],[W-i,Fb-i]].forEach(([x,z])=>P.push({k:'cyl',x,y:-pa,z,r,h:pa,col:R3D_COL.pata,st:'#111'}));
+    const pts=[[i,i],[W-i,i],[i,Fb-i],[W-i,Fb-i]];
+    // Lote R6 — rincón recto: 5ª pata delante, en la línea de bisagras (junto a la regleta) [confirmado 23-09-2026; x exacta supuesto]
+    if(tipo==='rinRec'&&sp.rin&&sp.rin.pw>0)pts.push([Math.max(i+C.pataDiam,Math.min(W-i-C.pataDiam,sp.rin.der?sp.rin.pw:W-sp.rin.pw)),i]);
+    pts.forEach(([x,z])=>P.push({k:'cyl',x,y:-pa,z,r,h:pa,col:R3D_COL.pata,st:'#111'}));
   }
   // Frentes cajón/gaveta apilados desde arriba (en el placa horno sin gola, desde abajo: el horno va encima; con gola el
   // horno va abajo y el cajón arriba, Lote D1). Alto vacío → se reparte el hueco que dejan los que sí tienen alto.
@@ -1867,12 +1914,14 @@ function r3dPiezas(sp,conFrentes,est){
     }
   };
   let yTop=A,yBot=0,yFrenteMin=Infinity;
+  // Lote R6 — rincón recto: puertas y frentes van del lado contrario al ciego (sin ancho tecleado, el de las puertas).
+  const rin=tipo==='rinRec'?sp.rin:null,xLado=w=>(rin&&!rin.der)?W-w:0;
   sp.frentes.forEach((f,i)=>{
-    const h=f.alto||altoAuto,w=f.ancho||W,y0=desdeAbajo?yBot:yTop-h-reservaGola(f),key='f'+i;
+    const h=f.alto||altoAuto,w=f.ancho||((rin&&rin.pw)||W),xf=xLado(w),y0=desdeAbajo?yBot:yTop-h-reservaGola(f),key='f'+i;
     yFrenteMin=Math.min(yFrenteMin,y0);
     // Caja del cajón (siempre: con frentes se ve por arriba, sin frentes se ve la caja vacía)
     const L=f.fondo==='F40'?40:50,pared=C.cajPared[sp.modCaj]||C.cajPared.IATIRA,colCaj=sp.modCaj==='AVYOU'?R3D_COL.cajAVYOU:R3D_COL.cajIATIRA;
-    const x0=cx.tL+C.cajHolgura,ow=cx.Wi-2*C.cajHolgura,z0=C.cajRetranqueo;let yb=Math.max(y0,0)+Math.max(t,cx.tb)+0.4; // nunca por debajo del suelo (frentes que exceden el alto) · Lote R5: entre costados reales
+    const x0=cx.xLo+C.cajHolgura,ow=cx.xHi-cx.xLo-2*C.cajHolgura,z0=C.cajRetranqueo;/* Lote R6: hueco libre (sin el ciego) */let yb=Math.max(y0,0)+Math.max(t,cx.tb)+0.4; // nunca por debajo del suelo (frentes que exceden el alto) · Lote R5: entre costados reales
     const esGV=f.tipo==='GV';
     let latH=Math.max(3,Math.min(C.cajLatH[f.tipo]||C.cajLatH.CJ,h-(t+0.4)-(t+0.5)-(esGV?1.2:0)));
     let Lc=Math.min(L,zCaja-0.4-z0); // acortada si el fondo del mueble no admite la guía
@@ -1886,7 +1935,7 @@ function r3dPiezas(sp,conFrentes,est){
       else if(yb<oy1+0.4-1e-6){const d=oy1+0.4-yb;yb+=d;latH-=d;} // Lote D1: tolerancia de coma flotante (cajón sobre la balda fija)
     });
     const sale=conFrentes?abierto(key)*C.cajonSale*Math.max(0,Lc):0; // Lote R3: el cajón sale al tocarlo (frente y caja juntos)
-    if(conFrentes){box(hg,y0+hg,-g-sale,w-2*hg,h-2*hg,g,R3D_COL.frente,null,{key});herraje(0,w,y0+h,f.tir,null,sale);}
+    if(conFrentes){box(xf+hg,y0+hg,-g-sale,w-2*hg,h-2*hg,g,R3D_COL.frente,null,{key});herraje(xf,w,y0+h,f.tir,null,sale);}
     if(ow>2*pared+2&&Lc>10&&latH>=3){
       const wi=ow-2*pared,gf=C.cajFondoGros,zt=z0+Lc-pared,zs=z0-sale; // ancho interior · plano de la trasera del cajón · z0 desplazado
       const cb=(x,y,z,w2,h2,d2,col)=>box(x,y,z-sale,w2,h2,d2,col,R3D_COL.strokeCaj,{key});
@@ -1914,7 +1963,7 @@ function r3dPiezas(sp,conFrentes,est){
   // izquierda; en 2 puertas cada una por su lado. FF (frente fijo) y AB (abatible) no se abren. El pivote es la esquina
   // delantera del canto de bisagras: a 90° la puerta queda de canto delante del costado, sin cruzar nada.
   if(conFrentes){
-    let x=0;
+    let x=(rin&&rin.pw)?xLado(rin.pw):0; // Lote R6
     sp.puertas.forEach((p,i)=>{
       const n=p.mano==='2'?2:1,h=p.alto||(yTop-((esGola&&p.tir)?C.golaAlto:0)),w=p.ancho||(W/sp.puertas.length)/n,abrible=p.mano!=='FF'&&p.mano!=='AB'; // Lote R4: con gola, alto auto = hueco − 3
       for(let j=0;j<n;j++){
@@ -1925,12 +1974,19 @@ function r3dPiezas(sp,conFrentes,est){
         herraje(x,w,h,p.tir,rot,0);x+=w;
       }
     });
+    // Lote R6 — regleta vista del rincón recto: material de puerta, en el plano de las puertas y pegada a su canto de
+    // bisagras (sobre ella giran), alto = alto de puerta, ancho 20 o el tecleado (regleta completa), sin salirse del mueble.
+    // Con gola, el perfil sigue por encima de la regleta [supuesto]. No se abre ni se toca.
+    if(rin&&rin.pw>0){
+      const rw=Math.min(rin.rw,W-rin.pw),hr=rin.hReg||(yTop-(esGola?C.golaAlto:0)),xr=rin.der?rin.pw:W-rin.pw-rw;
+      if(rw>0&&hr>0){box(xr+hg,hg,-g,rw-2*hg,hr-2*hg,g,R3D_COL.frente);if(esGola)herraje(xr,rw,hr,true,null,0);}
+    }
   }
   // Lote R3 — baldas: las mismas que salen en herrajes sueltos (o las manuales), de las medidas de Lote N. Una: centrada
   // en el hueco; varias: repartidas a alturas iguales (Álvaro, 22-09-2026). Pegadas a la trasera (o al paletón trasero),
   // y solo en el hueco que dejan libre los cajones. El placa horno no lleva balda suelta (la fija ya está en el casco).
   if(sp.nBaldas>0&&!esPlacaH){
-    const fonB=fondoBaldaMueble(sp.fam,F),zLo=Math.max(0.5,zBalda-fonB),yLo=cx.tb,yHi=Math.min(yHueco,yFrenteMin-0.4);
+    const fonB=cx.fonBalda,zLo=Math.max(0.5,zBaldaMin,zBalda-fonB),yLo=cx.tb,yHi=Math.min(yHueco,yFrenteMin-0.4); // Lote R6: no cruza el ciego
     if(yHi-yLo>=C.baldaMinHueco&&zBalda-zLo>5){
       const n=Math.min(sp.nBaldas,10);
       for(let k=1;k<=n;k++){const cl='balda#'+(k-1),st=cx.pz[cl]||'',e=st==='p'?cx.g:t,yc=yLo+k*(yHi-yLo)/(n+1); // Lote R5: una clave por balda
@@ -2124,8 +2180,10 @@ function restaurarPiezas(){cerrarMenuPieza();MPIEZAS={};cp();}
 function r3dCaption(sp){
   const med=`${fmtCm(sp.anc)}×${fmtCm(sp.alt)}×${fmtCm(sp.fon)} cm`;
   const trMm=Math.round((sp.tr||grosorTrasera('')/10)*10); // Lote D1
-  let t=`${sp.lab?sp.lab+' · ':''}${sp.nombre} — ${med} · tablero ${Math.round(sp.gros*10)} mm${sp.patas?` · 4 patas de ${sp.pataAlto||R3D_CTE.pataAlto}`:''}`;
+  let t=`${sp.lab?sp.lab+' · ':''}${sp.nombre} — ${med} · tablero ${Math.round(sp.gros*10)} mm${sp.patas?` · ${sp.nPatas||4} patas de ${sp.pataAlto||R3D_CTE.pataAlto}`:''}`;
   if(sp.tipo==='bajo')t+=` · trasera ${trMm} mm a ${R3D_CTE.traseraRemetida} cm`;
+  if(sp.tipo==='rinRec'){const cx=constrCtx(sp); // Lote R6
+    t+=` · trasera ${trMm} mm a ${R3D_CTE.traseraRemetida} cm`+(cx.cW>0?` · ciego ${fmtCm(cx.cW)} cm a la ${cx.cDer?'derecha':'izquierda'} · regleta ${fmtCm(Math.min(sp.rin.rw,sp.anc-sp.rin.pw))} cm`:' · ⚠️ falta el ancho de la puerta para el ciego');}
   if(sp.tipo==='fregadero')t+=` · base ${fmtCm(r3dFondoBase(sp))} cm · sin trasera`;
   // Lote R3 — bajos placa
   if(sp.tipo==='placap')t+=` · base ${fmtCm(r3dFondoBase(sp))} cm · trasera ${trMm} mm clavada a ${fmtCm(r3dFondoBase(sp))}`;
@@ -2224,7 +2282,8 @@ function r3dActualizar(){
   if(!SEL){panel.style.display='none';return;}
   panel.style.display='block';
   const cont=document.getElementById('r3dCont'),cap=document.getElementById('r3dCap'),tools=document.getElementById('r3dTools');
-  if(isRin(SEL)){
+  R3D.editable=!isRin(SEL); // Lote R6: en el rincón recto no se editan piezas (R5 solo en el formulario normal)
+  if(isRin(SEL)&&!esBajoRinRecto(SEL)){
     R3D.spec=null;cont.innerHTML='';cont.style.display='none';tools.style.display='none';
     cap.innerHTML=`<span style="color:#856404">⚠️ ${esc(SEL.nom)}: construcción 3D de rincón pendiente</span>`;
     return;
@@ -2232,7 +2291,7 @@ function r3dActualizar(){
   const sp=r3dSpecFormulario();if(!sp){panel.style.display='none';return;}
   const sig=sp.nombre+'|'+sp.sub;if(R3D.sig!==sig){R3D.est={};R3D.sig=sig;} // Lote R3: otro mueble → todo cerrado
   R3D.spec=sp;tools.style.display='flex';cont.style.display='block';r3dInstalarGiro(R3D);r3dPintarBotones(R3D);r3dPintar(R3D);
-  const rb=document.getElementById('r3dRestBtn');if(rb)rb.style.display=Object.keys(MPIEZAS).length?'':'none'; // Lote R5
+  const rb=document.getElementById('r3dRestBtn');if(rb)rb.style.display=(R3D.editable&&Object.keys(MPIEZAS).length)?'':'none'; // Lote R5 · R6
   cap.innerHTML=r3dCaption(sp)+(sp.pendiente?`<br><span style="color:#856404">⚠️ Construcción pendiente: se muestra un casco genérico (costados, suelo, techo y trasera)</span>`:'');
 }
 function r3dOcultar(){const p=document.getElementById('r3dPanel');if(p)p.style.display='none';R3D.spec=null;}
@@ -2241,7 +2300,7 @@ function abrirRender3DLinea(id){
   const l=LN.find(x=>x.id===id);
   if(!l||!l.meta||l.meta.tipo!=='mueble'){flash('⚠️ Esta línea no tiene render 3D');return;}
   const arm=ARM.find(a=>a.id===(l.meta.armIdSeleccionado||l.meta.armId));
-  if(arm&&isRin(arm)){flash('⚠️ Rincón: construcción 3D pendiente');return;}
+  if(arm&&isRin(arm)&&!esBajoRinRecto(arm)){flash('⚠️ Rincón: construcción 3D pendiente');return;} // Lote R6
   const sp=r3dSpecLinea(l);if(!sp){flash('⚠️ Armazón original no encontrado');return;}
   R3DM.spec=sp;R3DM.frentes=true;R3DM.est={}; // Lote R3: se abre con todo cerrado
   document.getElementById('r3dModalTit').textContent=l.desc;
@@ -2377,6 +2436,8 @@ const BAJOS=['Bajos 70','Bajos 75','Bajos 80']; // Lote P: + Bajos 80
 function isBajo(arm){return BAJOS.includes(arm.fam)||['Columnas','Media Columna'].includes(arm.fam);}
 function isRin(arm){return['Rinc.','B.Rinc.','Col.Rinc.'].some(k=>arm.nom.includes(k));}
 function isRinR(arm){return isRin(arm)&&arm.nom.includes('Recto');}
+// Lote R6 — bajo rincón recto (B.Rinc.Recto de 70/75/80): el único rincón con construcción definida (3D y despiece).
+function esBajoRinRecto(arm){return !!arm&&esBajoFam(arm)&&isRinR(arm);}
 // Helpers de familia para herrajes sueltos
 function esBajoFam(arm){return BAJOS.includes(arm.fam);} // Lote P: misma lista que isBajo (incluye Bajos 80)
 function esColumnaFam(arm){return['Columnas','Media Columna'].includes(arm.fam);}
@@ -4119,9 +4180,21 @@ function renderRFCJ(){
 function addRFCJ(){RFrentesCJ.push({alto:'',ancho:'',tir:'on',tipo:'CJ',fondo:'F50'});renderRFCJ();}
 function updRFCJ(idx,field,val){if(RFrentesCJ[idx]){RFrentesCJ[idx][field]=val;if(field==='tir'||field==='tipo'||field==='fondo')renderRFCJ();else rdsg();}}
 function delRFCJ(idx){RFrentesCJ.splice(idx,1);renderRFCJ();}
+// Lote R6 (23-09-2026) — en el bajo rincón recto la regleta vista es automática y obligatoria (Álvaro): alto = alto de la
+// puerta (el mayor), ancho 20 por defecto y editable (regleta completa). En el resto de rincones sigue siendo opcional.
+function sincRegletaRincon(){
+  const chk=document.getElementById('chkR'),ra=document.getElementById('rRA'),rw=document.getElementById('rRW'),box=document.getElementById('rinRF');
+  if(!chk||!ra)return;
+  if(SEL&&esBajoRinRecto(SEL)){
+    chk.checked=true;chk.disabled=true;ra.readOnly=true;if(box)box.style.display='grid';
+    const h=RPuertas.reduce((m,p)=>Math.max(m,+p.alto||0),0);ra.value=h||'';ra.placeholder='= alto puerta';
+    if(rw&&!(+rw.value))rw.value=RIN_REGLETA_ANCHO;
+  } else {chk.disabled=false;ra.readOnly=false;ra.placeholder='70';}
+}
 function togR(){const c=document.getElementById('chkR').checked;document.getElementById('rinRF').style.display=c?'grid':'none';rdsg();}
 function rdsg(){
   if(!SEL)return;
+  sincRegletaRincon(); // Lote R6
   // Ancho real manual para bajos/columnas rincón recto: tarifica con armazón estándar superior.
   const anchoRealRR=+document.getElementById('rRRecAncho')?.value||0;
   const ajusteRR=armazonRRectoTarifa(SEL,anchoRealRR);
@@ -4194,6 +4267,9 @@ function addRin(){
     const her=precioCajonHerraje(S.modCaj,f.tipo,f.fondo||'F50',w);
     if(!her){flash(`⚠️ Frente F${i+1}: no hay cajón ${S.modCaj} ${f.tipo} ${f.fondo} disponible para ${w}cm`);return;}
   }
+  // Lote R6 — bajo rincón recto: la regleta es obligatoria y su alto sale de la puerta
+  sincRegletaRincon();
+  if(esBajoRinRecto(SEL)&&!(+document.getElementById('rRA').value&&+document.getElementById('rRW').value)){flash('⚠️ Rincón recto: indica alto y ancho de la puerta (la regleta sale de ella)');return;}
   const cnt=+document.getElementById('rCnt').value||1,nota=gv('rNt');
   // Ancho real manual (bajos/columnas rincón recto). Si se rellena, se tarifa con armazón superior.
   const anchoRealRR=+document.getElementById('rRRecAncho')?.value||0;
@@ -4243,6 +4319,9 @@ function addRin(){
   // Descripción: usa nombre del armazón realmente tarifado y añade nota de ancho fabricado.
   let desc=`${etiquetaMueble(MHOJA,armTar,RPuertas,RFrentesCJ,S.tar)} + ${S.tar} [${pd.join(', ')}]`; // Lote Q
   if(ajusteRR.ajustado)desc+=` · ancho real ${anchoRealRR}cm${ajusteRR.supera?' [excede estándar]':''}`;
+  // Lote R6 — ciego del bajo rincón recto en la descripción (hoja de producción): lado y ancho con el ancho real
+  if(esBajoRinRecto(SEL)){const g=rinRectoGeo(snapPuertas,snapFrentes,regleta&&regleta.ancho),cW=g.pw>0?r1((anchoRealRR||SEL.anc)-g.pw-RIN_CIEGO_DESC):0;
+    if(cW>0)desc+=` · ciego ${g.der?'dcha':'izq'} ${fmtCm(cW)}cm`;}
   // Lote F: forma especial / doble fondo en rincón
   if(RFORMA!=='ninguna'){
     desc+=` · ${FORMA_LAB[RFORMA]} ×2`;
@@ -4669,11 +4748,10 @@ function baldaArmElegido(){
   cBalda();
 }
 // Fondo de balda a partir del mueble: Sobre Frigo 41,5 · bajos/columnas F.58 51,5 · resto fondo − 3,5.
-function fondoBaldaMueble(fam,fon){
+function fondoBaldaMueble(fam,fon,rin){
   fon=r1(fon);
-  if(fam==='Sobre Frigo')return BALDA_FONDO_SFRIGO;
-  if(fon===58&&(BAJOS.includes(fam)||['Columnas','Media Columna'].includes(fam)))return BALDA_FONDO_F58;
-  return r1(fon-BALDA_DESC_FONDO);
+  const f=fam==='Sobre Frigo'?BALDA_FONDO_SFRIGO:((fon===58&&(BAJOS.includes(fam)||['Columnas','Media Columna'].includes(fam)))?BALDA_FONDO_F58:r1(fon-BALDA_DESC_FONDO));
+  return rin?r1(f-BALDA_DESC_RINCON):f; // Lote R6: mueble rincón → fondo estándar − 7 mm (Álvaro, 23-09-2026)
 }
 // Ancho de balda = ancho del mueble − 2 × grosor de costado (mm → cm).
 function anchoBaldaMueble(anc,gros){return r1((+anc||0)-2*(+gros||16)/10);}
@@ -4937,7 +5015,8 @@ function rGola(){
 }
 // HERRAJES SUELTOS — Cálculo desde meta de cada línea LN.
 // Reglas confirmadas con Álvaro:
-//   Patas: solo bajos / columnas / media columna. 2 si ancho 15-20, 8 si Rinc.Esc, 6 si Rinc.Rec o ancho≥100, 4 resto.
+//   Patas: solo bajos / columnas / media columna. 2 si ancho 15-20, 8 si Rinc.Esc, 5 si Rinc.Rec (Lote R6, 23-09-2026: antes 6),
+//          6 si ancho≥100, 4 resto.
 //   Colgadores: 3 si Rincón Colgante, 0 si Sobre Frigo, 2 si Colgantes/Campana-Grupo/Caldera/Microondas/Escurreplatos/Sobre Encimera.
 //   Baldas: Caldera siempre 0. Bajos 1. Columnas/Media Columna manual. Colgantes por altura efectiva de PUERTA:
 //           <40→0, 40-69→1, 70-90→2, >90→3. Si Sin puerta y es colgante → manual (baldasMan).
@@ -5004,7 +5083,7 @@ function calcularHerrajesSueltos(){
       if(m.esBajo||m.esCol){
         if(m.anc===15||m.anc===20)p=2;
         else if(m.esRinEsc)p=8;
-        else if(m.esRinRec)p=6;
+        else if(m.esRinRec)p=PATAS_RIN_RECTO; // Lote R6: 4 esquinas + 1 en la línea de bisagras
         else if(m.anc>=100)p=6;
         else p=4;
       }
