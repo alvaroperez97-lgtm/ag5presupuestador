@@ -179,7 +179,7 @@ tr:hover td{background:var(--c);}
   body.pcli .grand{font-size:15px;padding-top:5px;}
 }
 /* Lote R1 (18-09-2026) — visor 3D del mueble (SVG, giro arrastrando). Solo pantalla. */
-.r3d{background:#faf5ea;border:1px solid #e0d3ba;border-radius:8px;padding:6px;max-width:420px;margin:0 auto;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;min-height:60px;}
+.r3d{background:#faf5ea;border:1px solid #e0d3ba;border-radius:8px;padding:6px;max-width:420px;margin:0 auto;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;min-height:60px;}
 .r3d:active{cursor:grabbing;}
 .r3dModal{position:fixed;inset:0;background:rgba(42,26,10,.55);z-index:500;display:none;align-items:center;justify-content:center;padding:16px;}
 .r3dBox{background:var(--b);border-radius:10px;padding:16px 18px;max-width:480px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.35);max-height:95vh;overflow-y:auto;}
@@ -972,7 +972,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-23.7';
+const APP_BUILD = '2026-09-23.8';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1434,6 +1434,7 @@ const ARM=buildARM();
 //   · Bajo fregadero (Lote R2): paletones delantero y trasero DE CANTO (12 cm de alto), base 5 cm más corta que los
 //     costados (58 → 53) y travesaño de refuerzo de 12 cm de pie sobre el final de la base. SIN trasera. La gaveta
 //     salvasifón se dibuja con el recorte en U por detrás.
+//   · Lote R8: el visor pinta con WebGL (búfer de profundidad, sin fallos de orden) y el SVG queda de respaldo.
 //   · Rincones: pendiente (se muestra el aviso, sin dibujo), salvo el bajo rincón recto (Lote R6: CONSTR.rinRec) y el bajo
 //     rincón escuadra / fregadero (Lote R7: CONSTR.rinEsc).
 // Grosor del tablero = el elegido en el proyecto (16 / 19). Puertas y frentes a 19 mm. Frentes de cajón apilados
@@ -1471,7 +1472,7 @@ const R3D_CTE={
   hornoMandos:{'60':8,'45':6},  // cm: franja de mandos del horno dibujado (60 = convencional, 45 = compacto)
   hornoHolgura:0.3, hornoFondo:50, hornoPuertaGros:2, hornoCristalInset:4, hornoTirAlto:2.2, hornoTirSaliente:3.5, // horno de relleno [supuesto]
   baldaMinHueco:8,     // cm: hueco mínimo libre para dibujar baldas
-  puertaAbre:90,       // grados que gira una puerta al tocarla (90: queda delante del costado, sin cruzar nada)
+  puertaAbre:180,      // grados que gira una puerta al tocarla (Lote R8, Álvaro 23-09-2026: 180; antes 90)
   cajonSale:0.75,      // fracción del fondo de la caja que sale un cajón/gaveta al tocarlo
   animMs:450,          // duración de la animación de abrir/cerrar
   clickMaxPx:6,        // px de movimiento máximo para que un toque cuente como clic y no como giro
@@ -1525,6 +1526,10 @@ const CONSTR=(()=>{
   const trasVista=(c,y,h,z)=>({x:c.tL+0.1,y,z,w:c.Wi-0.2,h,d:c.tr,col:'trasera'});
   const fondoBaldaFija=c=>(c.hornoAbajo&&c.yB+c.th('baldaFija')>c.A-c.C.paleton)?c.Fb-c.th('palTras'):c.Fb; // placa horno, ver comentario de la pieza
   const costados=(f1,f2)=>[cost('cI','izquierdo',f1,false),cost('cD','derecho',f2||f1,true)];
+  // Lote R8 — base / techo del rincón escuadra: una pieza en L (prisma) de y a y + h. Con costado integrado en un brazo
+  // se acorta en ese extremo (eZ0 en el izquierdo, eX1 en el derecho). rects = la misma L en rectángulos (visor SVG).
+  const escL=(c,y,h,col)=>({pts:[[0,c.eZ0],[c.F,c.eZ0],[c.F,c.H-c.F],[c.eX1,c.H-c.F],[c.eX1,c.H],[0,c.H]],
+    rects:[[0,c.eZ0,c.F,c.H-c.F],[0,c.H-c.F,c.eX1,c.H]],y,h,col});
   // Casco del bajo puerta (18-09-2026). Lote R6: en una función para reutilizarlo tal cual en el bajo rincón recto.
   const cascoBajo=()=>[
       base('18-09-2026',{L:2,A:2}),...costados('18-09-2026'),
@@ -1564,40 +1569,50 @@ const CONSTR=(()=>{
     // remetidas 5 (norma: la del fondo va entera y la izquierda muere contra ella). Refuerzo de pie en la esquina
     // trasera, delante de las traseras: paletón de 12 (2 largos) contra la trasera del fondo y de 12 − t (1 largo) contra
     // la izquierda, en L de 12 × 12. Una balda en L con cajeo 12,1 × 12,1, todos los cantos. 8 patas. Sin cajones.
+    // Lote R8 (23-09-2026) — el casco usa los grosores REALES de cada pieza (c.th(id): t, o el de puerta si se pasa a
+    // material de puerta desde el 3D, Lote R5) y base, techo y balda se dibujan como UNA pieza en L (prisma), no como
+    // varias cajas unidas. Costado en material de puerta (costado visto integrado): va del suelo arriba y la base y el
+    // techo se acortan su grosor en ese brazo (misma regla que en los bajos: el ancho exterior no cambia).
     rinEsc:{lab:'Bajo rincón escuadra',pendiente:false,piezas:[
-      {id:'base',nombre:'Base',pos:c=>`una pieza en L, por debajo de los costados; cajeo ${fmtCm(c.W-c.F)}×${fmtCm(c.H-c.F)}; canto en todo el perímetro`,
-        estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',corte:c=>({largo:c.W,ancho:c.H}),cantos:{L:2,A:2},
-        cajas:c=>[{x:0,y:0,z:0,w:c.F,h:c.t,d:c.H-c.F,col:'suelo'},{x:0,y:0,z:c.H-c.F,w:c.W,h:c.t,d:c.F,col:'suelo'}]},
-      {id:'techo',nombre:'Techo',pos:c=>`una pieza en L, por encima de los costados; cajeo ${fmtCm(c.W-c.F)}×${fmtCm(c.H-c.F)}; canto en todo el perímetro`,
-        estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',corte:c=>({largo:c.W,ancho:c.H}),cantos:{L:2,A:2},
-        cajas:c=>[{x:0,y:c.A-c.t,z:0,w:c.F,h:c.t,d:c.H-c.F,col:'techo'},{x:0,y:c.A-c.t,z:c.H-c.F,w:c.W,h:c.t,d:c.F,col:'techo'}]},
+      {id:'base',nombre:'Base',pos:c=>`una pieza en L, por debajo de los costados; cajeo ${fmtCm(c.eX1-c.F)}×${fmtCm(c.H-c.F-c.eZ0)}; canto en todo el perímetro`,
+        estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',corte:c=>({largo:c.eX1,ancho:c.H-c.eZ0}),cantos:{L:2,A:2},
+        cajas:c=>[escL(c,0,c.th('base'),'suelo')]},
+      {id:'techo',nombre:'Techo',pos:c=>`una pieza en L, por encima de los costados; cajeo ${fmtCm(c.eX1-c.F)}×${fmtCm(c.H-c.F-c.eZ0)}; canto en todo el perímetro`,
+        estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',corte:c=>({largo:c.eX1,ancho:c.H-c.eZ0}),cantos:{L:2,A:2},
+        cajas:c=>[escL(c,c.A-c.th('techo'),c.th('techo'),'techo')]},
       {id:'cI',nombre:'Costado',pos:'entre base y techo, al final del brazo izquierdo',estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',
-        corte:c=>({largo:c.A-2*c.t,ancho:c.F}),cantos:{L:2,A:0},cajas:c=>[{x:0,y:c.t,z:0,w:c.F,h:c.A-2*c.t,d:c.t,col:'costado'}]},
+        posPuerta:'costado visto integrado, brazo izquierdo: del suelo arriba, base y techo se acortan en ese brazo',
+        corte:c=>({largo:c.pz.cI==='p'?c.A:c.A-c.eTb-c.eTt,ancho:c.F}),cantos:{L:2,A:0},cantosPuerta:{L:2,A:2},
+        cajas:c=>{const i=c.pz.cI==='p',y=i?0:c.eTb;return [{x:0,y,z:0,w:c.F,h:(i?c.A:c.A-c.eTt)-y,d:c.eI,col:'costado'}];}},
       {id:'cD',nombre:'Costado',pos:'entre base y techo, al final del brazo derecho',estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',
-        corte:c=>({largo:c.A-2*c.t,ancho:c.F}),cantos:{L:2,A:0},cajas:c=>[{x:c.W-c.t,y:c.t,z:c.H-c.F,w:c.t,h:c.A-2*c.t,d:c.F,col:'costado'}]},
-      // Trasera en ranura: alto A − t (ranura t/2 en base y techo). Fondo: de la cara trasera de la izquierda (x = 5) a la
-      // ranura del costado derecho (W − t/2). Izquierda: de la ranura del costado izquierdo (t/2) a la cara de la del fondo.
+        posPuerta:'costado visto integrado, brazo derecho: del suelo arriba, base y techo se acortan en ese brazo',
+        corte:c=>({largo:c.pz.cD==='p'?c.A:c.A-c.eTb-c.eTt,ancho:c.F}),cantos:{L:2,A:0},cantosPuerta:{L:2,A:2},
+        cajas:c=>{const i=c.pz.cD==='p',y=i?0:c.eTb;return [{x:c.W-c.eD,y,z:c.H-c.F,w:c.eD,h:(i?c.A:c.A-c.eTt)-y,d:c.F,col:'costado'}];}},
+      // Trasera en ranura (media pieza en base, techo y costado): alto = hueco + la mitad de base y techo (A − t con t).
+      // Fondo: de la cara trasera de la izquierda (x = 5) a la ranura del costado derecho. Izquierda: de la ranura del
+      // costado izquierdo a la cara de la del fondo (norma: la del fondo va entera y la izquierda muere contra ella).
       trasera({id:'trasera',nombre:'Trasera fondo',pos:'pared del fondo, en ranura, cara trasera a 5; entera (la izquierda muere contra ella)',estado:'confirmado',fecha:'23-09-2026',
-        corte:c=>({largo:c.A-c.t,ancho:c.W-c.C.traseraRemetida-c.t/2}),
-        cajas:c=>[{x:c.C.traseraRemetida,y:c.t,z:c.zb,w:c.W-c.t-c.C.traseraRemetida,h:c.A-2*c.t,d:c.tr,col:'trasera'}]}),
+        corte:c=>({largo:c.A-(c.eTb+c.eTt)/2,ancho:c.W-c.C.traseraRemetida-c.eD/2}),
+        cajas:c=>[{x:c.C.traseraRemetida,y:c.eTb,z:c.zb,w:c.W-c.eD-c.C.traseraRemetida,h:c.A-c.eTb-c.eTt,d:c.tr,col:'trasera'}]}),
       trasera({id:'trasIzq',nombre:'Trasera izquierda',pos:'pared izquierda, en ranura, cara trasera a 5; muere contra la del fondo',estado:'confirmado',fecha:'23-09-2026',
-        corte:c=>({largo:c.A-c.t,ancho:c.zb-c.t/2}),
-        cajas:c=>[{x:c.C.traseraRemetida,y:c.t,z:c.t,w:c.tr,h:c.A-2*c.t,d:c.zb-c.t,col:'trasera'}]}),
+        corte:c=>({largo:c.A-(c.eTb+c.eTt)/2,ancho:c.zb-c.eI/2}),
+        cajas:c=>[{x:c.C.traseraRemetida,y:c.eTb,z:c.eI,w:c.tr,h:c.A-c.eTb-c.eTt,d:c.zb-c.eI,col:'trasera'}]}),
       {id:'refA',nombre:'Paletón',pos:'de pie, refuerzo de la esquina trasera, contra la trasera del fondo (12)',estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',
-        corte:c=>({largo:c.A-2*c.t,ancho:RIN_ESC_REFUERZO}),cantos:{L:2,A:0},
-        cajas:c=>[{x:c.xi,y:c.t,z:c.zb-c.t,w:RIN_ESC_REFUERZO,h:c.A-2*c.t,d:c.t,col:'trav'}]},
+        corte:c=>({largo:c.A-c.eTb-c.eTt,ancho:RIN_ESC_REFUERZO}),cantos:{L:2,A:0},
+        cajas:c=>[{x:c.xi,y:c.eTb,z:c.zb-c.th('refA'),w:RIN_ESC_REFUERZO,h:c.A-c.eTb-c.eTt,d:c.th('refA'),col:'trav'}]},
       {id:'refB',nombre:'Paletón',pos:'de pie, refuerzo de la esquina trasera, contra la trasera izquierda (12 − t)',estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',
-        corte:c=>({largo:c.A-2*c.t,ancho:RIN_ESC_REFUERZO-c.t}),cantos:{L:1,A:0},
-        cajas:c=>[{x:c.xi,y:c.t,z:c.zb-RIN_ESC_REFUERZO,w:c.t,h:c.A-2*c.t,d:RIN_ESC_REFUERZO-c.t,col:'trav'}]},
-      // Balda en L de una pieza: rectángulo (W − t − xi) × (zb − t), fondo de brazo = el de rincón (fonBalda), cajeo
-      // delantero y cajeo 12,1 × 12,1 en la esquina trasera; todos los cantos. En el 3D, 3 cajas que no se cruzan.
+        corte:c=>({largo:c.A-c.eTb-c.eTt,ancho:RIN_ESC_REFUERZO-c.th('refA')}),cantos:{L:1,A:0},
+        cajas:c=>[{x:c.xi,y:c.eTb,z:c.zb-RIN_ESC_REFUERZO,w:c.th('refB'),h:c.A-c.eTb-c.eTt,d:RIN_ESC_REFUERZO-c.th('refA'),col:'trav'}]},
+      // Balda en L de una pieza: de la trasera izquierda (xi) al costado derecho y del costado izquierdo a la trasera del
+      // fondo (zb); brazos del fondo de balda de rincón; cajeo delantero y cajeo 12,1 × 12,1 alrededor del refuerzo.
       {id:'balda',nombre:'Balda',pos:c=>{const fb=c.fonBalda,k=RIN_ESC_REFUERZO+RIN_ESC_CAJEO_HOLGURA;
-          return `una pieza en L, brazos de ${fmtCm(fb)} de fondo; cajeo delantero ${fmtCm(c.W-c.t-c.xi-fb)}×${fmtCm(c.zb-c.t-fb)} y cajeo ${fmtCm(k)}×${fmtCm(k)} en la esquina trasera (refuerzo); canto en todo el perímetro`;},
-        estado:'confirmado',fecha:'23-09-2026',ud:'nBaldas',grosor:'t',corte:c=>({largo:c.W-c.t-c.xi,ancho:c.zb-c.t}),cantos:{L:2,A:2},
+          return `una pieza en L, brazos de ${fmtCm(fb)} de fondo; cajeo delantero ${fmtCm(c.W-c.eD-c.xi-fb)}×${fmtCm(c.zb-c.eI-fb)} y cajeo ${fmtCm(k)}×${fmtCm(k)} en la esquina trasera (refuerzo); canto en todo el perímetro`;},
+        estado:'confirmado',fecha:'23-09-2026',ud:'nBaldas',grosor:'t',corte:c=>({largo:c.W-c.eD-c.xi,ancho:c.zb-c.eI}),cantos:{L:2,A:2},
         cuando:c=>c.nB>0,
-        cajas:c=>{const fb=c.fonBalda,k=RIN_ESC_REFUERZO+RIN_ESC_CAJEO_HOLGURA,y=c.t+(c.A-2*c.t)/2-c.t/2;
-          return [{x:c.xi,y,z:c.t,w:fb,h:c.t,d:c.zb-k-c.t,col:'balda'},{x:c.xi+k,y,z:c.zb-k,w:fb-k,h:c.t,d:k,col:'balda'},
-            {x:c.xi+fb,y,z:c.zb-fb,w:c.W-c.t-c.xi-fb,h:c.t,d:fb,col:'balda'}];}}],
+        cajas:c=>{const fb=c.fonBalda,k=RIN_ESC_REFUERZO+RIN_ESC_CAJEO_HOLGURA,e=c.th('balda#0'),y=c.eTb+(c.A-c.eTb-c.eTt)/2-e/2;
+          const x0=c.xi,x1=c.W-c.eD,z0=c.eI,z1=c.zb;
+          return [{pts:[[x0,z0],[x0+fb,z0],[x0+fb,z1-fb],[x1,z1-fb],[x1,z1],[x0+k,z1],[x0+k,z1-k],[x0,z1-k]],
+            rects:[[x0,z0,x0+fb,z1-k],[x0+k,z1-k,x0+fb,z1],[x0+fb,z1-fb,x1,z1]],y,h:e,col:'balda'}];}}],
       huecos:c=>({zCaja:c.F,zBalda:0,yHueco:c.A-c.t})},
     placap:{lab:'Bajo placa puertas',pendiente:false,piezas:[
       base('22-09-2026',{L:1,A:2},'por debajo de los costados, 53 de fondo; sin canto atrás (trasera clavada)'),...costados('18-09-2026'),
@@ -1671,7 +1686,10 @@ function constrCtx(sp){
   return {A,W,F,Fb,t,tr:sp.tr||grosorTrasera('')/10,yB,hornoAbajo,fonBalda:fondoBaldaMueble(sp.fam,F,!!sp.rincon),C,
     pz,g,th,tL,tR,tb,Wi:W-tL-tR,bx0,bW:W-bx0-(pz.cD==='p'?g:0),trAncho:W-Math.max(tL,tR),tTop:Math.max(th('palDel'),th('palTras')),
     cW,cDer,cX:cDer?W-tR-cW:tL,xLo:(cW>0&&!cDer)?tL+cW:tL,xHi:(cW>0&&cDer)?W-tR-cW:W-tR,
-    H,zb:H-C.traseraRemetida-trE,xi:C.traseraRemetida+trE,nB:sp.nBaldas||0}; // Lote R7
+    H,zb:H-C.traseraRemetida-trE,xi:C.traseraRemetida+trE,nB:sp.nBaldas||0, // Lote R7
+    // Lote R8 — escuadra: grosor real de costados (eI / eD), base (eTb) y techo (eTt); con costado integrado la L de base y
+    // techo empieza en z = eI (brazo izquierdo) o termina en x = W − eD (brazo derecho).
+    eI:th('cI'),eD:th('cD'),eTb:th('base'),eTt:th('techo'),eZ0:pz.cI==='p'?th('cI'):0,eX1:W-(pz.cD==='p'?th('cD'):0)};
 }
 function constrTabla(tipo){return CONSTR[tipo]||CONSTR.generico;}
 // Piezas de la tabla que van en este casco (filtra `cuando`).
@@ -1890,6 +1908,7 @@ function r3dSpecFormulario(){
     if(!rinTiene3D(SEL))return null; // Lote R7: + rincón escuadra / fregadero
     return r3dSpec({arm:SEL,hoja:MHOJA,alt:SEL.alt,anc:(esBajoRinRecto(SEL)&&+document.getElementById('rRRecAncho')?.value)||SEL.anc,fon:SEL.fon,
       puertas:RPuertas,frentes:[],cfg:S.tb,tar:S.tar,modCaj:S.modCaj,gros:S.gros,sinFrentes:false,abrePrimero:RPRIMERO,
+      piezas:MPIEZAS,cvt:(MODELOS[MMODELO]&&MODELOS[MMODELO].cvt)||TCVT[S.tar]||null,matPuerta:matPuertaTxt(S.tar,MODELOS[MMODELO]&&MODELOS[MMODELO].colorPuerta), // Lote R8
       nBaldas:nBaldasMueble({fam:SEL.fam,nom:SEL.nom,esBajo:true,baldaFreg:esFregadero(SEL)&&!!document.getElementById('chkRBaldaFreg')?.checked}),
       regletaAncho:+document.getElementById('rRW')?.value||RIN_REGLETA_ANCHO});
   }
@@ -1934,8 +1953,10 @@ function r3dPiezas(sp,conFrentes,est){
   const colPz=(st,col)=>st==='x'?R3D_COL.eliminada:(st==='p'?R3D_COL.frente:col);
   {
     const tabla=constrTabla(tipo);
-    constrPiezas(tabla,cx).forEach(pz=>{if(!pz.cajas)return;const st=(pz.id&&cx.pz[pz.id])||'';
-      pz.cajas(cx).forEach(b=>{box(b.x,b.y,b.z,b.w,b.h,b.d,colPz(st,R3D_COL[b.col]||R3D_COL.costado),null,editPz&&pz.id?{key:'pz:'+pz.id}:null);if(b.obst)obst.push(b.obst);});});
+    constrPiezas(tabla,cx).forEach(pz=>{if(!pz.cajas)return;const cl=pz.ud==='nBaldas'?pz.id+'#0':pz.id,st=(cl&&cx.pz[cl])||''; // Lote R8: la balda de la tabla es la 1ª unidad
+      pz.cajas(cx).forEach(b=>{const col=colPz(st,R3D_COL[b.col]||R3D_COL.costado),ex=editPz&&cl?{key:'pz:'+cl}:null;
+        if(b.pts){P.push(Object.assign({k:'prism',pts:b.pts,rects:b.rects,y:b.y,h:b.h,col,st:R3D_COL.stroke},ex||{}));return;} // Lote R8: pieza en L de una pieza
+        box(b.x,b.y,b.z,b.w,b.h,b.d,col,null,ex);if(b.obst)obst.push(b.obst);});});
     const hu=tabla.huecos(cx);zCaja=hu.zCaja;zBalda=hu.zBalda;yHueco=hu.yHueco;yB=cx.yB;zBaldaMin=hu.zBaldaMin||0;
   }
   if(sp.patas){
@@ -2051,7 +2072,8 @@ function r3dPiezas(sp,conFrentes,est){
       const n=p.mano==='2'?2:1,h=p.alto||(yTop-((esGola&&p.tir)?C.golaAlto:0)),w=p.ancho||(W/sp.puertas.length)/n,abrible=p.mano!=='FF'&&p.mano!=='AB'; // Lote R4: con gola, alto auto = hueco − 3
       for(let j=0;j<n;j++){
         const key='p'+i+(n>1?'_'+j:''),dcha=n===2?j===1:p.mano!=='I';
-        const ang=abrible?abierto(key)*C.puertaAbre*Math.PI/180:0;
+        const tope=(rin&&esTir&&p.tir)?Math.min(C.puertaAbre,180-Math.atan2(C.tirSaliente,Math.max(0.1,(w-Math.min(C.tirLargo,Math.max(4,w-4)))/2-hg))*180/Math.PI-1):C.puertaAbre; // Lote R8
+        const ang=abrible?abierto(key)*tope*Math.PI/180:0;
         const rot=ang>1e-4?{ang:dcha?ang:-ang,px:dcha?x+w-hg:x+hg,pz:-g}:null;
         box(x+hg,hg,-g,w-2*hg,h-2*hg,g,R3D_COL.frente,null,abrible?{key,rot}:{rot});
         herraje(x,w,h,p.tir,rot,0);x+=w;
@@ -2111,6 +2133,7 @@ function r3dVerts(p){
 }
 function r3dNormal(p,n){if(!p.rot)return n;const c=Math.cos(p.rot.ang),s=Math.sin(p.rot.ang);return [n[0]*c-n[2]*s,n[1],n[0]*s+n[2]*c];}
 function r3dAABB(p){
+  if(p.k==='prism'){const xs=p.pts.map(q=>q[0]),zs=p.pts.map(q=>q[1]);return [[Math.min(...xs),Math.max(...xs)],[p.y,p.y+p.h],[Math.min(...zs),Math.max(...zs)]];} // Lote R8
   if(p.k!=='box')return [[p.x-p.r,p.x+p.r],[p.y,p.y+p.h],[p.z-p.r,p.z+p.r]];
   if(!p.rot)return [[p.x,p.x+p.w],[p.y,p.y+p.h],[p.z,p.z+p.d]];
   const V=r3dVerts(p),mn=[Infinity,Infinity,Infinity],mx=[-Infinity,-Infinity,-Infinity];
@@ -2149,21 +2172,45 @@ function r3dOrdenar(P,d,prof){
   }
   return orden;
 }
-function r3dSVG(sp,vis,Wpx,Hpx){
-  const P=r3dPiezas(sp,vis.frentes,vis.est); // Lote R3: con el estado de apertura del visor
+// Lote R8 — cámara del visor (la comparten el SVG y el WebGL): proyección ortográfica al viewBox Wpx × Hpx con giro
+// (th, ph), zoom y desplazamiento. proy(v) → [sx, sy, profundidad (mayor = más lejos)]; nCam(n) → normal en cámara.
+function r3dCamara(sp,vis,Wpx,Hpx,P){
   const ct=Math.cos(vis.th),st=Math.sin(vis.th),cf=Math.cos(vis.ph),sf=Math.sin(vis.ph);
   const pa=sp.patas?(sp.pataAlto||R3D_CTE.pataAlto):0; // Lote D1: patas 10/15
   const fz=sp.fonVis||sp.fon,cx=sp.anc/2,cy=(sp.alt-pa)/2,cz=fz/2; // Lote R7: el rincón escuadra ocupa H en z
-  const R=Math.sqrt(cx*cx+(sp.alt+pa)*(sp.alt+pa)/4+cz*cz)*1.06||1;
+  let R=Math.sqrt(cx*cx+(sp.alt+pa)*(sp.alt+pa)/4+cz*cz)*1.06||1,kx=cx,ky=cy,kz=cz;
+  // Lote R8 — encuadre con las piezas en su posición actual: centro y radio de la caja que envuelve todo (puertas a 180°
+  // al lado del mueble, cajones fuera). No depende del giro de la vista: al girar no cambia de tamaño; al abrir, se aleja.
+  if(P&&P.length){const mn=[0,-pa,0],mx=[sp.anc,sp.alt,fz],v3=v=>{for(let k=0;k<3;k++){if(v[k]<mn[k])mn[k]=v[k];if(v[k]>mx[k])mx[k]=v[k];}};
+    P.forEach(p=>{if(p.k==='box')r3dVerts(p).forEach(v3);else if(p.k==='cyl'){v3([p.x+p.r,p.y,p.z+p.r]);v3([p.x-p.r,p.y+p.h,p.z-p.r]);}
+      else if(p.k==='prism')p.pts.forEach(q=>{v3([q[0],p.y,q[1]]);v3([q[0],p.y+p.h,q[1]]);});});
+    kx=(mn[0]+mx[0])/2;ky=(mn[1]+mx[1])/2;kz=(mn[2]+mx[2])/2;R=Math.hypot(mx[0]-kx,mx[1]-ky,mx[2]-kz)*1.06||1;}
   const s=Math.min(Wpx,Hpx)/(2*R)*(vis.zoom||1),ox=Wpx/2+(vis.px||0),oy=Hpx/2+(vis.py||0); // Lote R2: zoom y desplazamiento
-  const proy=v=>{const x=(v[0]-cx)*ct+(v[2]-cz)*st,zz=-(v[0]-cx)*st+(v[2]-cz)*ct,y=v[1]-cy;
-    return [ox+x*s,oy-(y*cf+zz*sf)*s,zz*cf-y*sf];}; // [sx, sy, profundidad (mayor = más lejos)]
+  const proy=v=>{const x=(v[0]-kx)*ct+(v[2]-kz)*st,zz=-(v[0]-kx)*st+(v[2]-kz)*ct,y=v[1]-ky;
+    return [ox+x*s,oy-(y*cf+zz*sf)*s,zz*cf-y*sf];};
   const nCam=n=>{const x=n[0]*ct+n[2]*st,zz=-n[0]*st+n[2]*ct,y=n[1];return [x,y*cf+zz*sf,zz*cf-y*sf];};
   const dirVista=[-st*cf,-sf,ct*cf]; // dirección en la que crece la profundidad, en coordenadas del mueble
-  const L=[-0.35,0.75,-0.55];const Ln=Math.hypot(...L);
+  const L=[-0.35,0.75,-0.55],Ln=Math.hypot(...L);
+  const luz=n=>{const c=nCam(n);return 0.62+0.38*Math.max(0,(c[0]*L[0]+c[1]*L[1]+c[2]*L[2])/Ln);};
+  return {pa,fz,s,proy,nCam,dirVista,luz};
+}
+// Lote R8 — para el visor SVG (algoritmo del pintor, solo cajas) una pieza en L se parte en sus rectángulos. Los índices
+// `delante` (tirador → su puerta) se recolocan porque la lista cambia de longitud.
+function r3dSoloCajas(P){
+  if(!P.some(p=>p.k==='prism'))return P;
+  const out=[],nuevo=[];
+  P.forEach((p,i)=>{nuevo[i]=out.length;
+    if(p.k!=='prism'){out.push(p);return;}
+    p.rects.forEach(r=>out.push({k:'box',x:r[0],y:p.y,z:r[1],w:r[2]-r[0],h:p.h,d:r[3]-r[1],col:p.col,st:p.st,key:p.key}));});
+  out.forEach(p=>{if(p.delante!=null)p.delante=nuevo[p.delante];});
+  return out;
+}
+function r3dSVG(sp,vis,Wpx,Hpx){
+  const P=r3dSoloCajas(r3dPiezas(sp,vis.frentes,vis.est)); // Lote R3: con el estado de apertura del visor · R8: L en cajas
+  const cam=r3dCamara(sp,vis,Wpx,Hpx,P),{pa,fz,proy,nCam,dirVista}=cam; // Lote R8: cámara común
   const hex=(col,k)=>{const m=col.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);if(!m)return col;
     return '#'+[1,2,3].map(i=>Math.round(parseInt(m[i],16)*k).toString(16).padStart(2,'0')).join('');};
-  const sombra=(col,n)=>{const c=nCam(n);const d=Math.max(0,(c[0]*L[0]+c[1]*L[1]+c[2]*L[2])/Ln);return hex(col,0.62+0.38*d);};
+  const sombra=(col,n)=>hex(col,cam.luz(n));
   const r1=v=>Math.round(v*10)/10;
   const poly=(pts,fill,st,sw,key)=>`<polygon points="${pts.map(q=>r1(q[0])+','+r1(q[1])).join(' ')}" fill="${fill}" stroke="${st}" stroke-width="${sw}" stroke-linejoin="round"${key?` data-k="${key}" style="cursor:pointer"`:''}/>`;
   let svg=`<svg viewBox="0 0 ${Wpx} ${Hpx}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">`;
@@ -2200,10 +2247,163 @@ function r3dHull(pts){
   lo.pop();up.pop();return lo.concat(up);
 }
 
+// ═════════════════════ Lote R8 (23-09-2026) · MOTOR WebGL DEL VISOR 3D ═════════════════════
+// El SVG pinta pieza a pieza por orden (algoritmo del pintor): con puertas girando, piezas en L o solapes en ciclo a veces
+// salía una pieza de detrás por encima de otra. Con WebGL (nativo del navegador, sin librerías) cada píxel se queda con la
+// pieza más cercana (búfer de profundidad), con antialiasing y a la resolución real de la pantalla. Mismas piezas
+// (r3dPiezas), misma cámara (r3dCamara) y mismos gestos. La pieza tocada se averigua pintando cada una con un color-índice
+// en un búfer aparte (r3dPickGL). Si el navegador no da WebGL (o pierde el contexto) se sigue con el SVG de siempre.
+const R3D_GL={linea:0.8,lineaAlfa:0.9,bordeOsc:0.6,selMezcla:0.45,fondo:[250/255,245/255,234/255], // línea en px CSS; fondo = el de .r3d
+  sombraSuelo:[[7,0.035],[4,0.05],[1.5,0.07]]}; // sombra en el suelo: [cm de más alrededor, opacidad] (capas, de fuera a dentro)
+function r3dColorRGBA(col){
+  let m=String(col).match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+  if(m)return [parseInt(m[1],16)/255,parseInt(m[2],16)/255,parseInt(m[3],16)/255,1];
+  m=String(col).match(/rgba?\(([^)]+)\)/i);
+  if(m){const v=m[1].split(',').map(Number);return [v[0]/255,v[1]/255,v[2]/255,v.length>3?v[3]:1];}
+  return [0.6,0.6,0.6,1];
+}
+function r3dGLIni(vis){
+  if(vis.glx)return vis.glx;if(vis.glNo||typeof document==='undefined')return null;
+  const cv=document.createElement('canvas');cv.style.cssText='display:block;width:100%;height:auto;touch-action:none';
+  let gl=null;try{gl=cv.getContext('webgl',{antialias:true,alpha:false,depth:true,preserveDrawingBuffer:false});}catch(_){gl=null;}
+  if(!gl){vis.glNo=true;return null;}
+  const sh=(tipo,txt)=>{const s=gl.createShader(tipo);gl.shaderSource(s,txt);gl.compileShader(s);return gl.getShaderParameter(s,gl.COMPILE_STATUS)?s:null;};
+  const vs=sh(gl.VERTEX_SHADER,'attribute vec3 p;attribute vec4 c;varying vec4 v;void main(){gl_Position=vec4(p,1.0);v=c;}');
+  const fs=sh(gl.FRAGMENT_SHADER,'precision mediump float;varying vec4 v;void main(){gl_FragColor=v;}');
+  const pr=gl.createProgram();if(vs&&fs){gl.attachShader(pr,vs);gl.attachShader(pr,fs);gl.linkProgram(pr);}
+  if(!vs||!fs||!gl.getProgramParameter(pr,gl.LINK_STATUS)){vis.glNo=true;return null;}
+  const X={cv,gl,pr,aP:gl.getAttribLocation(pr,'p'),aC:gl.getAttribLocation(pr,'c'),buf:gl.createBuffer(),fb:null};
+  cv.addEventListener('webglcontextlost',e=>{e.preventDefault();vis.glx=null;vis.glNo=true;const c=document.getElementById(vis.cont);if(c)c.innerHTML='';r3dPintar(vis);}); // → SVG
+  vis.glx=X;return X;
+}
+// Malla del visor: caras (triángulos) y aristas (tiras finas en pantalla) de todas las piezas, ya proyectadas a
+// coordenadas de recorte. pick = colores-índice (pieza i → i + 1) sin luces ni aristas. hw = media anchura de arista en
+// unidades del viewBox. Devuelve {op, tr, li}: Float32Array de [x, y, z, r, g, b, a] por vértice.
+function r3dMallaGL(P,cam,vis,pick,hw){
+  const caras=[],aris=[];
+  const cara=(i,pts,n)=>caras.push({i,pts,n});
+  const EB=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  P.forEach((p,i)=>{
+    if(p.k==='box'){
+      const V=r3dVerts(p);
+      [[[0,3,2,1],[0,0,-1]],[[4,5,6,7],[0,0,1]],[[0,1,5,4],[0,-1,0]],[[3,7,6,2],[0,1,0]],[[0,4,7,3],[-1,0,0]],[[1,2,6,5],[1,0,0]]]
+        .forEach(([ix,n0])=>cara(i,ix.map(k=>V[k]),r3dNormal(p,n0)));
+      if(!pick)EB.forEach(([a,b])=>aris.push({i,a:V[a],b:V[b]}));
+    } else if(p.k==='cyl'){
+      const N=20,y0=p.y,y1=p.y+p.h,pt=(k,y)=>{const a=k/N*2*Math.PI;return [p.x+p.r*Math.cos(a),y,p.z+p.r*Math.sin(a)];};
+      for(let k=0;k<N;k++){const a=(k+0.5)/N*2*Math.PI;cara(i,[pt(k,y0),pt(k+1,y0),pt(k+1,y1),pt(k,y1)],[Math.cos(a),0,Math.sin(a)]);
+        if(!pick){aris.push({i,a:pt(k,y0),b:pt(k+1,y0)});aris.push({i,a:pt(k,y1),b:pt(k+1,y1)});}}
+      const tapa=y=>Array.from({length:N},(_,k)=>pt(k,y));cara(i,tapa(y1),[0,1,0]);cara(i,tapa(y0).reverse(),[0,-1,0]);
+    } else if(p.k==='prism'){
+      // Pieza en L (base, techo, balda del rincón escuadra): tapas por rectángulos, laterales por cada tramo del contorno
+      // con su normal hacia fuera, y aristas solo en el contorno: se ve como UNA pieza, sin la junta interior.
+      const y0=p.y,y1=p.y+p.h,Q=p.pts,n=Q.length;
+      let ar=0;for(let k=0;k<n;k++){const a=Q[k],b=Q[(k+1)%n];ar+=a[0]*b[1]-b[0]*a[1];}const sg=ar>0?1:-1;
+      p.rects.forEach(r=>{cara(i,[[r[0],y1,r[1]],[r[0],y1,r[3]],[r[2],y1,r[3]],[r[2],y1,r[1]]],[0,1,0]);
+        cara(i,[[r[0],y0,r[1]],[r[2],y0,r[1]],[r[2],y0,r[3]],[r[0],y0,r[3]]],[0,-1,0]);});
+      for(let k=0;k<n;k++){const a=Q[k],b=Q[(k+1)%n],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1;
+        cara(i,[[a[0],y0,a[1]],[b[0],y0,b[1]],[b[0],y1,b[1]],[a[0],y1,a[1]]],[sg*dz/l,0,-sg*dx/l]);
+        if(!pick){aris.push({i,a:[a[0],y0,a[1]],b:[b[0],y0,b[1]]});aris.push({i,a:[a[0],y1,a[1]],b:[b[0],y1,b[1]]});aris.push({i,a:[a[0],y0,a[1]],b:[a[0],y1,a[1]]});}}
+    }
+  });
+  // Profundidad → [−0,95, 0,95] con el rango real de esta vista (ortográfica: lineal)
+  let dmin=Infinity,dmax=-Infinity;const PR=new Map(),pj=v=>{let q=PR.get(v);if(!q){q=cam.proy(v);PR.set(v,q);if(q[2]<dmin)dmin=q[2];if(q[2]>dmax)dmax=q[2];}return q;};
+  caras.forEach(f=>f.pts.forEach(pj));aris.forEach(e=>{pj(e.a);pj(e.b);});
+  const dz=(dmax-dmin)||1,W=R3D_W,H=R3D_H,nx=sx=>sx/W*2-1,ny=sy=>1-sy/H*2,nz=d=>-0.95+1.9*(d-dmin)/dz;
+  const op=[],tr=[],li=[],trC=[];
+  const vtx=(arr,q,c)=>arr.push(nx(q[0]),ny(q[1]),nz(q[2]),c[0],c[1],c[2],c[3]);
+  const colPieza=P.map((p,i)=>{
+    if(pick){const id=i+1;return [(id&255)/255,((id>>8)&255)/255,((id>>16)&255)/255,1];}
+    let c=r3dColorRGBA(p.col);
+    if(p.key&&p.key===vis.sel){const m=R3D_GL.selMezcla,r=[0.84,0.16,0.16];c=[c[0]*(1-m)+r[0]*m,c[1]*(1-m)+r[1]*m,c[2]*(1-m)+r[2]*m,Math.max(c[3],0.55)];} // Lote R5: pieza con el menú abierto
+    return c;});
+  caras.forEach(f=>{
+    if(cam.nCam(f.n)[2]>=0)return; // cara que mira hacia atrás (sólidos cerrados)
+    const base=colPieza[f.i],k=pick?1:cam.luz(f.n),c=[base[0]*k,base[1]*k,base[2]*k,base[3]];
+    const q=f.pts.map(pj),dst=c[3]<0.999&&!pick?tr:op;
+    for(let t=1;t<q.length-1;t++){
+      if(dst===tr)trC.push((q[0][2]+q[t][2]+q[t+1][2])/3);
+      vtx(dst,q[0],c);vtx(dst,q[t],c);vtx(dst,q[t+1],c);}
+  });
+  if(!pick){
+    aris.forEach(e=>{
+      const base=colPieza[e.i],sel=P[e.i].key&&P[e.i].key===vis.sel,k=R3D_GL.bordeOsc;
+      const c=sel?[0.84,0.16,0.16,1]:[base[0]*k,base[1]*k,base[2]*k,R3D_GL.lineaAlfa*(base[3]<0.999?0.45:1)];
+      const a=pj(e.a),b=pj(e.b),dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy);if(l<1e-6)return;
+      const w=hw*(sel?2:1),ux=dx/l*w,uy=dy/l*w,px=-uy,py=ux; // tira de ancho 2w, alargada w por cada punta (juntas limpias)
+      const A1=[a[0]-ux+px,a[1]-uy+py,a[2]],A2=[a[0]-ux-px,a[1]-uy-py,a[2]],B1=[b[0]+ux+px,b[1]+uy+py,b[2]],B2=[b[0]+ux-px,b[1]+uy-py,b[2]];
+      vtx(li,A1,c);vtx(li,A2,c);vtx(li,B1,c);vtx(li,B1,c);vtx(li,A2,c);vtx(li,B2,c);
+    });
+  }
+  // Translúcidas (piezas eliminadas, Lote R5): de atrás adelante
+  let trO=tr;
+  if(trC.length){const ord=trC.map((d,j)=>j).sort((a,b)=>trC[b]-trC[a]),o=[];ord.forEach(j=>{for(let k=j*21;k<j*21+21;k++)o.push(tr[k]);});trO=o;}
+  return {op:new Float32Array(op),tr:new Float32Array(trO),li:new Float32Array(li)};
+}
+function r3dGLDibuja(X,datos,modo){
+  const gl=X.gl;if(!datos.length)return;
+  gl.bindBuffer(gl.ARRAY_BUFFER,X.buf);gl.bufferData(gl.ARRAY_BUFFER,datos,gl.STREAM_DRAW);
+  gl.enableVertexAttribArray(X.aP);gl.vertexAttribPointer(X.aP,3,gl.FLOAT,false,28,0);
+  gl.enableVertexAttribArray(X.aC);gl.vertexAttribPointer(X.aC,4,gl.FLOAT,false,28,12);
+  gl.drawArrays(modo||gl.TRIANGLES,0,datos.length/7);
+}
+// Pinta el visor con WebGL. false = no hay WebGL (el llamador pinta el SVG).
+function r3dPintarGL(vis){
+  const cont=document.getElementById(vis.cont);if(!cont||!vis.spec)return false;
+  const X=r3dGLIni(vis);if(!X)return false;
+  if(X.cv.parentNode!==cont){cont.innerHTML='';cont.appendChild(X.cv);}
+  const cssW=X.cv.clientWidth||cont.clientWidth;if(!cssW)return true; // visor oculto: nada que pintar todavía
+  const dpr=Math.min(3,window.devicePixelRatio||1),Wd=Math.round(cssW*dpr),Hd=Math.round(cssW*R3D_H/R3D_W*dpr);
+  if(X.cv.width!==Wd||X.cv.height!==Hd){X.cv.width=Wd;X.cv.height=Hd;}
+  const sp=vis.spec,P=r3dPiezas(sp,vis.frentes,vis.est),cam=r3dCamara(sp,vis,R3D_W,R3D_H,P);
+  const hw=R3D_GL.linea*R3D_W/cssW/2; // media anchura de arista: px CSS → unidades del viewBox
+  vis.glUlt={P,cam}; // para averiguar la pieza tocada con la misma escena
+  const M=r3dMallaGL(P,cam,vis,false,hw),gl=X.gl,F=R3D_GL.fondo;
+  gl.viewport(0,0,Wd,Hd);gl.clearColor(F[0],F[1],F[2],1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.useProgram(X.pr);gl.enable(gl.BLEND);gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+  // Sombra en el suelo: capas suaves bajo la huella del mueble (sin profundidad: siempre debajo de todo)
+  gl.disable(gl.DEPTH_TEST);gl.depthMask(false);
+  const ys=-cam.pa,som=[];
+  R3D_GL.sombraSuelo.forEach(([m,a])=>{const c=[74/255,44/255,14/255,a],q=[[-m,ys,-m],[sp.anc+m,ys,-m],[sp.anc+m,ys,cam.fz+m],[-m,ys,cam.fz+m]].map(cam.proy);
+    [[0,1,2],[0,2,3]].forEach(t=>t.forEach(k=>som.push(q[k][0]/R3D_W*2-1,1-q[k][1]/R3D_H*2,0,c[0],c[1],c[2],c[3])));});
+  r3dGLDibuja(X,new Float32Array(som));
+  // Caras opacas (empujadas un poco hacia atrás para que las aristas se vean limpias), aristas y translúcidas
+  gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(true);gl.disable(gl.BLEND);
+  gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,2);r3dGLDibuja(X,M.op);gl.disable(gl.POLYGON_OFFSET_FILL);
+  gl.enable(gl.BLEND);gl.depthMask(false);r3dGLDibuja(X,M.li);r3dGLDibuja(X,M.tr);gl.depthMask(true);
+  return true;
+}
+// Pieza bajo el dedo o el cursor: se pinta la última escena con colores-índice en un búfer fuera de pantalla y se lee el
+// píxel. Devuelve la clave (key) de la pieza, o la de su puerta si se toca el tirador; null si no hay pieza con clave.
+function r3dPickGL(vis,clientX,clientY){
+  const X=vis.glx,U=vis.glUlt;if(!X||!U)return null;
+  const r=X.cv.getBoundingClientRect();if(!r.width||!r.height)return null;
+  const fx=(clientX-r.left)/r.width,fy=(clientY-r.top)/r.height;if(fx<0||fx>1||fy<0||fy>1)return null;
+  const gl=X.gl,W=X.cv.width,H=X.cv.height;
+  if(!X.fb||X.fbW!==W||X.fbH!==H){
+    if(X.fb){gl.deleteFramebuffer(X.fb);gl.deleteTexture(X.fbT);gl.deleteRenderbuffer(X.fbD);}
+    X.fbT=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,X.fbT);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,W,H,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    X.fbD=gl.createRenderbuffer();gl.bindRenderbuffer(gl.RENDERBUFFER,X.fbD);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,W,H);
+    X.fb=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,X.fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,X.fbT,0);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,X.fbD);
+    X.fbW=W;X.fbH=H;
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER,X.fb);gl.viewport(0,0,W,H);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.useProgram(X.pr);gl.disable(gl.BLEND);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(true);
+  r3dGLDibuja(X,r3dMallaGL(U.P,U.cam,vis,true,0).op);
+  const px=new Uint8Array(4);gl.readPixels(Math.min(W-1,Math.floor(fx*W)),Math.min(H-1,Math.floor((1-fy)*H)),1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  const id=px[0]+(px[1]<<8)+(px[2]<<16),p=id?U.P[id-1]:null;if(!p)return null;
+  if(p.key)return p.key;
+  return p.delante!=null&&U.P[p.delante]?(U.P[p.delante].key||null):null; // tirador → su puerta
+}
+
 // ── Visores ──
 function r3dPintar(vis){
   const cont=document.getElementById(vis.cont);if(!cont||!vis.spec)return;
-  cont.innerHTML=r3dSVG(vis.spec,vis,R3D_W,R3D_H);
+  if(!r3dPintarGL(vis))cont.innerHTML=r3dSVG(vis.spec,vis,R3D_W,R3D_H); // Lote R8: WebGL; si no hay, el SVG de siempre
   if(Object.values(vis.est||{}).some(e=>e.t0!=null))r3dAnimar(vis); // Lote R3: sigue la animación de abrir/cerrar
 }
 // Lote R3 (22-09-2026) — abrir/cerrar al tocar una puerta (giro sobre las bisagras) o un cajón/gaveta (sale ¾ de su
@@ -2253,13 +2453,13 @@ function r3dPiezaAccion(v){
   if(v!=='c'&&performance.now()-s.t0<350)return; // pulsación que abrió el menú: no cuenta como elección
   cerrarMenuPieza();if(v==='c')return;
   if(v==='x'||v==='p')MPIEZAS[s.clave]=v;else delete MPIEZAS[s.clave];
-  cp();
+  if(SEL&&isRin(SEL))rdsg();else cp(); // Lote R8: rincones
 }
 function cerrarMenuPieza(){
   const m=document.getElementById('r3dMenu');if(m)m.style.display='none';
   const s=R3D_MENU;R3D_MENU=null;if(s&&s.vis){s.vis.sel=null;r3dPintar(s.vis);}
 }
-function restaurarPiezas(){cerrarMenuPieza();MPIEZAS={};cp();}
+function restaurarPiezas(){cerrarMenuPieza();MPIEZAS={};if(SEL&&isRin(SEL))rdsg();else cp();} // Lote R8: rincones
 function r3dCaption(sp){
   const med=`${fmtCm(sp.anc)}×${fmtCm(sp.alt)}×${fmtCm(sp.fon)} cm`;
   const trMm=Math.round((sp.tr||grosorTrasera('')/10)*10); // Lote D1
@@ -2298,7 +2498,7 @@ function r3dZoomA(vis,factor,sx,sy){
 }
 function r3dZoom(vis,factor){r3dZoomA(vis,factor);r3dPintar(vis);}
 // px de pantalla → px del viewBox (el SVG se estira al ancho del contenedor). k = factor de conversión.
-function r3dEscalaSVG(vis){const cont=document.getElementById(vis.cont),svg=cont&&cont.querySelector('svg'),r=(svg||cont).getBoundingClientRect();return {r,k:r.width?R3D_W/r.width:1};}
+function r3dEscalaSVG(vis){const cont=document.getElementById(vis.cont),svg=cont&&cont.querySelector('canvas,svg'),r=(svg||cont).getBoundingClientRect();return {r,k:r.width?R3D_W/r.width:1};}
 function r3dPuntoSVG(vis,clientX,clientY){const {r,k}=r3dEscalaSVG(vis);return {sx:(clientX-r.left)*k,sy:(clientY-r.top)*k,k};}
 function r3dPintarBotones(vis){
   const b=document.getElementById(vis.cont+'Btn');if(!b)return;
@@ -2317,7 +2517,7 @@ function r3dInstalarGiro(vis){
   };
   cont.addEventListener('pointerdown',e=>{
     // Lote R3: se apunta la pieza tocada (antes de capturar el puntero, e.target aún es el polígono) para el clic
-    const k=e.target&&e.target.getAttribute?e.target.getAttribute('data-k'):null;
+    const k=vis.glx?r3dPickGL(vis,e.clientX,e.clientY):(e.target&&e.target.getAttribute?e.target.getAttribute('data-k'):null); // Lote R8
     vis.hit=k||null;vis.down={x:e.clientX,y:e.clientY,btn:e.button};
     // Lote R5 — pulsación larga (sin mover) sobre una pieza del casco → menú de la pieza
     clearTimeout(vis.lp);vis.lp=0;vis.lpHecho=false;
@@ -2371,7 +2571,7 @@ function r3dActualizar(){
   if(!SEL){panel.style.display='none';return;}
   panel.style.display='block';
   const cont=document.getElementById('r3dCont'),cap=document.getElementById('r3dCap'),tools=document.getElementById('r3dTools');
-  R3D.editable=!isRin(SEL); // Lote R6: en el rincón recto no se editan piezas (R5 solo en el formulario normal)
+  R3D.editable=!isRin(SEL)||rinTiene3D(SEL); // Lote R8: también los rincones con construcción (recto, escuadra, fregadero)
   if(isRin(SEL)&&!rinTiene3D(SEL)){ // Lote R7
     R3D.spec=null;cont.innerHTML='';cont.style.display='none';tools.style.display='none';
     cap.innerHTML=`<span style="color:#856404">⚠️ ${esc(SEL.nom)}: construcción 3D de rincón pendiente</span>`;
@@ -4305,7 +4505,8 @@ function rdsg(){
   const ajusteRR=armazonRRectoTarifa(SEL,anchoRealRR);
   const armTar=ajusteRR.arm;
   // Lote F: en rincón el alto/fondo no son editables, así que solo aplica la forma especial (×2).
-  const optsArm={esEspecial:RFORMA!=='ninguna',altoNoStd:false,fondoNoStd:false};
+  const spPz=r3dSpecFormulario(),pzEf=(spPz&&isRin(SEL))?spPz.piezas:{}; // Lote R8: piezas del casco cambiadas en el 3D
+  const optsArm={esEspecial:RFORMA!=='ninguna',altoNoStd:false,fondoNoStd:false,materialPuerta:piezasHayPuerta(pzEf)};
   const armP=gap2(armTar,optsArm,RARMMAN);
   RD_ARM=armTar; // Lote M
   const recArmR=notaRecargoArm(optsArm,RFORMA);
@@ -4352,6 +4553,10 @@ function rdsg(){
     const ra=+document.getElementById('rRA')?.value||0,rw=+document.getElementById('rRW')?.value||20;
     if(ra&&rw){const ct=MODELOS[MMODELO]?.cvt||TCVT[S.tar]||null;rPreg=ct?gcvt(ct,ra,rw):0;lines.push(`Regleta → CVT ${ct||'(sin tarifa CVT)'} (${ra}×${rw}): ${fmt(rPreg)}  ↳ va a la lista de Costados/Regletas`);}
   }
+  // Lote R8 — piezas del casco cambiadas en el 3D (como en el formulario normal, Lote R5)
+  {const ctPz=(MODELOS[MMODELO]&&MODELOS[MMODELO].cvt)||TCVT[S.tar]||null;
+    lineasPiezasPuerta(spPz,ctPz).forEach(q=>lines.push(`${q.etq} en material de puerta → CVT ${ctPz||'(sin tarifa CVT)'} (${fmtCm(q.a)}×${fmtCm(q.w)}): ${fmt(q.p)}${q.nota}  ↳ va a la lista de Costados/Regletas`));
+    const elimPz=Object.keys(pzEf).filter(k=>pzEf[k]==='x').map(etqPieza);if(elimPz.length)lines.push(`Piezas eliminadas (no cambian el precio): ${elimPz.join(', ')}`);}
   if(S.recargoModelo>0&&pt>0)lines.push(`Recargo modelo +${S.recargoModelo}% aplicado a puertas/frentes${S.recargoCVT?' y costados/regletas':''}`);
   const tot=armP+pt+tt,cnt=+document.getElementById('rCnt')?.value||1;
   lines.push(`\nTotal/ud (sin cajones herraje): ${fmt(tot)} · ×${cnt}: ${fmt(tot*cnt)}`);
@@ -4387,7 +4592,8 @@ function addRin(){
   const ajusteRR=armazonRRectoTarifa(SEL,anchoRealRR);
   const armTar=ajusteRR.arm;
   // Lote F: forma especial (×2) en rincón. Alto/fondo no editables → solo esEspecial.
-  const optsArm={esEspecial:RFORMA!=='ninguna',altoNoStd:false,fondoNoStd:false};
+  const spPz=r3dSpecFormulario(),pzEf=(spPz&&isRin(SEL))?spPz.piezas:{}; // Lote R8: piezas del casco cambiadas en el 3D
+  const optsArm={esEspecial:RFORMA!=='ninguna',altoNoStd:false,fondoNoStd:false,materialPuerta:piezasHayPuerta(pzEf)};
   const dobleFondo=(RFORMA==='chaflan')?{dcho:+document.getElementById('rDFD').value||null,izq:+document.getElementById('rDFI').value||null}:null;
   const armP=gap2(armTar,optsArm,RARMMAN);let pt=0,tt=0,pd=[],altoPuertaMax=0,manos=[]; // Lote M
   const snapPuertas=RPuertas.map(p=>({alto:+p.alto||0,ancho:+p.ancho||0,tir:p.tir||'on',mano:p.mano||'D',...(p.pMan!=null?{pMan:+p.pMan}:{}),...(p.tMan!=null?{tMan:+p.tMan}:{})}));
@@ -4431,6 +4637,7 @@ function addRin(){
   let desc=`${etiquetaMueble(MHOJA,armTar,RPuertas,RFrentesCJ,S.tar)} + ${S.tar} [${pd.join(', ')}]`; // Lote Q
   if(ajusteRR.ajustado)desc+=` · ancho real ${anchoRealRR}cm${ajusteRR.supera?' [excede estándar]':''}`;
   if(esRinEsc(SEL)&&RPRIMERO)desc+=` · abre primero ${RPRIMERO}`; // Lote R7: sale en la hoja de producción
+  {const txtPz=textoPiezasDesc(pzEf);if(txtPz)desc+=` · ${txtPz}`;} // Lote R8
   // Lote R6 — ciego del bajo rincón recto en la descripción (hoja de producción): lado y ancho con el ancho real
   if(esBajoRinRecto(SEL)){const g=rinRectoGeo(snapPuertas,snapFrentes,regleta&&regleta.ancho),cW=g.pw>0?r1((anchoRealRR||SEL.anc)-g.pw-RIN_CIEGO_DESC):0;
     if(cW>0)desc+=` · ciego ${g.der?'dcha':'izq'} ${fmtCm(cW)}cm`;}
@@ -4458,6 +4665,7 @@ function addRin(){
     tarifa:S.tar, modCaj:S.modCaj, modeloId:MMODELO, tb:{...S.tb}, ta:{...S.ta},
     mPuertas:snapPuertas, mFrentesCJ:snapFrentes, regleta,
     esRincon:true,abrePrimero:esRinEsc(SEL)?RPRIMERO:'', // Lote R7
+    piezas:pzEf, // Lote R8: piezas del casco cambiadas en el 3D
     subfam:snapHoja(MHOJA),sinBaldas:!!(MHOJA&&MHOJA.sinBaldas),abatible:false, // Lote Q
     // Lote F
     forma:RFORMA, dobleFondo,
@@ -4493,6 +4701,7 @@ function addRin(){
     });
     // Regleta CVT auto (asociada al mueble), tarificada por la CVT del modelo.
     insertarRegletaCVT(regleta,idMueble,cnt,armTar.nom,MMODELO);
+    insertarPiezasPuertaCVT(spPz,idMueble,cnt,armTar.nom,MMODELO); // Lote R8
   }
   if(EDIT_ID){
     finalizarEdicion();
@@ -5641,6 +5850,7 @@ function iniciarEdicion(id){
     // Lote R7: los rincones no llevan cajones ni gavetas; una línea antigua que los traiga los pierde al guardar
     RFrentesCJ=[];if((m.mFrentesCJ||[]).some(f=>(+f.alto)&&(+f.ancho)))flash('⚠️ Los rincones no llevan cajones ni gavetas: se quitan al guardar');
     RPRIMERO=m.abrePrimero||'';
+    MPIEZAS=piezasLimpias(m.piezas); // Lote R8: piezas del casco de la línea
     renderRinP();renderRFCJ();
     // Lote F: restaurar forma especial / doble fondo del rincón
     RFORMA=m.forma||'ninguna';pintarFormaTgg('r',RFORMA);
