@@ -189,6 +189,21 @@ tr:hover td{background:var(--c);}
 .medRes.esp{background:rgba(196,151,58,.28);border:1.5px solid var(--dc);color:#fff;font-weight:700;}
 .medRes:empty{display:none;}
 #btnMedEsp:disabled{opacity:.45;cursor:default;}
+/* Lote V1 (23-09-2026) — creador de escenas: planta de la habitación y 3D (ventana #escModal). Solo pantalla. */
+.escBox{max-width:1100px;}
+.escBar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;}
+.escRes{font-size:11.5px;color:var(--mm);cursor:pointer;border-bottom:1px dashed var(--d);line-height:1.5;}
+.escSel{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-height:34px;font-size:12px;color:var(--mm);margin-bottom:8px;}
+.escAyuda{font-size:11px;color:var(--g);font-style:italic;}
+.escLay{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;}
+@media(min-width:900px){.escLay{grid-template-columns:minmax(0,1fr) 280px;}}
+.escPlanta{background:#fff;border:1px solid var(--cd);border-radius:8px;padding:6px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
+.escAviso{font-size:11.5px;color:#c62828;margin-top:6px;} .escAviso:empty{display:none;}
+.escMenuTit{font-size:11.5px;font-weight:700;color:var(--mm);margin-bottom:6px;}
+.escFichas{display:flex;flex-wrap:wrap;gap:6px;max-height:42vh;overflow-y:auto;align-content:flex-start;}
+.escFicha{border:1.5px solid var(--cd);background:var(--c);color:var(--m);border-radius:14px;padding:5px 10px;font-family:'Lato',sans-serif;font-size:11px;cursor:pointer;text-align:left;max-width:100%;}
+.escFicha b{font-weight:900;} .escFicha.on{background:#e8f1e4;border-color:#8bb07e;color:#2f5a25;} .escFicha.sel{outline:2px solid #3b6ea5;outline-offset:1px;}
+#escV3d{max-width:min(100%,calc((100vh - 240px) * 1.2));}
 @media print{.r3dModal,#r3dPanel{display:none!important;}}
 @media(max-width:900px){.l2{grid-template-columns:1fr!important;}}
 </style>
@@ -820,7 +835,7 @@ tr:hover td{background:var(--c);}
     <div style="font-size:11px;color:var(--g);font-style:italic;margin-top:8px">Las líneas de gola de bajos se añaden y actualizan solas en el presupuesto según se añaden, editan o borran muebles.</div><button class="btn bp" onclick="addGolaP()" style="margin-top:8px">↻ Recalcular gola</button>
   </div>
   <div class="pn">
-    <div class="pt">📊 Líneas</div>
+    <div class="pt">📊 Líneas<button class="btn bp np" id="btnEscena" onclick="abrirEscena()" style="display:none;margin-left:auto;padding:5px 12px;font-size:12px" title="Planta de la habitación con los muebles del presupuesto y vista 3D">🏠 Crear escena</button></div>
     <div class="ptw">
       <table><thead><tr><th>#</th><th>Descripción</th><th style="text-align:center">Cant.</th><th style="text-align:right">€/ud</th><th style="text-align:right">Total</th><th class="np">🗑</th></tr></thead>
       <tbody id="pBody"></tbody></table>
@@ -884,6 +899,55 @@ tr:hover td{background:var(--c);}
       <button class="btn r3dBtn2" onclick="medEspVolverTarifa()" style="font-size:11px;padding:7px 12px">↺ Medidas de tarifa</button>
       <button class="btn bs" onclick="cerrarMedidasEsp()" style="font-size:11px;padding:7px 12px">Cancelar</button>
       <button class="btn bp" onclick="aplicarMedidasEsp()" style="font-size:11px;padding:7px 14px">✅ Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lote V1 (23-09-2026): creador de escenas — habitación a escala con los muebles del presupuesto (planta con imán y
+     vista 3D con el motor del visor). Se guarda con el proyecto. No toca precios. Solo pantalla. -->
+<div id="escModal" class="r3dModal" onclick="if(event.target===this)cerrarEscena()">
+  <div class="r3dBox escBox">
+    <div class="pt" style="justify-content:space-between"><span style="font-size:13px">🏠 Escena</span><button class="btn bd2" onclick="cerrarEscena()">✕</button></div>
+    <div id="escForm" style="display:none">
+      <div id="escFormTit" style="font-size:12px;color:var(--mm);font-weight:700;margin-bottom:10px"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-bottom:10px">
+        <div class="fg"><label>Largo (cm)</label><input type="number" id="escLargo" min="100" step="1" placeholder="p. ej. 400" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
+        <div class="fg"><label>Ancho (cm)</label><input type="number" id="escAncho" min="100" step="1" placeholder="p. ej. 300" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
+        <div class="fg"><label>Alto de techo (cm)</label><input type="number" id="escAlto" min="200" step="1" placeholder="p. ej. 250" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
+        <div class="fg"><label>Altos: canto de arriba (cm)</label><input type="number" id="escAltos" min="100" step="1" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
+      </div>
+      <div style="font-size:11px;color:var(--g);margin-bottom:10px;line-height:1.5">Habitación rectangular. El largo es la pared de arriba de la planta y el ancho, la de la izquierda. Bajos y columnas van sobre las patas del proyecto; los altos, con el canto de arriba a la altura indicada.</div>
+      <div id="escFormAviso" style="font-size:11.5px;color:#c62828;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+        <button class="btn bs" onclick="escenaCancelarForm()" style="font-size:11px;padding:7px 12px">Cancelar</button>
+        <button class="btn bp" id="escFormOk" onclick="escenaAplicarHabitacion()" style="font-size:11px;padding:7px 14px">✅ Crear habitación</button>
+      </div>
+    </div>
+    <div id="escTrabajo" style="display:none">
+      <div class="escBar">
+        <div class="tgg" style="margin-top:0">
+          <button class="tgb" id="escBtnPlanta" onclick="escenaVista('planta')" style="padding:6px 12px;font-size:11.5px">📐 Planta</button>
+          <button class="tgb" id="escBtn3d" onclick="escenaVista('3d')" style="padding:6px 12px;font-size:11.5px">🧊 Ver en 3D</button>
+        </div>
+        <span id="escRes" class="escRes" onclick="escenaFormulario(true)" title="Cambiar las medidas de la habitación"></span>
+      </div>
+      <div id="escVPlanta">
+        <div id="escSel" class="escSel"></div>
+        <div class="escLay">
+          <div><div id="escPlanta" class="escPlanta"></div><div id="escAviso" class="escAviso"></div></div>
+          <div><div id="escMenuTit" class="escMenuTit"></div><div id="escMenu" class="escFichas"></div></div>
+        </div>
+      </div>
+      <div id="escV3dWrap" style="display:none">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+          <button class="btn r3dBtn2" onclick="r3dZoom(R3DE,R3D_CTE.zoomPaso)" style="font-size:11px;padding:6px 10px" title="Ampliar">🔍＋</button>
+          <button class="btn r3dBtn2" onclick="r3dZoom(R3DE,1/R3D_CTE.zoomPaso)" style="font-size:11px;padding:6px 10px" title="Reducir">🔍−</button>
+          <button class="btn r3dBtn2" onclick="escenaVistaInicial()" style="font-size:11px;padding:6px 12px">↺ Vista inicial</button>
+          <span style="font-size:11px;color:var(--g);font-style:italic">arrastra para girar · pellizco o rueda: zoom · dos dedos o botón derecho: mover · las paredes de delante se ocultan solas</span>
+        </div>
+        <div id="escV3d" class="r3d"></div>
+        <div id="escV3dCap" style="font-size:11px;color:var(--mm);margin-top:8px;line-height:1.5"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -991,7 +1055,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-23.10';
+const APP_BUILD = '2026-09-23.11';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -2330,16 +2394,17 @@ function r3dMallaGL(P,cam,vis,pick,hw){
         .forEach(([ix,n0])=>cara(i,ix.map(k=>V[k]),r3dNormal(p,n0)));
       if(!pick)EB.forEach(([a,b])=>aris.push({i,a:V[a],b:V[b]}));
     } else if(p.k==='cyl'){
-      const N=20,y0=p.y,y1=p.y+p.h,pt=(k,y)=>{const a=k/N*2*Math.PI;return [p.x+p.r*Math.cos(a),y,p.z+p.r*Math.sin(a)];};
+      const N=p.seg||20,y0=p.y,y1=p.y+p.h,pt=(k,y)=>{const a=k/N*2*Math.PI;return [p.x+p.r*Math.cos(a),y,p.z+p.r*Math.sin(a)];}; // Lote V1: p.seg = lados (escena)
       for(let k=0;k<N;k++){const a=(k+0.5)/N*2*Math.PI;cara(i,[pt(k,y0),pt(k+1,y0),pt(k+1,y1),pt(k,y1)],[Math.cos(a),0,Math.sin(a)]);
-        if(!pick){aris.push({i,a:pt(k,y0),b:pt(k+1,y0)});aris.push({i,a:pt(k,y1),b:pt(k+1,y1)});}}
+        if(!pick&&!p.sinAristas){aris.push({i,a:pt(k,y0),b:pt(k+1,y0)});aris.push({i,a:pt(k,y1),b:pt(k+1,y1)});}}
       const tapa=y=>Array.from({length:N},(_,k)=>pt(k,y));cara(i,tapa(y1),[0,1,0]);cara(i,tapa(y0).reverse(),[0,-1,0]);
     } else if(p.k==='prism'){
       // Pieza en L (base, techo, balda del rincón escuadra): tapas por rectángulos, laterales por cada tramo del contorno
       // con su normal hacia fuera, y aristas solo en el contorno: se ve como UNA pieza, sin la junta interior.
       const y0=p.y,y1=p.y+p.h,Q=p.pts,n=Q.length;
       let ar=0;for(let k=0;k<n;k++){const a=Q[k],b=Q[(k+1)%n];ar+=a[0]*b[1]-b[0]*a[1];}const sg=ar>0?1:-1;
-      p.rects.forEach(r=>{cara(i,[[r[0],y1,r[1]],[r[0],y1,r[3]],[r[2],y1,r[3]],[r[2],y1,r[1]]],[0,1,0]);
+      if(!p.rects){cara(i,Q.map(q=>[q[0],y1,q[1]]),[0,1,0]);cara(i,Q.slice().reverse().map(q=>[q[0],y0,q[1]]),[0,-1,0]);} // Lote V1: polígono convexo sin rects (caja maciza del rincón chaflán en la escena)
+      else p.rects.forEach(r=>{cara(i,[[r[0],y1,r[1]],[r[0],y1,r[3]],[r[2],y1,r[3]],[r[2],y1,r[1]]],[0,1,0]);
         cara(i,[[r[0],y0,r[1]],[r[2],y0,r[1]],[r[2],y0,r[3]],[r[0],y0,r[3]]],[0,-1,0]);});
       for(let k=0;k<n;k++){const a=Q[k],b=Q[(k+1)%n],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1;
         cara(i,[[a[0],y0,a[1]],[b[0],y0,b[1]],[b[0],y1,b[1]],[a[0],y1,a[1]]],[sg*dz/l,0,-sg*dx/l]);
@@ -2442,6 +2507,7 @@ function r3dPickGL(vis,clientX,clientY){
 
 // ── Visores ──
 function r3dPintar(vis){
+  if(vis.pintar){vis.pintar(vis);return;} // Lote V1: el visor de la escena (R3DE) pinta la habitación entera (escenaPintar3D)
   const cont=document.getElementById(vis.cont);if(!cont||!vis.spec)return;
   if(!r3dPintarGL(vis))cont.innerHTML=r3dSVG(vis.spec,vis,R3D_W,R3D_H); // Lote R8: WebGL; si no hay, el SVG de siempre
   if(Object.values(vis.est||{}).some(e=>e.t0!=null))r3dAnimar(vis); // Lote R3: sigue la animación de abrir/cerrar
@@ -2638,6 +2704,364 @@ function abrirRender3DLinea(id){
   r3dInstalarGiro(R3DM);r3dPintarBotones(R3DM);r3dReset(R3DM);
 }
 function cerrarRender3D(){document.getElementById('r3dModal').style.display='none';R3DM.spec=null;}
+
+// ═════════════════════ Lote V1 (23-09-2026) · CREADOR DE ESCENAS ═════════════════════
+// Botón «🏠 Crear escena» de ⑥ Proyectos (con al menos un mueble). Habitación rectangular a escala (largo × ancho × alto
+// de techo) con los muebles del presupuesto, una ficha por unidad: se ponen en la planta vista desde arriba, se arrastran
+// con imán a las paredes y a los vecinos, se giran 90° y se quitan. «Ver en 3D» monta la habitación con el motor del
+// visor (r3dSpecLinea + r3dPiezas de cada mueble, llevado a su sitio), con suelo y paredes, y oculta las paredes que
+// quedan entre la cámara y la habitación. Se guarda con el proyecto (construirSnapshotProy y borrador). No toca precios ni
+// sale en impresión.
+// Decisiones de Álvaro (23-09-2026): escuadra y rincón fregadero ocupan en planta una L con los dos brazos (el primer
+// número del nombre es el brazo izquierdo) y el fondo del mueble; rincón recto = ancho real × fondo; rincones altos y de
+// columna, la misma regla según su tipo; rincón chaflán (solo hay altos) = esa L con la esquina de delante cortada en
+// diagonal; rincón alto recto ciego «70x80» = 80 de ancho (arm.anc) × su fondo. Sin 3D propio (r3dSpecLinea → null) se
+// ven como una caja maciza con sus medidas y esa huella. En planta los altos pueden ir encima de los bajos: el imán junta
+// altos con altos y bajos con bajos, y las columnas chocan con los dos. Bajos y columnas sobre las patas del proyecto
+// (S.patas); altos con el canto de arriba a ESCENA.altoAltos (2,15 m por defecto, editable).
+// Coordenadas de la planta en cm: x a lo largo de la pared de arriba, y hacia abajo. Cada mueble colocado es
+// {lid, u, x, y, r}: línea, unidad (0 … cnt − 1), esquina superior izquierda de su caja en planta y giro (r × 90° en el
+// sentido de las agujas del reloj; r = 0: trasera contra la pared de arriba). Sus medidas salen SIEMPRE de la línea, así
+// que la escena sigue a las ediciones; las unidades que ya no existen se quitan en escenaPurgar.
+// En el 3D la pared de arriba de la planta queda al fondo (Z = ancho) y el frente de los muebles mira a la cámara.
+const ESC_CTE={
+  altoAltos:215,                  // cm: canto de arriba de los altos por defecto (Álvaro, 23-09-2026: 2,15 m, editable)
+  medMin:100, medMax:3000,        // cm: largo y ancho admitidos para la habitación
+  techoMin:200, techoMax:500, techoDef:250, // cm: alto de techo admitido (techoDef solo repara una escena guardada dañada)
+  altosMin:100,                   // cm: canto de arriba de los altos, mínimo
+  imanPx:12,                      // px de pantalla: a esta distancia un mueble se pega a una pared o a un vecino
+  arrastrePx:4,                   // px: movimiento mínimo para que tocar un mueble sea arrastrarlo
+  letraPx:11,                     // px: tamaño de las etiquetas M1, M2… de la planta
+  planoAltoMax:0.55,              // fracción del alto de la ventana que puede ocupar la planta
+  rejilla:50,                     // cm: separación de la rejilla de la planta
+  paredPlanta:10, margenPlanta:6, // cm: grosor con que se pintan las paredes en planta y margen exterior
+  solapeMin:0.5,                  // cm: dos muebles se marcan en rojo si se pisan más de esto
+  paredGrosor:8, sueloGrosor:2,   // cm: paredes y suelo del 3D (solo dibujo)
+  th0:25, ph0:35, phMin:5,        // grados: vista inicial del 3D y elevación mínima (nunca desde debajo del suelo)
+  zoom0:1.15,                     // zoom inicial del 3D
+  pataLados:8,                    // lados de las patas en el 3D de la escena, pintadas sin aristas (con 20 y aristas, las
+                                  // patas eran 3/4 del coste de cada fotograma con 30 muebles)
+  paredOculta:0.05,               // se oculta la pared cuya cara interior mira hacia donde mira la cámara más que esto
+  colPlanta:{pared:'#4A2C0E',suelo:'#fbf8f1',rejilla:'#ece3d0',bajo:'#e2cea6',col:'#c9a86a',alto:'rgba(123,74,30,0.12)',
+    borde:'#7B4A1E',frente:'#C4973A',sel:'#3b6ea5',mal:'#c62828',texto:'#2A1A0A'},
+  col3d:{suelo:'#d6ccb8',pared:'#efe9df',borde:'#8a7a60'}
+};
+let ESCENA=null; // {v, largo, ancho, alto, altoAltos, items:[{lid, u, x, y, r}]} o null (proyecto sin escena)
+let ESC_UI={sel:null,vista:'planta',drag:null,raf:0,imanCm:10,vista3d:false,resize:false,form:'crear'};
+const R3DE=r3dNuevoVisor('escV3d');R3DE.pintar=escenaPintar3D; // visor 3D de la escena: r3dPintar lo desvía a escenaPintar3D
+function escenaClave(it){return it.lid+':'+it.u;}
+function escenaGiro(r){return ((+r|0)%4+4)%4;}
+// Muebles del presupuesto (líneas padre con meta de mueble) en el orden de las líneas, numerados M1, M2…
+function escenaMuebles(){return LN.filter(l=>!l.parentId&&l.meta&&l.meta.tipo==='mueble').map((l,i)=>({l,n:i+1}));}
+function escenaUnidades(){return escenaMuebles().reduce((s,o)=>s+Math.max(1,+o.l.cnt||1),0);}
+function escenaEtiqueta(o,u){return 'M'+o.n+(Math.max(1,+o.l.cnt||1)>1?'·'+(u+1):'');}
+// Nombre corto: la descripción de la línea hasta la tarifa o la primera nota («Bajo 2 puertas A.75 An.60»).
+function escenaNombre(l){return String(l&&l.desc||'').split(/ \+ | · | \[/)[0].trim()||'Mueble';}
+// Huella en planta de una línea de mueble en coordenadas locales (cm): u a lo ancho (de izquierda a derecha mirando el
+// frente) y v desde la pared (v = 0, trasera) hacia el frente. bw × bd = caja; rects = rectángulos que la forman (imán,
+// solapes, patas); poly = contorno; frente = raya del frente; lab = centro de la zona de la etiqueta (la planta la acerca
+// al frente en bajos y columnas y a la pared en altos, para que un alto encima de un bajo no tape su etiqueta);
+// nivel 'bajo' | 'col' | 'alto'.
+function escenaHuella(l){
+  const m=l&&l.meta;if(!m||m.tipo!=='mueble'||l.parentId)return null;
+  const arm=ARM.find(a=>a.id===(m.armIdSeleccionado||m.armId))||{nom:m.nom||'',fam:m.fam||'',alt:+m.alt||0,anc:+m.anc||0,fon:+m.fon||0};
+  const nivel=esBajoFam(arm)?'bajo':(esColumnaFam(arm)?'col':'alto');
+  const alt=Math.max(1,+m.alt||+arm.alt||0),F=Math.max(1,+m.fon||+arm.fon||0),chaf=/Rinc\.Chaf/.test(arm.nom||'');
+  if(esRinEsc(arm)||chaf){ // L con la esquina de las dos paredes en (0, 0): brazo dcho. por la pared de atrás, izq. por la de la izquierda
+    const W=Math.max(F,+arm.anc||+m.anc||0),H=Math.max(F,brazoIzqEsc(arm));
+    return {nivel,alt,F,forma:chaf?'chaf':'L',bw:W,bd:H,rects:[[0,0,W,F],[0,F,F,H]],
+      poly:chaf?[[0,0],[W,0],[W,F],[F,H],[0,H]]:[[0,0],[W,0],[W,F],[F,F],[F,H],[0,H]],
+      frente:chaf?[[W,F],[F,H]]:[[W,F],[F,F],[F,H]],lab:[F/2,F/2]};
+  }
+  const W=Math.max(1,(isRin(arm)&&+m.anchoReal)||+m.anc||+arm.anc||0);
+  return {nivel,alt,F,forma:'rect',bw:W,bd:F,rects:[[0,0,W,F]],poly:[[0,0],[W,0],[W,F],[0,F]],frente:[[0,F],[W,F]],lab:[W/2,F/2]};
+}
+// (u, v) locales → (x, y) de la planta, según el giro y la posición del mueble colocado.
+function escenaRotar(it,h){
+  const r=escenaGiro(it.r),bw=h.bw,bd=h.bd,x0=+it.x||0,y0=+it.y||0;
+  return (u,v)=>r===1?[x0+bd-v,y0+u]:r===2?[x0+bw-u,y0+bd-v]:r===3?[x0+v,y0+bw-u]:[x0+u,y0+v];
+}
+// Geometría en planta de un mueble colocado (null si su línea ya no existe o no es un mueble).
+function escenaGeo(it){
+  const l=LN.find(x=>x.id===it.lid),h=escenaHuella(l);if(!h)return null;
+  const T=escenaRotar(it,h),r=escenaGiro(it.r),W=r%2?h.bd:h.bw,H=r%2?h.bw:h.bd,x0=+it.x||0,y0=+it.y||0;
+  const rects=h.rects.map(q=>{const a=T(q[0],q[1]),b=T(q[2],q[3]);return [Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[0],b[0]),Math.max(a[1],b[1])];});
+  return {l,h,W,H,x0,y0,x1:x0+W,y1:y0+H,rects,poly:h.poly.map(q=>T(q[0],q[1])),frente:h.frente.map(q=>T(q[0],q[1]))};
+}
+function escenaCompat(a,b){return a==='col'||b==='col'||a===b;} // altos con altos, bajos con bajos; columnas con todo
+function escenaPisan(A,B){const e=ESC_CTE.solapeMin;return A.some(a=>B.some(b=>Math.min(a[2],b[2])-Math.max(a[0],b[0])>e&&Math.min(a[3],b[3])-Math.max(a[1],b[1])>e));}
+// Índices de los muebles que pisan a otro de su nivel (se pintan en rojo).
+function escenaSolapes(G){
+  const mal=new Set();
+  for(let i=0;i<G.length;i++)for(let j=i+1;j<G.length;j++){const a=G[i],b=G[j];
+    if(a&&b&&escenaCompat(a.h.nivel,b.h.nivel)&&escenaPisan(a.rects,b.rects)){mal.add(i);mal.add(j);}}
+  return mal;
+}
+// Deja una caja W × H dentro de la habitación (centrada si no cabe), en décimas de cm.
+function escenaEncajar(W,H,x,y){
+  const E=ESCENA,lim=(v,max,tot,dim)=>{if(dim>=tot)return Math.round((tot-dim)/2*10)/10;const q=Math.round(Math.min(Math.max(0,v),max)*10)/10;return q>max?Math.floor(max*10)/10:q;};
+  return {x:lim(x,E.largo-W,E.largo,W),y:lim(y,E.ancho-H,E.ancho,H)};
+}
+// Imán: la caja del mueble i en (x, y) se pega a la pared o al vecino compatible más cercano si está a menos de
+// ESC_UI.imanCm (ESC_CTE.imanPx de pantalla), en cada eje por separado. Con el vecino al lado (se cruzan en el otro eje),
+// pegada a él; con el vecino delante o detrás (se tocan sin pisarse), alineada con él.
+function escenaIman(i,x,y){
+  const E=ESCENA,g=escenaGeo(E.items[i]);if(!g)return {x,y};
+  const W=g.W,H=g.H,t=ESC_UI.imanCm,cx=[0,E.largo-W],cy=[0,E.ancho-H],e=ESC_CTE.solapeMin;
+  E.items.forEach((o,j)=>{if(j===i)return;const q=escenaGeo(o);if(!q||!escenaCompat(g.h.nivel,q.h.nivel))return;
+    const sy=Math.min(y+H,q.y1)-Math.max(y,q.y0),sx=Math.min(x+W,q.x1)-Math.max(x,q.x0); // cruce en cada eje (< 0 = hueco)
+    if(sy>-t){cx.push(q.x1,q.x0-W);if(sy<=e)cx.push(q.x0,q.x1-W);}
+    if(sx>-t){cy.push(q.y1,q.y0-H);if(sx<=e)cy.push(q.y0,q.y1-H);}});
+  const cerca=(v,cs)=>{let b=v,d=t;cs.forEach(c=>{const dd=Math.abs(c-v);if(dd<=d){d=dd;b=c;}});return b;};
+  return escenaEncajar(W,H,cerca(x,cx),cerca(y,cy));
+}
+// Sitio para un mueble recién puesto: L y chaflán, en la primera esquina libre (arriba izquierda, arriba derecha, abajo
+// derecha, abajo izquierda); el resto, con la trasera contra la pared (arriba, izquierda, derecha, abajo), en el primer
+// hueco desde la esquina. Si no cabe en ninguno, en el centro (y se verá en rojo si pisa a otro).
+function escenaSitioLibre(it,h){
+  const E=ESCENA,dims=r=>r%2?[h.bd,h.bw]:[h.bw,h.bd],otros=E.items.map(escenaGeo).filter(q=>q&&escenaCompat(h.nivel,q.h.nivel));
+  const libre=(x,y,r)=>{const g=escenaGeo({lid:it.lid,u:it.u,x,y,r});return !!g&&g.x0>-0.1&&g.y0>-0.1&&g.x1<E.largo+0.1&&g.y1<E.ancho+0.1&&!otros.some(q=>escenaPisan(g.rects,q.rects));};
+  if(h.forma!=='rect')for(const r of [0,1,2,3]){const [W,H]=dims(r),x=(r===1||r===2)?E.largo-W:0,y=r>=2?E.ancho-H:0;if(libre(x,y,r))return {x,y,r};}
+  for(const r of [0,3,1,2]){
+    const [W,H]=dims(r),lat=r%2===1,cand=[0].concat(otros.map(q=>lat?q.y1:q.x1)).sort((a,b)=>a-b);
+    for(const c of cand){const x=lat?(r===3?0:E.largo-W):c,y=lat?c:(r===0?0:E.ancho-H);if(libre(x,y,r))return {x,y,r};}
+  }
+  const [W,H]=dims(0);return Object.assign({r:0},escenaEncajar(W,H,(E.largo-W)/2,(E.ancho-H)/2));
+}
+function escenaColocar(lid,u){
+  const l=LN.find(x=>x.id===lid),h=escenaHuella(l);if(!ESCENA||!h)return null;
+  const it=Object.assign({lid,u},escenaSitioLibre({lid,u},h));ESCENA.items.push(it);ESC_UI.sel=escenaClave(it);return it;
+}
+// Quita las unidades que ya no existen (línea borrada, cantidad reducida) o repetidas. Corre al final de
+// recalcularAcumulados, que se llama tras cada alta, edición, borrado o cambio de cantidad y al cargar un proyecto.
+function escenaPurgar(){
+  if(!ESCENA)return;
+  const vistos=new Set();
+  ESCENA.items=ESCENA.items.filter(it=>{const l=LN.find(x=>x.id===it.lid),k=escenaClave(it);
+    const ok=!!l&&!l.parentId&&!!l.meta&&l.meta.tipo==='mueble'&&it.u>=0&&it.u<Math.max(1,+l.cnt||1)&&!vistos.has(k);
+    if(ok)vistos.add(k);return ok;});
+  if(ESC_UI.sel&&!ESCENA.items.some(it=>escenaClave(it)===ESC_UI.sel))ESC_UI.sel=null;
+}
+// Escena de un proyecto guardado, del borrador o de una copia importada: se valida todo.
+function escenaSanear(e){
+  if(!e||typeof e!=='object')return null;
+  const C=ESC_CTE,num=(v,a,b)=>{v=+v;return isFinite(v)&&v>=a&&v<=b?v:null;};
+  const largo=num(e.largo,C.medMin,C.medMax),ancho=num(e.ancho,C.medMin,C.medMax);if(largo==null||ancho==null)return null;
+  const alto=num(e.alto,C.techoMin,C.techoMax)||C.techoDef,altoAltos=num(e.altoAltos,C.altosMin,alto)||Math.min(C.altoAltos,alto);
+  const items=(Array.isArray(e.items)?e.items:[]).filter(it=>it&&isFinite(+it.lid)&&isFinite(+it.u)&&isFinite(+it.x)&&isFinite(+it.y))
+    .map(it=>({lid:+it.lid,u:Math.max(0,+it.u|0),x:+it.x,y:+it.y,r:escenaGiro(it.r)}));
+  return {v:1,largo,ancho,alto,altoAltos,items};
+}
+function escenaEncajarTodo(){if(!ESCENA)return;ESCENA.items.forEach(it=>{const g=escenaGeo(it);if(!g)return;const p=escenaEncajar(g.W,g.H,it.x,it.y);it.x=p.x;it.y=p.y;});}
+// Botón de ⑥ Proyectos: visible con al menos un mueble; con escena, cuántas unidades están colocadas.
+function escenaPintarBoton(){
+  const b=document.getElementById('btnEscena');if(!b)return;
+  const tot=escenaUnidades();b.style.display=tot?'':'none';
+  b.textContent=!tot?'':(ESCENA?`🏠 Escena · ${ESCENA.items.length}/${tot}`:'🏠 Crear escena');
+}
+function escenaAbierta(){const m=document.getElementById('escModal');return !!m&&m.style.display==='flex';}
+function abrirEscena(){
+  if(!escenaMuebles().length){flash('⚠️ Añade algún mueble antes de crear la escena');return;}
+  document.getElementById('escModal').style.display='flex';
+  if(!ESC_UI.resize&&typeof window!=='undefined'&&window.addEventListener){ESC_UI.resize=true;window.addEventListener('resize',escenaRedimensionar);}
+  escenaInstalarPlanta();ESC_UI.drag=null;ESC_UI.vista3d=false;
+  if(!ESCENA){escenaFormulario(false);return;}
+  escenaPurgar();escenaEncajarTodo();escenaMostrarTrabajo();
+}
+function cerrarEscena(){document.getElementById('escModal').style.display='none';ESC_UI.drag=null;R3DE.esc=null;escenaPintarBoton();}
+function escenaRedimensionar(){if(!escenaAbierta()||!ESCENA)return;if(ESC_UI.vista==='3d')r3dPintar(R3DE);else escenaPintarPlanta();}
+// Formulario de la habitación: crear (sin escena) o cambiar medidas (✏️ del resumen).
+function escenaFormulario(editar){
+  const E=ESCENA,ed=!!(editar&&E),v=(id,x)=>{const el=document.getElementById(id);if(el)el.value=x==null?'':String(x);};
+  ESC_UI.form=ed?'editar':'crear';
+  document.getElementById('escForm').style.display='';document.getElementById('escTrabajo').style.display='none';
+  document.getElementById('escFormTit').textContent=ed?'Medidas de la habitación':'Nueva escena · medidas de la habitación';
+  document.getElementById('escFormOk').textContent=ed?'✅ Aplicar':'✅ Crear habitación';
+  v('escLargo',ed?E.largo:'');v('escAncho',ed?E.ancho:'');v('escAlto',ed?E.alto:'');v('escAltos',ed?E.altoAltos:ESC_CTE.altoAltos);
+  document.getElementById('escFormAviso').textContent='';
+}
+function escenaAplicarHabitacion(){
+  const C=ESC_CTE,n=id=>{const v=parseFloat(String(document.getElementById(id)?.value||'').replace(',','.'));return isFinite(v)?v:NaN;};
+  const largo=n('escLargo'),ancho=n('escAncho'),alto=n('escAlto'),altos=n('escAltos'),av=document.getElementById('escFormAviso');
+  const mal=t=>{if(av)av.textContent='⚠️ '+t;};
+  if(!(largo>=C.medMin&&largo<=C.medMax&&ancho>=C.medMin&&ancho<=C.medMax))return mal(`Largo y ancho, entre ${C.medMin} y ${C.medMax} cm.`);
+  if(!(alto>=C.techoMin&&alto<=C.techoMax))return mal(`Alto de techo, entre ${C.techoMin} y ${C.techoMax} cm.`);
+  if(!(altos>=C.altosMin&&altos<=alto))return mal(`Canto de arriba de los altos, entre ${C.altosMin} cm y el techo (${fmtCm(alto)} cm).`);
+  const d={largo:r1(largo),ancho:r1(ancho),alto:r1(alto),altoAltos:r1(altos)};
+  if(!ESCENA)ESCENA=Object.assign({v:1,items:[]},d);else Object.assign(ESCENA,d);
+  escenaEncajarTodo();escenaMostrarTrabajo();
+}
+function escenaCancelarForm(){if(ESC_UI.form==='editar'&&ESCENA)escenaMostrarTrabajo();else cerrarEscena();}
+function escenaMostrarTrabajo(){document.getElementById('escForm').style.display='none';document.getElementById('escTrabajo').style.display='';escenaVista('planta');}
+function escenaVista(v){
+  if(!ESCENA)return;
+  const es3d=v==='3d';ESC_UI.vista=es3d?'3d':'planta';
+  document.getElementById('escBtnPlanta').classList.toggle('on',!es3d);document.getElementById('escBtn3d').classList.toggle('on',es3d);
+  document.getElementById('escVPlanta').style.display=es3d?'none':'';document.getElementById('escV3dWrap').style.display=es3d?'':'none';
+  if(!es3d){R3DE.esc=null;escenaPintarTodo();return;}
+  escenaPintarResumen();
+  R3DE.esc=escenaPiezas3D();r3dInstalarGiro(R3DE);
+  const cap=document.getElementById('escV3dCap');if(cap)cap.innerHTML=escenaCaption3D(R3DE.esc);
+  if(!ESC_UI.vista3d){ESC_UI.vista3d=true;escenaVistaInicial();}else r3dPintar(R3DE);
+}
+function escenaVistaInicial(){const C=ESC_CTE;R3DE.th=C.th0*Math.PI/180;R3DE.ph=C.ph0*Math.PI/180;R3DE.zoom=C.zoom0;R3DE.px=0;R3DE.py=0;r3dPintar(R3DE);}
+function escenaPintarTodo(){escenaPintarPlanta();escenaPintarSel();escenaPintarMenu();escenaPintarResumen();}
+function escenaPintarResumen(){
+  const el=document.getElementById('escRes');if(!el||!ESCENA)return;const E=ESCENA;
+  el.textContent=`Habitación ${fmtCm(E.largo)} × ${fmtCm(E.ancho)} cm · techo ${fmtCm(E.alto)} · altos a ${fmtCm(E.altoAltos)} · patas ${S.patas||'10'} ✏️`;
+}
+function escenaIndiceSel(){return ESCENA&&ESC_UI.sel?ESCENA.items.findIndex(it=>escenaClave(it)===ESC_UI.sel):-1;}
+function escenaPintarSel(){
+  const el=document.getElementById('escSel');if(!el||!ESCENA)return;
+  const i=escenaIndiceSel();
+  if(i<0){el.innerHTML='<span class="escAyuda">Toca un mueble de la lista para ponerlo en la habitación y arrástralo: se pega a las paredes y a los muebles vecinos. La raya dorada es el frente.</span>';return;}
+  const it=ESCENA.items[i],g=escenaGeo(it),o=escenaMuebles().find(x=>x.l.id===it.lid);
+  el.innerHTML=`<span style="flex:1;min-width:160px"><b>${o?escenaEtiqueta(o,it.u):''}</b> ${esc(g?escenaNombre(g.l):'')}${g?` · ${fmtCm(g.W)}×${fmtCm(g.H)} cm en planta`:''}</span>`+
+    `<button class="btn bs" onclick="escenaGirar()" style="font-size:11.5px;padding:6px 11px">⟳ Girar 90°</button>`+
+    `<button class="btn bs" onclick="escenaQuitar()" style="font-size:11.5px;padding:6px 11px">↩ Quitar</button>`;
+}
+// Fichas: una por unidad de cada mueble del presupuesto. Tocar una sin colocar la pone; una colocada, la selecciona.
+function escenaPintarMenu(){
+  const cont=document.getElementById('escMenu'),tit=document.getElementById('escMenuTit');if(!cont||!ESCENA)return;
+  let tot=0,col=0,h='';
+  escenaMuebles().forEach(o=>{const c=Math.max(1,+o.l.cnt||1),nom=escenaNombre(o.l);
+    for(let u=0;u<c;u++){tot++;const k=o.l.id+':'+u,pu=ESCENA.items.some(it=>escenaClave(it)===k);if(pu)col++;
+      h+=`<button class="escFicha${pu?' on':''}${k===ESC_UI.sel?' sel':''}" onclick="escenaFicha(${o.l.id},${u})" title="${esc(o.l.desc)}"><b>${pu?'✓ ':''}${escenaEtiqueta(o,u)}</b> ${esc(nom)}</button>`;}});
+  cont.innerHTML=h||'<span class="escAyuda">Sin muebles en el presupuesto.</span>';
+  if(tit)tit.textContent=`Muebles del presupuesto · colocados ${col} de ${tot}`;
+}
+function escenaFicha(lid,u){
+  if(!ESCENA)return;const k=lid+':'+u;
+  if(ESCENA.items.some(it=>escenaClave(it)===k))ESC_UI.sel=k;else escenaColocar(lid,u);
+  escenaPintarTodo();
+}
+function escenaGirar(){
+  const i=escenaIndiceSel();if(i<0)return;const it=ESCENA.items[i],g=escenaGeo(it);if(!g)return;
+  const cx=it.x+g.W/2,cy=it.y+g.H/2;it.r=(escenaGiro(it.r)+1)%4; // gira sobre el centro de su caja
+  const p=escenaIman(i,cx-g.H/2,cy-g.W/2);it.x=p.x;it.y=p.y;escenaPintarTodo();
+}
+function escenaQuitar(){const i=escenaIndiceSel();if(i<0)return;ESCENA.items.splice(i,1);ESC_UI.sel=null;escenaPintarTodo();}
+// Planta a escala: suelo con rejilla, paredes, y los muebles (bajos y columnas; encima los altos, rayados; el elegido,
+// el último). Raya dorada = frente. Rojo = pisa a otro de su nivel. El tamaño en pantalla se ajusta al ancho del panel y
+// al alto de la ventana; de ahí salen la distancia del imán y el tamaño de las etiquetas.
+function escenaPintarPlanta(){
+  const cont=document.getElementById('escPlanta');if(!cont||!ESCENA)return;
+  const E=ESCENA,C=ESC_CTE,K=C.colPlanta,pw=C.paredPlanta,mg=pw+C.margenPlanta,vbW=E.largo+2*mg,vbH=E.ancho+2*mg;
+  const disp=Math.max(160,(cont.clientWidth||600)-12),maxH=Math.max(200,((typeof window!=='undefined'&&window.innerHeight)||800)*C.planoAltoMax);
+  const wPx=Math.min(disp,maxH*vbW/vbH),k=wPx/vbW; // px de pantalla por cm
+  ESC_UI.imanCm=C.imanPx/k;
+  const fs=r1(C.letraPx/k),num={};escenaMuebles().forEach(o=>{num[o.l.id]=o;});
+  const G=E.items.map(escenaGeo),mal=escenaSolapes(G),pts=a=>a.map(q=>r1(q[0])+','+r1(q[1])).join(' ');
+  const peso=i=>(G[i].h.nivel==='alto'?1:0)+(escenaClave(E.items[i])===ESC_UI.sel?2:0);
+  let s=`<svg viewBox="${-mg} ${-mg} ${r1(vbW)} ${r1(vbH)}" width="${Math.round(wPx)}" height="${Math.round(wPx*vbH/vbW)}" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto;max-width:100%;height:auto;touch-action:none">`+
+    `<rect x="${-pw}" y="${-pw}" width="${r1(E.largo+2*pw)}" height="${r1(E.ancho+2*pw)}" fill="${K.pared}"/><rect x="0" y="0" width="${E.largo}" height="${E.ancho}" fill="${K.suelo}"/>`;
+  let rj='';for(let x=C.rejilla;x<E.largo;x+=C.rejilla)rj+=`M${x} 0V${E.ancho}`;for(let y=C.rejilla;y<E.ancho;y+=C.rejilla)rj+=`M0 ${y}H${E.largo}`;
+  if(rj)s+=`<path d="${rj}" fill="none" stroke="${K.rejilla}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+  G.map((g,i)=>i).filter(i=>G[i]).sort((a,b)=>peso(a)-peso(b)).forEach(i=>{
+    const g=G[i],it=E.items[i],o=num[it.lid],sel=escenaClave(it)===ESC_UI.sel,alto=g.h.nivel==='alto',roj=mal.has(i);
+    const fill=alto?K.alto:(g.h.nivel==='col'?K.col:K.bajo),st=sel?K.sel:(roj?K.mal:K.borde);
+    const q=g.h,fz=q.forma==='rect'?q.bd:q.F,lab=escenaRotar(it,q)(q.lab[0],alto?Math.min(q.lab[1],fs*0.8):Math.max(q.lab[1],fz-fs*0.8));
+    s+=`<g data-i="${i}" style="cursor:grab"><polygon points="${pts(g.poly)}" fill="${fill}" stroke="${st}" stroke-width="${sel||roj?2.5:1.2}" vector-effect="non-scaling-stroke" stroke-linejoin="round"${alto?' stroke-dasharray="6 3"':''}/>`+
+      `<polyline points="${pts(g.frente)}" fill="none" stroke="${K.frente}" stroke-width="3" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`+
+      `<text x="${r1(lab[0])}" y="${r1(lab[1])}" font-size="${fs}" text-anchor="middle" dominant-baseline="central" font-weight="700" fill="${K.texto}" stroke="#fff" stroke-width="${r1(fs*0.28)}" paint-order="stroke" style="pointer-events:none">${o?escenaEtiqueta(o,it.u):'?'}</text></g>`;
+  });
+  cont.innerHTML=s+'</svg>';
+  const av=document.getElementById('escAviso');if(av)av.textContent=mal.size?'⚠️ Hay muebles que se pisan (en rojo). Los altos pueden ir encima de los bajos; las columnas, no.':'';
+}
+function escenaPunto(svg,cx,cy){const m=svg&&svg.getScreenCTM&&svg.getScreenCTM();if(!m)return null;const p=svg.createSVGPoint();p.x=cx;p.y=cy;const q=p.matrixTransform(m.inverse());return {x:q.x,y:q.y};}
+// Planta: tocar un mueble lo selecciona y arrastrarlo lo mueve con imán; tocar el suelo quita la selección.
+function escenaInstalarPlanta(){
+  const cont=document.getElementById('escPlanta');if(!cont||cont.dataset.esc)return;cont.dataset.esc='1';
+  cont.addEventListener('pointerdown',e=>{
+    if(!ESCENA||e.button>0)return;
+    const svg=cont.querySelector('svg'),g=e.target&&e.target.closest?e.target.closest('[data-i]'):null;if(!svg)return;
+    if(!g){if(ESC_UI.sel){ESC_UI.sel=null;escenaPintarTodo();}return;}
+    const i=+g.getAttribute('data-i'),it=ESCENA.items[i],q=escenaPunto(svg,e.clientX,e.clientY);if(!it||!q)return;
+    ESC_UI.sel=escenaClave(it);ESC_UI.drag={i,id:e.pointerId,qx:q.x,qy:q.y,ix:it.x,iy:it.y,cx:e.clientX,cy:e.clientY,mov:false};
+    try{cont.setPointerCapture(e.pointerId);}catch(_){}
+    e.preventDefault();escenaPintarTodo();
+  });
+  cont.addEventListener('pointermove',e=>{
+    const d=ESC_UI.drag;if(!d||d.id!==e.pointerId||!ESCENA)return;
+    if(!d.mov&&Math.hypot(e.clientX-d.cx,e.clientY-d.cy)<ESC_CTE.arrastrePx)return;
+    d.mov=true;const svg=cont.querySelector('svg'),q=escenaPunto(svg,e.clientX,e.clientY),it=ESCENA.items[d.i];if(!q||!it)return;
+    const p=escenaIman(d.i,d.ix+q.x-d.qx,d.iy+q.y-d.qy);it.x=p.x;it.y=p.y;
+    if(!ESC_UI.raf)ESC_UI.raf=requestAnimationFrame(()=>{ESC_UI.raf=0;escenaPintarPlanta();});
+  });
+  const fin=e=>{const d=ESC_UI.drag;if(!d||d.id!==e.pointerId)return;ESC_UI.drag=null;if(d.mov)escenaPintarTodo();};
+  cont.addEventListener('pointerup',fin);cont.addEventListener('pointercancel',fin);
+}
+// ── 3D de la escena ──
+// Pieza del visor (coordenadas del mueble: x ancho, y alto, z fondo con el frente en z = 0) → habitación, con T(x, z) →
+// [X, Z] y el mueble subido yB. Los giros son de 90°: las cajas siguen alineadas con los ejes y no se reflejan.
+function escenaPiezaEnSala(p,T,yB){
+  const q={k:p.k,col:p.col,st:p.st,y:p.y+yB,h:p.h};
+  if(p.k==='box'){const a=T(p.x,p.z),b=T(p.x+p.w,p.z+p.d);q.x=Math.min(a[0],b[0]);q.z=Math.min(a[1],b[1]);q.w=Math.abs(b[0]-a[0]);q.d=Math.abs(b[1]-a[1]);}
+  else if(p.k==='cyl'){const a=T(p.x,p.z);q.x=a[0];q.z=a[1];q.r=p.r;q.seg=ESC_CTE.pataLados;q.sinAristas=true;}
+  else if(p.k==='prism'){q.pts=p.pts.map(t=>T(t[0],t[1]));q.rects=p.rects?p.rects.map(r=>{const a=T(r[0],r[1]),b=T(r[2],r[3]);return [Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[0],b[0]),Math.max(a[1],b[1])];}):null;}
+  return q;
+}
+// Caja maciza de un mueble sin construcción 3D (rincones altos y de columna): su huella a todo su alto.
+function escenaMacizo(h){
+  const z=v=>h.bd-v,col=R3D_COL.costado,st=R3D_COL.stroke;
+  if(h.forma==='rect')return {k:'box',x:0,y:0,z:0,w:h.bw,h:h.alt,d:h.bd,col,st};
+  return {k:'prism',pts:h.poly.map(q=>[q[0],z(q[1])]),rects:h.forma==='L'?h.rects.map(r=>[r[0],z(r[3]),r[2],z(r[1])]):null,y:0,h:h.alt,col,st};
+}
+// Patas para lo que va al suelo y el visor no las dibuja (columnas y cajas macizas): en las esquinas de cada rectángulo
+// de la huella, con el retranqueo de las de los bajos.
+function escenaPatas(h,pa){
+  const C=R3D_CTE,r=C.pataDiam/2,i=C.pataInset,out=[];
+  h.rects.forEach(q=>{const x0=q[0],x1=q[2],z0=h.bd-q[3],z1=h.bd-q[1];
+    [[x0+i,z0+i],[x1-i,z0+i],[x0+i,z1-i],[x1-i,z1-i]].forEach(([x,z])=>out.push({k:'cyl',x,y:-pa,z,r,h:pa,col:R3D_COL.pata,st:'#111'}));});
+  return out;
+}
+function escenaPiezas3D(){
+  const E=ESCENA,C=ESC_CTE,P=[],pa=+S.patas||R3D_CTE.pataAlto;let macizos=0;
+  E.items.forEach(it=>{
+    const l=LN.find(x=>x.id===it.lid),h=escenaHuella(l);if(!h)return;
+    const yB=h.nivel==='alto'?E.altoAltos-h.alt:pa,rot=escenaRotar(it,h),T=(x,z)=>{const q=rot(x,h.bd-z);return [q[0],E.ancho-q[1]];};
+    const sp=r3dSpecLinea(l);let loc;
+    if(sp){loc=r3dPiezas(sp,true,{}).filter(p=>p.col!==R3D_COL.eliminada);if(!sp.patas&&h.nivel!=='alto')loc=loc.concat(escenaPatas(h,pa));}
+    else{macizos++;loc=[escenaMacizo(h)].concat(h.nivel!=='alto'?escenaPatas(h,pa):[]);}
+    loc.forEach(p=>P.push(escenaPiezaEnSala(p,T,yB)));
+  });
+  const e=C.paredGrosor,s=C.sueloGrosor,L=E.largo,W=E.ancho,H=E.alto,K=C.col3d,bx=(x,y,z,w,h,d,col)=>({k:'box',x,y,z,w,h,d,col,st:K.borde});
+  const suelo=bx(0,-s,0,L,s,W,K.suelo);
+  // n = normal de la cara interior: fondo (pared de arriba de la planta), delante, izquierda y derecha
+  const paredes=[{p:bx(-e,-s,W,L+2*e,H+s,e,K.pared),n:[0,0,-1]},{p:bx(-e,-s,-e,L+2*e,H+s,e,K.pared),n:[0,0,1]},
+    {p:bx(-e,-s,0,e,H+s,W,K.pared),n:[1,0,0]},{p:bx(L,-s,0,e,H+s,W,K.pared),n:[-1,0,0]}];
+  return {P,suelo,paredes,marco:[suelo].concat(paredes.map(w=>w.p)),sp:{anc:L,alt:H,fon:W,patas:false},macizos};
+}
+// Paredes que se ven con la cámara (th, ph): fuera las que quedan entre la cámara y la habitación.
+function escenaParedesVistas(E,th,ph){
+  const cf=Math.cos(ph),d=[-Math.sin(th)*cf,-Math.sin(ph),Math.cos(th)*cf];
+  return E.paredes.filter(w=>w.n[0]*d[0]+w.n[1]*d[1]+w.n[2]*d[2]<=ESC_CTE.paredOculta);
+}
+// Pinta la escena con el motor WebGL del visor: mismas mallas (r3dMallaGL), cámara (r3dCamara, con la habitación como
+// «mueble») y gestos (r3dInstalarGiro). El encuadre sale de la habitación entera, con todas sus paredes: al girar no
+// cambia de tamaño. Sin WebGL no hay respaldo SVG (una escena tiene demasiadas piezas para el pintor): se avisa.
+function escenaPintar3D(vis){
+  const cont=document.getElementById(vis.cont),E=vis.esc;if(!cont||!E)return;
+  const X=r3dGLIni(vis);
+  if(!X){cont.innerHTML='<div style="padding:18px;font-size:12px;color:#856404">⚠️ Este navegador no puede dibujar en 3D (WebGL desactivado). La planta sigue funcionando.</div>';return;}
+  if(X.cv.parentNode!==cont){cont.innerHTML='';cont.appendChild(X.cv);}
+  const cssW=X.cv.clientWidth||cont.clientWidth;if(!cssW)return;
+  const dpr=Math.min(3,window.devicePixelRatio||1),Wd=Math.round(cssW*dpr),Hd=Math.round(cssW*R3D_H/R3D_W*dpr);
+  if(X.cv.width!==Wd||X.cv.height!==Hd){X.cv.width=Wd;X.cv.height=Hd;}
+  vis.ph=Math.max(ESC_CTE.phMin*Math.PI/180,vis.ph);vis.glUlt=null; // sin selección de piezas en la escena
+  const P=E.P.concat([E.suelo],escenaParedesVistas(E,vis.th,vis.ph).map(w=>w.p));
+  const cam=r3dCamara(E.sp,vis,R3D_W,R3D_H,E.marco),M=r3dMallaGL(P,cam,vis,false,R3D_GL.linea*R3D_W/cssW/2),gl=X.gl,F=R3D_GL.fondo;
+  gl.viewport(0,0,Wd,Hd);gl.clearColor(F[0],F[1],F[2],1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.useProgram(X.pr);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(true);gl.disable(gl.BLEND);
+  gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,2);r3dGLDibuja(X,M.op);gl.disable(gl.POLYGON_OFFSET_FILL);
+  gl.enable(gl.BLEND);gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+  r3dGLDibuja(X,M.li);r3dGLDibuja(X,M.tr);gl.depthMask(true);
+}
+function escenaCaption3D(E){
+  let t=`${ESCENA.items.length} de ${escenaUnidades()} muebles colocados · bajos y columnas sobre patas de ${S.patas||'10'} · altos con el canto de arriba a ${fmtCm(ESCENA.altoAltos)} cm`;
+  if(E.macizos)t+=` · ${E.macizos} sin construcción 3D (rincones altos o de columna): caja maciza con sus medidas`;
+  return esc(t);
+}
 // ═════════════════════════ Lote M (14-09-2026) — TARIFA MODIFICADA ═════════════════════════
 // Los precios del desglose del mueble se pueden editar. Si el usuario acepta "guardar en la tarifa", el
 // cambio se guarda en localStorage (g5_tarifa) y se aplica SOBRE las tablas del código (ARM, PD, TD, GA)
@@ -3110,6 +3534,7 @@ function construirSnapshotProy(qn,tipo){
     gola:dup(S.gola||{}),
     modelos:dup(MODELOS),
     lineas:dup(LN),
+    escena:ESCENA?dup(ESCENA):null, // Lote V1
     lid:LID,
     total:LN.reduce((s,l)=>s+l.p*l.cnt,0)
   };
@@ -3173,6 +3598,7 @@ function restaurarSnapshot(p){
   S.modCaj=p.modCaj||'IATIRA';
   S.gros=p.gros||'16';
   S.colorArm=tableroCatalogo(p.colorArm)?p.colorArm:'';S.patas=PATAS_ALTOS.includes(String(p.patas))?String(p.patas):'10'; // Lote D1 (proyectos antiguos: sin color, patas 10)
+  ESCENA=escenaSanear(p.escena);ESC_UI.sel=null; // Lote V1: escena del proyecto (proyectos antiguos: sin escena). Antes de recalcularAcumulados, que la purga
   S.nom=p.cliente?.nom||'';S.tel=p.cliente?.tel||'';S.email=p.cliente?.email||'';S.dir=p.cliente?.dir||'';
   S.fecha=p.fecha||'';S.val=p.val||'30 días';S.obs=p.obs||'';
   S.qn=p.qn;S.tipoDoc=p.tipo;
@@ -5479,6 +5905,7 @@ function rP(){
   document.getElementById('pQN').textContent=rotuloDoc();
   document.getElementById('pDt').textContent=`Fecha: ${S.fecha||'—'} · Válido: ${S.val||'30 días'}`;
   rGola();
+  escenaPintarBoton(); // Lote V1
   const body=document.getElementById('pBody');
   if(!LN.length){body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--g);font-style:italic">Sin líneas</td></tr>';cTot();buildWS();return;}
   const multi=MODELOS.length>1;
@@ -5985,6 +6412,7 @@ function recalcularAcumulados(){
     if(m.esRincon&&m.esRinRec&&m.esBajo)add(color,'codo');
   });
   regenerarLineasGola(); // Lote L: las líneas de gola bajos del presupuesto se mantienen solas
+  escenaPurgar(); // Lote V1: fuera de la escena las unidades de muebles borrados o con menos cantidad
 }
 // Lote L (14-09-2026) — Líneas AUTOMÁTICAS de gola bajos en el presupuesto. Regla de Álvaro: la gola se va
 // sumando según se añaden muebles y aparece sola en la pestaña Presupuesto por tiras enteras/medias
@@ -6225,6 +6653,7 @@ function nuevoP(){
   // Ajustes globales del proyecto: grosor 16, cajón I.ATIRA
   S.gros='16';document.getElementById('b16')?.classList.add('on');document.getElementById('b19')?.classList.remove('on');
   S.colorArm='';S.patas='10';pintarColorArm();pintarPatas(); // Lote D1
+  ESCENA=null;ESC_UI.sel=null; // Lote V1: la escena es del proyecto
   S.modCaj='IATIRA';
   // Cliente, fecha, validez, observaciones (DOM → S vía sp)
   ['cNom','cTel','cEmail','cDir','pObs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
