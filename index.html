@@ -1115,7 +1115,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-24.8';
+const APP_BUILD = '2026-09-24.9';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1596,19 +1596,17 @@ const ARM=buildARM();
 // Aparece en la pestaña Muebles al seleccionar un armazón y se redibuja con cada cambio de medidas, puertas,
 // frentes, tirador/gola, grosor o modelo de cajón (se engancha al final de cp()). Desde la pestaña Proyectos
 // el botón 🧊 de cada mueble abre el mismo visor en una ventana sobre la lista. SOLO PANTALLA: no se imprime.
-// Construcciones definidas por Álvaro (18-09-2026) — el resto de familias se dibuja como casco genérico con aviso:
+// Construcciones definidas por Álvaro (skill ag5-construccion-muebles; en código, la tabla CONSTR de más abajo):
 //   · NORMA DE TODOS LOS BAJOS (Lote R2, 18-09-2026): la BASE va por debajo de los costados, a todo el ancho y
 //     apoyada en las patas; los costados descansan encima (alto = alto del mueble − grosor). Los travesaños de
-//     arriba son INTERIORES (entre costados). Esta norma servirá más adelante para las listas de corte.
-//   · Bajo puerta y bajo gavetero/cajonero (mismo casco, solo cambian los frentes): SIN tapa (travesaños planos
-//     delantero y trasero de 12 cm), trasera encajada en ranura y remetida 5 cm desde atrás, 4 patas cilíndricas
-//     de plástico negro. La placa y la placa horno usan de momento este mismo casco (pendiente de definir).
-//   · Bajo fregadero (Lote R2): paletones delantero y trasero DE CANTO (12 cm de alto), base 5 cm más corta que los
-//     costados (58 → 53) y travesaño de refuerzo de 12 cm de pie sobre el final de la base. SIN trasera. La gaveta
-//     salvasifón se dibuja con el recorte en U por detrás.
+//     arriba son INTERIORES (entre costados). Esta norma sirve también para las listas de corte (despieceCasco).
+//   · Bajos con casco propio en CONSTR: bajo puerta / gavetero / cajonero (`bajo`), fregadero (`fregadero`), placa
+//     puertas (`placap`), placa gavetas/cajones (`placa`), placa horno (`placah`), rincón recto (`rinRec`, Lote R6),
+//     rincón escuadra y rincón fregadero (`rinEsc`, Lote R7) y chaflán (`chaflan`, Lote C1). Con gola, cajeo en los
+//     costados y paletón delantero de 8 (Lotes G1 · G1b · G1e).
+//   · Sin construcción todavía (casco genérico con aviso): altos, columnas, semicolumnas, sobrefrigos,
+//     sobreencimeras y los rincones de altos y de columnas (esos solo muestran el aviso).
 //   · Lote R8: el visor pinta con WebGL (búfer de profundidad, sin fallos de orden) y el SVG queda de respaldo.
-//   · Rincones: pendiente (se muestra el aviso, sin dibujo), salvo el bajo rincón recto (Lote R6: CONSTR.rinRec) y el bajo
-//     rincón escuadra / fregadero (Lote R7: CONSTR.rinEsc).
 // Grosor del tablero = el elegido en el proyecto (16 / 19). Puertas y frentes a 19 mm. Frentes de cajón apilados
 // desde arriba (F1 arriba) y puertas debajo, alineadas al suelo (así en bajos con gola el hueco de 3 cm del
 // perfil queda arriba). Cajón I.ATIRA plateado; AV YOU antracita y de pared más fina. Fondo de cajón F.50 / F.40.
@@ -2114,8 +2112,8 @@ function despieceCasco(sp,ud,ref){
   });
   return out;
 }
-// Despiece de una línea de mueble del presupuesto (null si no es mueble o es rincón: construcción pendiente; el bajo rincón
-// recto sí se despieza desde el Lote R6).
+// Despiece de una línea de mueble del presupuesto. null si no es mueble o si es un rincón sin construcción definida (los de
+// altos y columnas); los bajos rincón recto (Lote R6), escuadra / fregadero (Lote R7) y chaflán (Lote C1) sí se despiezan.
 function despieceLinea(l){
   const sp=r3dSpecLinea(l);if(!sp)return null;
   return despieceCasco(sp,l.cnt,l.id);
@@ -2226,11 +2224,12 @@ function rinRectoGeo(puertas,frentes,rw){
 // Fondo de la base: en fregaderos y bajos placa es 5 cm más corta que los costados (58 → 53, Lotes R2/R3); en el resto, el fondo.
 function r3dBaseCorta(sp){return ['fregadero','placap','placa','placah'].includes(sp.tipo);}
 function r3dFondoBase(sp){return r3dBaseCorta(sp)?Math.max(R3D_CTE.baseRecorte*2,sp.fon-R3D_CTE.baseRecorte):sp.fon;}
-// Spec desde el formulario vivo de la pestaña Muebles (null si no hay armazón o es rincón).
+// Spec desde el formulario vivo de la pestaña Muebles (null si no hay armazón o es un rincón sin construcción definida).
 function r3dSpecFormulario(){
   if(!SEL)return null;
   if(isRin(SEL)){
-    // Lote R6 — bajo rincón recto: formulario de rincón (puertas, frentes, ancho real, regleta). Sin edición de piezas (R5).
+    // Lote R6 — bajo rincón recto: formulario de rincón (puertas, ancho real, regleta). Lote R8: los rincones con
+    // construcción también admiten piezas eliminadas o en material de puerta (MPIEZAS), como los bajos regulares.
     if(!rinTiene3D(SEL))return null; // Lote R7: + rincón escuadra / fregadero
     return r3dSpec({arm:SEL,hoja:MHOJA,alt:SEL.alt,anc:(esBajoRinRecto(SEL)&&+document.getElementById('rRRecAncho')?.value)||SEL.anc,fon:SEL.fon,
       puertas:RPuertas,frentes:[],cfg:S.tb,tar:S.tar,modCaj:S.modCaj,gros:S.gros,sinFrentes:false,abrePrimero:RPRIMERO,
