@@ -1018,7 +1018,7 @@ const RESALTES={
   gris:    {nom:'Gris', bg:'#e4e4e4', chip:'#888888'}
 };
 function nuevoModelo(i){
-  return {nombre:'Modelo '+i, colorPuerta:'', colorArmazon:'', resalte:i===1?'none':(['naranja','verde','azul','rosa'][(i-2)]||'gris'),
+  return {nombre:'Modelo '+i, colorPuerta:'', colorArmazon:(typeof S!=='undefined'&&S&&S.colorArm)||'', resalte:i===1?'none':(['naranja','verde','azul','rosa'][(i-2)]||'gris'), // Lote X1: arranca con el color global
           tar:'Sin puerta', cvt:null, tb:{t:'sin',s:'',c:''}, ta:{t:'sin',s:'',c:''},
           lacaNoStd:false, uneroRebaj:false, vidrioTVA:null,
           recargo:0, recargoCVT:false}; // Lote L
@@ -1055,7 +1055,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-24.1';
+const APP_BUILD = '2026-09-24.2';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1164,6 +1164,16 @@ const COL_ANCHO_4_PUERTAS      = ANCHO_DOBLE_PUERTA; // Lote U: columnas desde e
 // Lote W1: columnas con puertas apiladas — P1 es la de ABAJO y mide 160 por defecto; P2 (arriba) el resto del alto.
 // Con gola se descuenta de la de abajo: 157 (A.205 → 157 + 45 = 202, el alto − 3).
 const COL_PUERTA_BAJA          = 160;  // cm: alto por defecto de la puerta de abajo de una columna
+// Lote X1 (24-09-2026, Álvaro) — columna CALDERA: puerta de abajo de 80 (77 con gola) y la de arriba el resto, para dejar
+// sitio a la caldera arriba. Columna HORNO/MICRO: de abajo arriba 2 gavetas de 30 (29,5 + 3 de hueco con gola), hueco del
+// horno de 60, hueco del micro de 40 y una puerta con el resto (A.205 → 45; A.220 → 60). Esa puerta de arriba NUNCA lleva
+// gola (el micro impide poner el perfil): con cocina de gola va con apertura push to open, que se suma sola en Varios.
+const COL_CALDERA_PUERTA_BAJA  = 80;   // cm: puerta de abajo de la columna caldera
+const COL_HORNO_GAVETA         = 30;   // cm: alto de cada gaveta de abajo de la columna horno/micro (sin gola)
+const COL_HORNO_GAVETA_GOLA    = 29.5; // cm: ídem con gola (+ 3 de hueco del perfil)
+const COL_HORNO_HUECO          = 60;   // cm: hueco del horno en la columna horno/micro
+const COL_MICRO_HUECO          = 40;   // cm: hueco del micro encima del horno
+const PUSH_PUERTA_NOM          = 'Sistema Push en Puertas'; // nombre exacto en el catálogo de Varios (VR): su precio manda
 const RIN_ESC_PUERTA_CORTA     = 2;    // cm: la puerta del escuadra que abre primero, más corta que su frente
 const PATAS_RIN_ESC            = 8;    // 6 esquinas de la L + 1 en el centro de cada frente interior
 const BALDA_DESC_ANCHO_TAR     = 3.2;  // la tarifa indexa por ancho de mueble = ancho de balda + 3,2 (costados de 16)
@@ -1563,8 +1573,13 @@ const R3D_CTE={
   // Lote R3 (22-09-2026) — bajos placa, horno, puertas y cajones interactivos, baldas
   placaTravY:15,       // cm del canto superior a la cara de arriba del travesaño plano delantero del placa gavetas (= frente de 15)
   placaTravRemetido:3, // cm que ese travesaño va remetido desde el frente del mueble
-  hornoHueco:{'60':60,'45':45}, // cm del canto superior a la cara INFERIOR de la balda fija que sostiene el horno (con gola: del canto inferior, Lote D1)
-  traseraClavadaRebaje:2, // cm que la trasera CLAVADA (placas) se corta más corta que el alto que cubre (Álvaro, 22-09-2026)
+  // Lote X1 (24-09-2026, Álvaro): el hueco LIBRE del horno es siempre 60 (o 45) y el horno monta sobre la base del
+  // mueble (con gola, horno abajo) o sobre la balda fija (horno arriba): la cara inferior de la balda fija queda a
+  // hueco + t del canto superior (61,6 con 16; 61,9 con 19) o, con gola, a hueco + base del canto inferior.
+  hornoHueco:{'60':60,'45':45}, // cm de hueco LIBRE del horno (el frente que cubre el horno mide lo mismo: 60 / 45)
+  // Lote X1 (24-09-2026, Álvaro): la trasera CLAVADA (placas) se corta 2 mm más corta A LO ALTO, que es donde va clavada;
+  // a lo ancho va en ranura y lleva el descuento normal (W − t). Placa puertas 75×60 con 16 → 748 × 584. Antes 2 cm (error).
+  traseraClavadaRebaje:0.2, // cm
   hornoMandos:{'60':8,'45':6},  // cm: franja de mandos del horno dibujado (60 = convencional, 45 = compacto)
   hornoHolgura:0.3, hornoFondo:50, hornoPuertaGros:2, hornoCristalInset:4, hornoTirAlto:2.2, hornoTirSaliente:3.5, // horno de relleno [supuesto]
   baldaMinHueco:8,     // cm: hueco mínimo libre para dibujar baldas
@@ -1591,7 +1606,8 @@ const R3D_W=360,R3D_H=300; // viewBox del SVG del visor (px)
 // C = R3D_CTE. Todo en cm. Ejes: x ancho, y alto, z fondo (frente 0).
 // Trasera en ranura: profundidad t/2 por lado → corte = medida del mueble − t en cada sentido acanalado. La caja del 3D
 // es solo la parte vista (entre costados, con 0,1 de aire para el orden de pintado). Trasera clavada (placas): alto de
-// corte = alto que cubre − 2 (Álvaro, 22-09-2026; R3D_CTE.traseraClavadaRebaje). La trasera no lleva canto (22-09-2026).
+// corte = alto que cubre − 0,2 (2 mm, Álvaro 24-09-2026; R3D_CTE.traseraClavadaRebaje). La trasera no lleva canto (22-09-2026).
+// Lote X1: `cantos` y `pos` de una pieza pueden ser función(c) (base del placa horno: 3 cantos con trasera, 4 sin ella).
 const CONSTR=(()=>{
   // Lote R5 (23-09-2026) — cada pieza lleva `id`: la clave con la que se elimina o se pasa a material de puerta desde el 3D
   // (en las baldas, una por unidad: 'balda#0', 'balda#1'…). Las medidas usan los grosores REALES de cada pieza del contexto:
@@ -1605,7 +1621,7 @@ const CONSTR=(()=>{
     corte:c=>c.pz[id]==='p'?{largo:c.A,ancho:c.F}:{largo:c.A-c.tb,ancho:c.F},cantos:{L:2,A:1},cantosPuerta:{L:2,A:2},
     cajas:c=>{const integ=c.pz[id]==='p',w=integ?c.g:c.t,y=integ?0:c.tb;return [{x:der?c.W-w:0,y,z:0,w,h:c.A-y,d:c.F,col:'costado'}];}});
   const base=(fecha,cantos,pos)=>({id:'base',nombre:'Base',pos:pos||'por debajo de los costados, a todo el ancho',estado:'confirmado',fecha,ud:1,grosor:'t',
-    corte:c=>({largo:c.bW,ancho:c.Fb}),cantos,cajas:c=>[{x:c.bx0,y:0,z:0,w:c.bW,h:c.tb,d:c.Fb,col:'suelo'}]});
+    corte:c=>({largo:c.bW,ancho:c.Fb}),cantos,cajas:c=>[{x:c.bx0,y:0,z:0,w:c.bW,h:c.tb,d:c.Fb,col:'suelo'}]}); // cantos: {L,A} o función(c) (Lote X1)
   // Paletón = travesaño = refuerzo (22-09-2026): ancho interior × 12, canto en los 2 largos. Cambia solo cómo va puesto.
   // caja(c, e): e = grosor de ESTA pieza (t, o el de puerta si va en material de puerta: misma medida de corte, 23-09-2026).
   const paleton=(id,nombre,pos,fecha,caja)=>({id,nombre,pos,estado:'confirmado',fecha,ud:1,grosor:'t',
@@ -1620,7 +1636,7 @@ const CONSTR=(()=>{
   // (An.60 → 581): la ranura es la mitad del grosor de la pieza donde se hace y el milímetro y medio de más no importa.
   const trasera=(o)=>Object.assign({id:'trasera',nombre:'Trasera',ud:1,grosor:'tr',cantos:{L:0,A:0},soloEliminar:true},o);
   const trasVista=(c,y,h,z)=>({x:c.tL+0.1,y,z,w:c.Wi-0.2,h,d:c.tr,col:'trasera'});
-  const fondoBaldaFija=c=>(c.hornoAbajo&&c.yB+c.th('baldaFija')>c.A-c.C.paleton)?c.Fb-c.th('palTras'):c.Fb; // placa horno, ver comentario de la pieza
+  const fondoBaldaFija=c=>c.Fb; // placa horno: 53 como la base (Lote X1: el paletón trasero va atrás del todo y ya no tropieza con ella)
   const costados=(f1,f2)=>[cost('cI','izquierdo',f1,false),cost('cD','derecho',f2||f1,true)];
   // Lote R8 — base / techo del rincón escuadra: una pieza en L (prisma) de y a y + h. Con costado integrado en un brazo
   // se acorta en ese extremo (eZ0 en el izquierdo, eX1 en el derecho). rects = la misma L en rectángulos (visor SVG).
@@ -1670,10 +1686,10 @@ const CONSTR=(()=>{
     // varias cajas unidas. Costado en material de puerta (costado visto integrado): va del suelo arriba y la base y el
     // techo se acortan su grosor en ese brazo (misma regla que en los bajos: el ancho exterior no cambia).
     rinEsc:{lab:'Bajo rincón escuadra',pendiente:false,piezas:[
-      {id:'base',nombre:'Base',pos:c=>`una pieza en L, por debajo de los costados; cajeo ${fmtCm(c.eX1-c.F)}×${fmtCm(c.H-c.F-c.eZ0)}; canto en todo el perímetro`,
+      {id:'base',nombre:'Base',pos:c=>`una pieza en L, por debajo de los costados; cajeo ${fmtCm(c.eX1-c.F)}×${fmtCm(c.H-c.F-c.eZ0)}; canto en todo el perímetro, cajeo incluido`,
         estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',corte:c=>({largo:c.eX1,ancho:c.H-c.eZ0}),cantos:{L:2,A:2},
         cajas:c=>[escL(c,0,c.th('base'),'suelo')]},
-      {id:'techo',nombre:'Techo',pos:c=>`una pieza en L, por encima de los costados; cajeo ${fmtCm(c.eX1-c.F)}×${fmtCm(c.H-c.F-c.eZ0)}; canto en todo el perímetro`,
+      {id:'techo',nombre:'Techo',pos:c=>`una pieza en L, por encima de los costados; cajeo ${fmtCm(c.eX1-c.F)}×${fmtCm(c.H-c.F-c.eZ0)}; canto en todo el perímetro, cajeo incluido`,
         estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',corte:c=>({largo:c.eX1,ancho:c.H-c.eZ0}),cantos:{L:2,A:2},
         cajas:c=>[escL(c,c.A-c.th('techo'),c.th('techo'),'techo')]},
       {id:'cI',nombre:'Costado',pos:'entre base y techo, al final del brazo izquierdo',estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',
@@ -1700,53 +1716,55 @@ const CONSTR=(()=>{
         corte:c=>({largo:c.A-c.eTb-c.eTt,ancho:RIN_ESC_REFUERZO-c.th('refA')}),cantos:{L:1,A:0},
         cajas:c=>[{x:c.xi,y:c.eTb,z:c.zb-RIN_ESC_REFUERZO,w:c.th('refB'),h:c.A-c.eTb-c.eTt,d:RIN_ESC_REFUERZO-c.th('refA'),col:'trav'}]},
       // Balda en L de una pieza: de la trasera izquierda (xi) al costado derecho y del costado izquierdo a la trasera del
-      // fondo (zb); brazos del fondo de balda de rincón; cajeo delantero y cajeo 12,1 × 12,1 alrededor del refuerzo.
-      {id:'balda',nombre:'Balda',pos:c=>{const fb=c.fonBalda,k=RIN_ESC_REFUERZO+RIN_ESC_CAJEO_HOLGURA;
-          return `una pieza en L, brazos de ${fmtCm(fb)} de fondo; cajeo delantero ${fmtCm(c.W-c.eD-c.xi-fb)}×${fmtCm(c.zb-c.eI-fb)} y cajeo ${fmtCm(k)}×${fmtCm(k)} en la esquina trasera (refuerzo); canto en todo el perímetro`;},
-        estado:'confirmado',fecha:'23-09-2026',ud:'nBaldas',grosor:'t',corte:c=>({largo:c.W-c.eD-c.xi,ancho:c.zb-c.eI}),cantos:{L:2,A:2},
+      // fondo (zb); brazos del fondo de balda de rincón; cajeo delantero (canteado) y, en la esquina trasera, MUESCA con la
+      // forma del refuerzo (Lote X1, Álvaro 24-09-2026: un cajeo de 12 × 12 dejaba un hueco por el que caían las cosas):
+      // 12,1 × (t + 0,1) contra la trasera del fondo y (t + 0,1) × 12,1 contra la izquierda, con la holgura de
+      // RIN_ESC_CAJEO_HOLGURA. Es un mecanizado (no un corte de sierra) y va sin canto: no entra la canteadora.
+      {id:'balda',nombre:'Balda',pos:c=>{const fb=c.fonBalda,h=RIN_ESC_CAJEO_HOLGURA,k=RIN_ESC_REFUERZO+h,a=c.th('refA')+h,b=c.th('refB')+h;
+          return `una pieza en L, brazos de ${fmtCm(fb)} de fondo; cajeo delantero ${fmtCm(c.W-c.eD-c.xi-fb)}×${fmtCm(c.zb-c.eI-fb)} canteado; en la esquina trasera, mecanizado en L con la forma del refuerzo (${fmtCm(k)}×${fmtCm(a)} contra la trasera del fondo y ${fmtCm(b)}×${fmtCm(k)} contra la izquierda), sin canto; canto en el resto del perímetro`;},
+        estado:'confirmado',fecha:'24-09-2026',ud:'nBaldas',grosor:'t',corte:c=>({largo:c.W-c.eD-c.xi,ancho:c.zb-c.eI}),cantos:{L:2,A:2},
         cuando:c=>c.nB>0,
-        cajas:c=>{const fb=c.fonBalda,k=RIN_ESC_REFUERZO+RIN_ESC_CAJEO_HOLGURA,e=c.th('balda#0'),y=c.eTb+(c.A-c.eTb-c.eTt)/2-e/2;
+        cajas:c=>{const fb=c.fonBalda,h=RIN_ESC_CAJEO_HOLGURA,k=RIN_ESC_REFUERZO+h,a=c.th('refA')+h,b=c.th('refB')+h,e=c.th('balda#0'),y=c.eTb+(c.A-c.eTb-c.eTt)/2-e/2;
           const x0=c.xi,x1=c.W-c.eD,z0=c.eI,z1=c.zb;
-          return [{pts:[[x0,z0],[x0+fb,z0],[x0+fb,z1-fb],[x1,z1-fb],[x1,z1],[x0+k,z1],[x0+k,z1-k],[x0,z1-k]],
-            rects:[[x0,z0,x0+fb,z1-k],[x0+k,z1-k,x0+fb,z1],[x0+fb,z1-fb,x1,z1]],y,h:e,col:'balda'}];}}],
+          // Muesca en L: [x0, x0+k] × [z1−a, z1] (contra la trasera del fondo) ∪ [x0, x0+b] × [z1−k, z1] (contra la izquierda)
+          return [{pts:[[x0,z0],[x0+fb,z0],[x0+fb,z1-fb],[x1,z1-fb],[x1,z1],[x0+k,z1],[x0+k,z1-a],[x0+b,z1-a],[x0+b,z1-k],[x0,z1-k]],
+            rects:[[x0,z0,x0+fb,z1-k],[x0+b,z1-k,x0+fb,z1-a],[x0+k,z1-a,x0+fb,z1],[x0+fb,z1-fb,x1,z1]],y,h:e,col:'balda'}];}}],
       huecos:c=>({zCaja:c.F,zBalda:0,yHueco:c.A-c.t})},
     placap:{lab:'Bajo placa puertas',pendiente:false,piezas:[
       base('22-09-2026',{L:1,A:2},'por debajo de los costados, 53 de fondo; sin canto atrás (trasera clavada)'),...costados('18-09-2026'),
       canto('palDel','delantero, arriba, enrasado al frente','22-09-2026',(c,e)=>({x:c.tL,y:c.A-c.C.paleton,z:0,w:c.Wi,h:c.C.paleton,d:e,obst:[c.A-c.C.paleton,c.A,0,e]})),
       canto('palTras','trasero, arriba, remetido a 53','22-09-2026',(c,e)=>({x:c.tL,y:c.A-c.C.paleton,z:c.Fb-e,w:c.Wi,h:c.C.paleton,d:e})),
-      trasera({pos:'entera, clavada a la testa de la base y al paletón trasero, en ranura en los costados',estado:'confirmado',fecha:'22-09-2026',
+      trasera({pos:'entera, clavada a la testa de la base y al paletón trasero (2 mm menos a lo alto), en ranura en los costados',estado:'confirmado',fecha:'24-09-2026',
         corte:c=>({largo:c.A-c.C.traseraClavadaRebaje,ancho:c.trAncho}),cajas:c=>[trasVista(c,0,c.A,c.Fb)]}),
       balda('22-09-2026')],
       huecos:c=>({zCaja:c.Fb-c.th('palTras'),zBalda:c.Fb,yHueco:c.A-c.t})},
+    // Lote X1 (24-09-2026, Álvaro): el paletón trasero de arriba va ENRASADO ATRÁS (como en el fregadero); solo en el
+    // placa puertas va remetido a 53, para clavarle la trasera junto con la testa de la base.
     placa:{lab:'Bajo placa gavetas/cajones',pendiente:false,piezas:[
       base('22-09-2026',{L:2,A:2},'por debajo de los costados, 53 de fondo'),...costados('18-09-2026'),
-      canto('palTras','trasero, arriba, remetido a 53','22-09-2026',(c,e)=>({x:c.tL,y:c.A-c.C.paleton,z:c.Fb-e,w:c.Wi,h:c.C.paleton,d:e})),
+      canto('palTras','trasero, arriba, enrasado atrás','24-09-2026',(c,e)=>({x:c.tL,y:c.A-c.C.paleton,z:c.F-e,w:c.Wi,h:c.C.paleton,d:e})),
       canto('refuerzo','refuerzo de pie sobre el final de la base','22-09-2026',(c,e)=>({x:c.tL,y:c.tb,z:c.Fb-e,w:c.Wi,h:c.C.refuerzo,d:e})),
       plano('travPlaca','delantero, tumbado, cara de arriba a 15 del canto superior, remetido 3','22-09-2026',(c,e)=>{const yT=c.A-c.C.placaTravY;
         return {x:c.tL,y:yT-e,z:c.C.placaTravRemetido,w:c.Wi,h:e,d:c.C.travesano,obst:[yT-e,yT,c.C.placaTravRemetido,c.C.placaTravRemetido+c.C.travesano]};})],
-      huecos:c=>({zCaja:c.Fb-c.th('palTras'),zBalda:c.Fb-c.th('refuerzo'),yHueco:c.A-c.t})},
-    // Placa horno: sin gola el horno va ARRIBA y el cajón abajo (balda fija con la cara inferior a 60/45 del canto
-    // superior, trasera solo abajo). Con gola el horno va ABAJO y el cajón arriba (Álvaro, 22-09-2026): la balda fija
-    // se mide igual pero desde el canto inferior del casco [supuesto: mismo hueco libre 60 − t] y la trasera pasa arriba,
-    // de la balda fija al paletón trasero [supuesto]. c.yB = cara inferior de la balda fija en los dos casos.
+      huecos:c=>({zCaja:c.F-c.th('palTras'),zBalda:c.Fb-c.th('refuerzo'),yHueco:c.A-c.t})},
+    // Placa horno: sin gola el horno va ARRIBA y el cajón abajo: balda fija con la cara inferior a hueco + t del canto
+    // superior (61,6 con 16), trasera solo abajo, de la base a la balda fija. Con gola el horno va ABAJO y el cajón arriba
+    // (Álvaro, 22-09-2026): el horno apoya en la base del mueble, la balda fija queda a hueco + base del canto inferior y
+    // NO LLEVA TRASERA (Álvaro, 24-09-2026: solo la lleva cuando el cajón va abajo). c.yB = cara inferior de la balda fija.
     placah:{lab:'Bajo placa horno',pendiente:false,piezas:[
-      base('22-09-2026',{L:1,A:2},'por debajo de los costados, 53 de fondo; sin canto atrás (trasera clavada)'),...costados('18-09-2026'),
-      canto('palTras','trasero, arriba, remetido a 53','22-09-2026',(c,e)=>({x:c.tL,y:c.A-c.C.paleton,z:c.Fb-e,w:c.Wi,h:c.C.paleton,d:e})),
-      // Con gola en un bajo de 70 la balda fija (a 60) tropieza con el paletón trasero (58–70): se queda delante de él,
-      // fondo 53 − t [supuesto]. En 75 y 80 no pasa y va a 53 como la base.
-      {id:'baldaFija',nombre:'Balda fija',pos:'plana, fondo 53, cara inferior a 60/45 del canto superior (con gola: del inferior); sostiene el horno',estado:'confirmado',fecha:'22-09-2026',ud:1,grosor:'t',
+      base('24-09-2026',c=>c.hornoAbajo?{L:2,A:2}:{L:1,A:2},c=>c.hornoAbajo?'por debajo de los costados, 53 de fondo; 4 cantos (con gola no hay trasera)':'por debajo de los costados, 53 de fondo; sin canto atrás (trasera clavada)'),...costados('18-09-2026'),
+      canto('palTras','trasero, arriba, enrasado atrás','24-09-2026',(c,e)=>({x:c.tL,y:c.A-c.C.paleton,z:c.F-e,w:c.Wi,h:c.C.paleton,d:e})),
+      // Balda fija a 53 de fondo como la base: con el paletón trasero atrás del todo (Lote X1) no tropiezan ni con gola.
+      {id:'baldaFija',nombre:'Balda fija',pos:c=>`plana, fondo 53, cara inferior a ${fmtCm(c.hornoAbajo?c.yB:c.A-c.yB)} del canto ${c.hornoAbajo?'inferior':'superior'} (hueco libre ${fmtCm(c.hueco)}); sostiene el horno`,estado:'confirmado',fecha:'24-09-2026',ud:1,grosor:'t',
         corte:c=>({largo:c.Wi,ancho:fondoBaldaFija(c)}),cantos:{L:1,A:0},
         cajas:c=>{const e=c.th('baldaFija');return [{x:c.tL,y:c.yB,z:0,w:c.Wi,h:e,d:fondoBaldaFija(c),col:'balda',obst:[c.yB,c.yB+e,0,fondoBaldaFija(c)]}];}},
-      // Alto de corte: alto que cubre (base + balda fija = A − h + t) − 2, por la misma regla que la trasera entera del
-      // placa puertas [supuesto: Álvaro solo confirmó el −2 para la entera]. Pendiente de confirmar antes de cortar.
-      trasera({pos:'solo abajo, de la base a la balda fija; clavada a las dos y en ranura en los costados',estado:'supuesto',fecha:'22-09-2026',
-        cuando:c=>!c.hornoAbajo,corte:c=>({largo:c.yB+c.th('baldaFija')-c.C.traseraClavadaRebaje,ancho:c.trAncho}),
-        cajas:c=>[trasVista(c,0,c.yB+c.th('baldaFija'),c.Fb)]}),
-      trasera({pos:'solo arriba (con gola), de la balda fija al paletón trasero; clavada a los dos y en ranura en los costados',estado:'supuesto',fecha:'22-09-2026',
-        cuando:c=>c.hornoAbajo,corte:c=>({largo:c.A-c.yB-c.C.traseraClavadaRebaje,ancho:c.trAncho}),
-        cajas:c=>[trasVista(c,c.yB,c.A-c.yB,c.Fb)]})],
-      // Con gola el cajón queda a la altura del paletón trasero (remetido a 53): la caja se limita a Fb − t, como en el placa gavetas.
-      huecos:c=>({zCaja:c.hornoAbajo?c.Fb-c.th('palTras'):c.Fb,zBalda:c.Fb,yHueco:c.hornoAbajo?c.A-c.t:c.yB})},
+      // Alto de corte (Álvaro, 24-09-2026): alto del mueble − hueco del horno − 2 mm (75 con horno 60 → 14,8 → 148), que es
+      // la base más la balda fija menos el rebaje de trasera clavada. Solo cuando el cajón va abajo (sin gola).
+      trasera({pos:'solo abajo, de la base a la balda fija; clavada a las dos (2 mm menos a lo alto) y en ranura en los costados',estado:'confirmado',fecha:'24-09-2026',
+        cuando:c=>!c.hornoAbajo,corte:c=>({largo:c.A-c.hueco-c.C.traseraClavadaRebaje,ancho:c.trAncho}),
+        cajas:c=>[trasVista(c,0,c.yB+c.th('baldaFija'),c.Fb)]})],
+      // Fondo de las cajas: hasta el paletón trasero (atrás del todo); las guías van en los costados, no en la base.
+      huecos:c=>({zCaja:c.hornoAbajo?c.F-c.th('palTras'):c.Fb,zBalda:c.Fb,yHueco:c.hornoAbajo?c.A-c.t:c.yB})},
     // Altos, columnas, semicolumnas, sobrefrigos, sobreencimeras: construcción pendiente de Álvaro. Casco genérico solo
     // para el dibujo (costados enteros, suelo y techo entre ellos, trasera enrasada atrás): TODO [supuesto], no se corta.
     // Sin `id`: sus piezas no se pueden eliminar ni pasar a material de puerta (Lote R5).
@@ -1767,11 +1785,12 @@ const CONSTR=(()=>{
 function constrCtx(sp){
   const C=R3D_CTE,t=sp.gros,A=sp.alt,W=sp.anc,F=sp.fon,Fb=r3dFondoBase(sp);
   const hueco=C.hornoHueco[sp.horno]||C.hornoHueco['60'],hornoAbajo=sp.tipo==='placah'&&!!sp.hornoAbajo;
-  // Balda fija del horno: cara inferior a `hueco` del canto superior (horno arriba) o del canto inferior (horno abajo, gola)
-  const yB=sp.tipo!=='placah'?0:(hornoAbajo?Math.min(A-t-1,hueco):Math.max(t+1,A-hueco));
   // Lote R5 — piezas cambiadas en el 3D: pz = {clave: 'x' eliminada | 'p' material de puerta}. g = grosor de la puerta (cm).
   const pz=sp.piezas||{},g=sp.gPuerta||GROSOR_PIEZA_PUERTA/10,th=id=>(id&&pz[id]==='p')?g:t;
   const tL=th('cI'),tR=th('cD'),tb=th('base'),bx0=pz.cI==='p'?g:0;
+  // Balda fija del horno (Lote X1, 24-09-2026): hueco LIBRE de `hueco` → cara inferior de la balda a hueco + t del canto
+  // superior (horno arriba, apoya en la balda) o a hueco + base del canto inferior (horno abajo con gola, apoya en la base).
+  const yB=sp.tipo!=='placah'?0:(hornoAbajo?Math.min(A-t-1,tb+hueco):Math.max(t+1,A-hueco-t));
   // Lote R6 — bajo rincón recto: ciego de ancho W − puertas − 11,6 (cW, 0 si no hay puertas con ancho), del lado de las
   // bisagras (cDer), en x = cX. xLo / xHi = hueco libre entre costados (y ciego) para las cajas de cajón.
   const rin=sp.tipo==='rinRec'?sp.rin:null,cDer=!rin||rin.der;
@@ -1779,7 +1798,7 @@ function constrCtx(sp){
   // de la trasera izquierda (las dos remetidas 5), nB = nº de baldas.
   const H=sp.tipo==='rinEsc'?(sp.escH||F):F,trE=sp.tr||grosorTrasera('')/10;
   const cW=rin&&rin.pw>0?Math.max(0,Math.min(r1(W-rin.pw-RIN_CIEGO_DESC),W-tL-tR)):0;
-  return {A,W,F,Fb,t,tr:sp.tr||grosorTrasera('')/10,yB,hornoAbajo,fonBalda:fondoBaldaMueble(sp.fam,F,!!sp.rincon),C,
+  return {A,W,F,Fb,t,tr:sp.tr||grosorTrasera('')/10,yB,hornoAbajo,hueco,fonBalda:fondoBaldaMueble(sp.fam,F,!!sp.rincon),C,
     pz,g,th,tL,tR,tb,Wi:W-tL-tR,bx0,bW:W-bx0-(pz.cD==='p'?g:0),trAncho:W-Math.max(tL,tR),tTop:Math.max(th('palDel'),th('palTras')),
     cW,cDer,cX:cDer?W-tR-cW:tL,xLo:(cW>0&&!cDer)?tL+cW:tL,xHi:(cW>0&&cDer)?W-tR-cW:W-tR,
     H,zb:H-C.traseraRemetida-trE,xi:C.traseraRemetida+trE,nB:sp.nBaldas||0, // Lote R7
@@ -1836,14 +1855,16 @@ function textoPiezasDesc(pz){
 }
 // Aviso destacado de la hoja de producción (línea del mueble).
 function avisoPiezasHoja(l){
-  const pz=l&&l.meta&&l.meta.piezas;if(!pz)return '';
-  const ks=Object.keys(pz);if(!ks.length)return '';
+  // Lote X1 (24-09-2026): puerta de arriba de la columna/semicolumna horno/micro con gola → SIN gola, push to open.
+  const avPush=(l&&l.meta&&l.meta.push)?`<div style="margin-top:3px;padding:3px 6px;border:2px solid #c0392b;background:#fdecea;color:#8b0000;font-weight:900;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact">⚠️ PUERTA DE ARRIBA SIN GOLA · APERTURA PUSH TO OPEN (el micro impide el perfil)</div>`:'';
+  const pz=l&&l.meta&&l.meta.piezas;if(!pz)return avPush;
+  const ks=Object.keys(pz);if(!ks.length)return avPush;
   const p=ks.filter(k=>pz[k]==='p'),x=ks.filter(k=>pz[k]==='x');
   const sp=r3dSpecLinea(l),g=sp?Math.round(sp.gPuerta*10):GROSOR_PIEZA_PUERTA;
   const cost=p.some(k=>k==='cI'||k==='cD'),partes=[];
   if(p.length)partes.push(`EN MATERIAL DE PUERTA (${g} mm${cost?'; costado visto integrado hasta el suelo, 4 cantos, base interior en ese lado':''}): ${p.map(etqPieza).join(', ')}`);
   if(x.length)partes.push(`ELIMINADAS, NO FABRICAR: ${x.map(etqPieza).join(', ')}`);
-  return `<div style="margin-top:3px;padding:3px 6px;border:2px solid #c0392b;background:#fdecea;color:#8b0000;font-weight:900;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact">⚠️ PIEZAS DEL CASCO · ${esc(partes.join(' · '))}</div>`;
+  return avPush+`<div style="margin-top:3px;padding:3px 6px;border:2px solid #c0392b;background:#fdecea;color:#8b0000;font-weight:900;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact">⚠️ PIEZAS DEL CASCO · ${esc(partes.join(' · '))}</div>`;
 }
 
 // ═════════════════════ DESPIECE DEL CASCO (Lote D1, 22-09-2026) · sin pantalla todavía ═════════════════════
@@ -1877,7 +1898,7 @@ function despieceCasco(sp,ud,ref){
     const m=pz.corte(c),esTr=pz.grosor==='tr';
     ['','p'].forEach(st=>{
       const cant=uds.filter(u=>u===st).length;if(!cant)return;
-      const enP=st==='p',can=(enP&&pz.cantosPuerta)||pz.cantos;
+      const enP=st==='p';let can=(enP&&pz.cantosPuerta)||pz.cantos;if(typeof can==='function')can=can(c); // Lote X1
       const p={cantidad:cant*n,descripcion:`${pz.nombre}${enP?' (material de puerta)':''} · ${mueble}`,largo:DESPIECE_MM(m.largo),ancho:DESPIECE_MM(m.ancho),
         grueso:enP?Math.round(c.g*10):(esTr?out.tr:out.gros),material:enP?(sp.matPuerta||'Material de puerta'):out.material,caras:0,cantosL:can.L,cantosA:can.A,
         pieza:pz.nombre,pos:enP?(pz.posPuerta||posPieza(pz,c))+' · EN MATERIAL DE PUERTA':posPieza(pz,c),estado:pz.estado,mueble,lineaId:ref!=null?ref:null,enPuerta:enP};
@@ -1967,7 +1988,10 @@ function r3dSpec(o){
     // con gola el horno va abajo y el cajón arriba (Álvaro, 22-09-2026). La construcción sigue al proyecto, no a la línea.
     colorArm:o.colorArm!=null?o.colorArm:(S.colorArm||''),tr:grosorTrasera(o.colorArm!=null?o.colorArm:S.colorArm)/10,
     pataAlto:+(o.patas||S.patas)||R3D_CTE.pataAlto,hornoAbajo:tipo==='placah'&&!!(o.cfg&&o.cfg.t==='gola'),
-    puertas:(o.puertas||[]).map(p=>({alto:+p.alto||0,ancho:+p.ancho||0,mano:p.mano||'D',tir:p.tir!=='off'&&(p.mano||'D')!=='FF'})),
+    puertas:(o.puertas||[]).map(p=>({alto:+p.alto||0,ancho:+p.ancho||0,mano:p.mano||'D',tir:p.tir!=='off'&&(p.mano||'D')!=='FF'&&!o.push})), // Lote X1: puerta push sin gola
+    // Lote X1: columna horno/micro → gavetas abajo, hueco del horno y del micro en medio y la puerta arriba (el casco de la
+    // columna sigue pendiente de construcción: el hueco se dibuja vacío)
+    colHorno:esColHornoMicro(o.arm,o.hoja)&&o.arm.fam==='Columnas',
     // Lote R3: en el dibujo los cajones van siempre arriba y las gavetas abajo (regla confirmada 18-09-2026), en el orden
     // de entrada dentro de cada tipo. La numeración F1, F2… del desglose no cambia: solo reordena el dibujo.
     frentes:(o.frentes||[]).map(f=>({alto:+f.alto||0,ancho:+f.ancho||0,tipo:f.tipo||'CJ',fondo:f.fondo||'F50',tir:f.tir!=='off',ss:(f.tipo||'CJ')==='GV'&&f.ss==='on'}))
@@ -2012,6 +2036,7 @@ function r3dSpecFormulario(){
   return r3dSpec({arm:SEL,hoja:MHOJA,alt:document.getElementById('mAlt').value,anc:document.getElementById('mAnc').value,
     fon:document.getElementById('mFon').value,puertas:MPuertas,frentes:MFrentesCJ,cfg:isBajo(SEL)?S.tb:S.ta,tar:tarEfectiva(),modCaj:S.modCaj,gros:S.gros,sinFrentes:MFRCLI,
     horno:MHORNO,nBaldas:nBaldasMueble(metaBaldasFormulario()), // Lote R3
+    push:esPushColHorno(), // Lote X1
     piezas:MPIEZAS,cvt:(MODELOS[MMODELO]&&MODELOS[MMODELO].cvt)||TCVT[S.tar]||null,matPuerta:matPuertaTxt(S.tar,MODELOS[MMODELO]&&MODELOS[MMODELO].colorPuerta)}); // Lote R5
 }
 // Spec desde la meta de una línea ya presupuestada (botón 🧊 de Proyectos).
@@ -2022,6 +2047,7 @@ function r3dSpecLinea(l){
   return r3dSpec({arm,hoja,alt:m.alt,anc:(isRin(arm)&&m.anchoReal)||m.anc,fon:m.fon,regletaAncho:m.regleta&&m.regleta.ancho,abrePrimero:m.abrePrimero,/* Lote R6: ancho real · R7 */puertas:m.mPuertas||[],frentes:m.mFrentesCJ||[],
     cfg:isBajo(arm)?m.tb:m.ta,tar:m.tarifa,modCaj:m.modCaj||S.modCaj,gros:S.gros,sinFrentes:!!m.frentesCliente,
     horno:m.horno,nBaldas:nBaldasMueble(m), // Lote R3
+    push:!!m.push, // Lote X1
     // Lote R5 — CVT y color de puerta del modelo de la línea (como la regleta)
     piezas:m.piezas,cvt:((MODELOS[m.modeloId]||MODELOS[0]||{}).cvt)||TCVT[m.tarifaModelo||m.tarifa]||null,
     matPuerta:matPuertaTxt(m.tarifaModelo||m.tarifa,(MODELOS[m.modeloId]||MODELOS[0]||{}).colorPuerta)});
@@ -2072,8 +2098,8 @@ function r3dPiezas(sp,conFrentes,est){
   const lleva=sp.admiteTir, esGola=lleva&&sp.tg.t==='gola', esTir=lleva&&sp.tg.t==='tirador';
   const reservaGola=f=>(esGola&&f.tir)?C.golaAlto:0; // hueco del perfil gola encima del frente
   const nVacios=sp.frentes.filter(f=>!f.alto).length;
-  const desdeAbajo=esPlacaH&&!hornoAbajo; // Lote D1
-  const libre=Math.max(0,(desdeAbajo?yB:A-(hornoAbajo?yB:0))-sp.frentes.reduce((s,f)=>s+f.alto+reservaGola(f),0));
+  const desdeAbajo=(esPlacaH&&!hornoAbajo)||!!sp.colHorno; // Lote D1 · X1 (columna horno/micro: gavetas abajo)
+  const libre=Math.max(0,(desdeAbajo?(sp.colHorno?A:yB):A-(hornoAbajo?yB:0))-sp.frentes.reduce((s,f)=>s+f.alto+reservaGola(f),0));
   const altoAuto=nVacios?Math.max(C.cajAltoMin,libre/nVacios):0;
   const colHerr=r3dColorHerraje(sp.tg.c);
   // gola encima del elemento (fija al casco) / tirador en su borde superior (gira o se desplaza con la puerta o el frente)
@@ -2592,8 +2618,8 @@ function r3dCaption(sp){
   if(sp.tipo==='fregadero')t+=` · base ${fmtCm(r3dFondoBase(sp))} cm · sin trasera`;
   // Lote R3 — bajos placa
   if(sp.tipo==='placap')t+=` · base ${fmtCm(r3dFondoBase(sp))} cm · trasera ${trMm} mm clavada a ${fmtCm(r3dFondoBase(sp))}`;
-  if(sp.tipo==='placa')t+=` · base ${fmtCm(r3dFondoBase(sp))} cm · sin trasera · travesaño delantero a ${R3D_CTE.placaTravY} del canto`;
-  if(sp.tipo==='placah'){const h=R3D_CTE.hornoHueco[sp.horno]||60;t+=` · base ${fmtCm(r3dFondoBase(sp))} cm · horno ${sp.horno} ${sp.hornoAbajo?'abajo (gola)':'arriba'} (hueco libre ${fmtCm(h-sp.gros)})`;}
+  if(sp.tipo==='placa')t+=` · base ${fmtCm(r3dFondoBase(sp))} cm · sin trasera · paletón trasero enrasado atrás · travesaño delantero a ${R3D_CTE.placaTravY} del canto`;
+  if(sp.tipo==='placah'){const h=R3D_CTE.hornoHueco[sp.horno]||60;t+=` · base ${fmtCm(r3dFondoBase(sp))} cm · horno ${sp.horno} ${sp.hornoAbajo?'abajo (gola, sin trasera)':'arriba'} (hueco libre ${fmtCm(h)})`;} // Lote X1
   if(sp.nBaldas>0&&sp.tipo!=='placah')t+=` · ${sp.nBaldas} balda${sp.nBaldas>1?'s':''}`;
   if(sp.sinFrentes)t+=' · puertas y frentes del cliente';
   // Lote R5 — piezas cambiadas
@@ -3840,7 +3866,12 @@ function setGros(v,btn){
 function setModCaj(v,btn){pill(btn,['bModIATIRA','bModAVYOU']);S.modCaj=v;if(SEL&&!isRin(SEL))cp();} // Lote R1: refresca desglose y vista 3D
 // Lote D1 (22-09-2026) — color de armazón (nombre exacto del catálogo de corte) y alto de patas del proyecto. Sin precio:
 // solo cambian la trasera (grosor y material del despiece) y el dibujo 3D, que se refresca si hay un mueble en el modal.
-function setColorArm(v){S.colorArm=tableroCatalogo(v)?v:'';pintarColorArm();if(SEL&&!isRin(SEL))cp();}
+function setColorArm(v){const prev=S.colorArm||'';S.colorArm=tableroCatalogo(v)?v:'';
+  // Lote X1 (24-09-2026, Álvaro): el color global rellena el «Color armazón (info)» de cada modelo que esté vacío o siga
+  // con el valor global anterior; lo tecleado a mano en un modelo se respeta.
+  (typeof MODELOS!=='undefined'?MODELOS:[]).forEach(m=>{if(!m.colorArmazon||m.colorArmazon===prev)m.colorArmazon=S.colorArm;});
+  const inp=document.getElementById('mdlColArmazon');if(inp&&typeof MODELOS!=='undefined'&&MODELOS[MFOCO])inp.value=MODELOS[MFOCO].colorArmazon||'';
+  pintarColorArm();if(SEL&&!isRin(SEL))cp();}
 function setPatas(v,btn){S.patas=PATAS_ALTOS.includes(String(v))?String(v):'10';if(btn)pill(btn,['bPat10','bPat15']);else pintarPatas();if(SEL&&!isRin(SEL))cp();}
 function pintarColorArm(){
   const sel=document.getElementById('selColorArm');if(!sel)return;
@@ -4163,7 +4194,7 @@ const ARBOL_MUEBLES=(()=>{
       {id:'caldera',lab:'Columna caldera',filtro:colNom('Col.Caldera')},
       {id:'escobero',lab:'Columna escobero',filtro:colReg,ops:[
         {id:'sinbaldas',lab:'Columna escobero sin baldas'},{id:'medias',lab:'Columna escobero medias baldas'},{id:'interior',lab:'Columna escobero armazón interior'}]},
-      {id:'horno',lab:'Columna horno/micro',filtro:colReg},
+      {id:'horno',lab:'Columna horno/micro',filtro:colReg,arranque:'COLHORNO'}, // Lote X1: 2 gavetas + horno + micro + puerta
       {id:'rincon',lab:'Columna rincón',filtro:colNom('Col.Rinc.'),ops:[
         {id:'recto',lab:'Columna rincón recto',filtro:colNom('Col.Rinc.Recto')},
         {id:'escuadra',lab:'Columna rincón escuadra',filtro:colNom('Col.Rinc.Esc')},
@@ -4318,7 +4349,7 @@ function altoPuertaDefecto(arm,altoArm){
   // Lote U2 (23-09-2026, Álvaro): también columnas y semicolumnas (no rincón) con gola de bajos. Llevan UNA gola y sus
   // puertas suman el alto − 3, el hueco de apertura: Columna A.205 → 202 (2 puertas de 101). El perfil mide 57 de alto
   // × 25 de grueso; el hueco visto es de 3 cm y cada puerta monta unos 1,4 cm sobre el perfil para poder tirar de ella.
-  const golaBajo=S.tb.t==='gola'&&!!arm&&(esBajoFam(arm)||esColumnaFam(arm))&&!isRin(arm);
+  const golaBajo=S.tb.t==='gola'&&!!arm&&(esBajoFam(arm)||esColumnaFam(arm))&&!isRin(arm)&&!esColHornoMicro(arm,MHOJA); // Lote X1: la puerta de arriba de la columna horno/micro va sin gola
   return golaBajo?altoArm-REBAJE_PUERTA_GOLA:altoArm;
 }
 // Lote P — medidas "por defecto" vigentes de puertas/frentes en el modal regular. Al teclear alto/ancho
@@ -4475,11 +4506,12 @@ let MPIEZAS={}; // Lote R5: piezas del casco cambiadas en el 3D del mueble en cu
 // meta.tarifa guarda la tarifa efectiva ("Sin puerta") para que gola, tiradores y hoja de tiradores lo excluyan solos;
 // meta.tarifaModelo guarda la real para restaurar S.tar al editar.
 let MFRCLI=false;
-// Lote R3 (22-09-2026) — bajo placa horno: alto del horno ('60' | '45'). El hueco del horno se mide desde el canto superior
-// del casco hasta la cara INFERIOR de la balda fija que lo sostiene (60 → hueco libre 58,4 con tablero de 16). El frente
-// de abajo mide alto del mueble − hueco (75 → cajón de 15; horno 45 → gaveta de 30); con gola se le quitan además los 3 cm.
-// Lote D1 (22-09-2026, Álvaro): CON GOLA el horno va ABAJO y el cajón ARRIBA; el hueco se mide entonces desde el canto
-// inferior del casco a la cara inferior de la balda fija [supuesto] y el frente (alto − hueco − 3) queda encima.
+// Lote R3 (22-09-2026) — bajo placa horno: alto del horno ('60' | '45'). Lote X1 (24-09-2026, Álvaro): el hueco es el
+// LIBRE (60 / 45 exactos); el horno apoya en la balda fija (horno arriba) o en la base del mueble (horno abajo, con gola),
+// así que la cara inferior de la balda fija queda a hueco + t (61,6 con 16). El frente que tapa el horno mide 60 / 45
+// (el horno lleva una pestaña de 16 mm que cubre la balda) y el otro frente mide alto del mueble − hueco (75 → cajón de
+// 15; horno 45 → gaveta de 30); con gola se le quitan además los 3 cm.
+// Lote D1 (22-09-2026, Álvaro): CON GOLA el horno va ABAJO y el cajón ARRIBA (alto − hueco − 3), y el casco no lleva trasera.
 const HORNO_HUECO={'60':60,'45':45};
 let MHORNO='60';
 function frenteHornoIni(altoArm){
@@ -4488,14 +4520,21 @@ function frenteHornoIni(altoArm){
   return {alto:alto||'',ancho:MDEF.ancho,tir:'on',tipo:MHORNO==='45'?'GV':'CJ',fondo:'F50',ss:'off'};
 }
 function esHojaHorno(){return !!(MHOJA&&MHOJA.subId==='placah');}
+// Lote X1 (24-09-2026) — columna o semicolumna HORNO/MICRO (subfamilia 'horno' del árbol, no rincón). Su puerta de arriba
+// nunca lleva gola; con cocina de gola se abre con push to open (esPushColHorno) y no suma metros de gola.
+function esColHornoMicro(arm,hoja){return !!arm&&esColumnaFam(arm)&&!isRin(arm)&&!!hoja&&hoja.subId==='horno';}
+function esPushColHorno(){return esColHornoMicro(SEL,MHOJA)&&S.tb.t==='gola'&&admiteTirador(tarEfectiva());}
+function precioPushPuerta(){const it=VR.find(v=>v.n===PUSH_PUERTA_NOM);return it?+it.p:0;}
+// Gaveta de arranque de la columna horno/micro (alto fijo: la puerta de arriba se calcula con lo que queda).
+function gavetaColHornoIni(){return {alto:S.tb.t==='gola'?COL_HORNO_GAVETA_GOLA:COL_HORNO_GAVETA,ancho:MDEF.ancho,tir:'on',tipo:'GV',fondo:'F50',ss:'off'};}
 function pintarHornoUI(){
   const box=document.getElementById('hornoBox');if(!box)return;
   const ver=esHojaHorno()&&SEL&&!isRin(SEL);box.style.display=ver?'flex':'none';
   document.querySelectorAll('#hornoTgg .tgb').forEach((b,i)=>b.classList.toggle('on',(i===1)===(MHORNO==='45')));
   const inf=document.getElementById('hornoInfo');
   if(inf&&ver){const alt=+document.getElementById('mAlt').value||SEL.alt,g=(+S.gros||16)/10,h=HORNO_HUECO[MHORNO],gola=S.tb.t==='gola'; // Lote D1
-    inf.textContent=gola?`Con gola: horno ABAJO y cajón arriba · balda fija a ${h} del canto inferior · hueco libre ${fmtCm(r1(h-g))} · frente de arriba ${fmtCm(Math.max(0,r1(alt-h-REBAJE_PUERTA_GOLA)))}`
-      :`Balda fija a ${h} del canto superior · hueco libre ${fmtCm(r1(h-g))} · frente de abajo ${fmtCm(Math.max(0,r1(alt-h)))}`;}
+    inf.textContent=gola?`Con gola: horno ABAJO y cajón arriba · sin trasera · hueco libre ${h} · balda fija a ${fmtCm(r1(h+g))} del canto inferior · frente de arriba ${fmtCm(Math.max(0,r1(alt-h-REBAJE_PUERTA_GOLA)))}`
+      :`Hueco libre ${h} · balda fija a ${fmtCm(r1(h+g))} del canto superior · frente de abajo ${fmtCm(Math.max(0,r1(alt-h)))}`;} // Lote X1
 }
 function setHorno(v){
   MHORNO=v==='45'?'45':'60';
@@ -4580,12 +4619,14 @@ function selA(id,card){
     MFORMA='ninguna';document.getElementById('mDFD').value='';document.getElementById('mDFI').value='';pintarFormaTgg('m','ninguna');
     const gi=document.getElementById('gInfo');gi.style.display=isGB?'block':'none';if(isGB)gi.textContent='🔧 Gola bajos: armazón se cobra como 75 (aunque sea de 80) · puerta 77 → tramo 90 sin recargo · la gola se suma sola en el presupuesto';
     if(!isGB&&S.tb.t==='gola'&&puertasApiladas(SEL)){gi.style.display='block';gi.textContent='🔧 Gola: una sola por columna · las puertas suman el alto − 3 (hueco de apertura; P1 abajo a 157) · la gola se suma sola en el presupuesto';} // Lote U2
+    if(esColHornoMicro(SEL,MHOJA)){gi.style.display='block';gi.textContent=S.tb.t==='gola'?`🔧 Columna horno/micro con gola: gavetas de ${fmtCm(COL_HORNO_GAVETA_GOLA)} + 3 de hueco cada una · horno ${COL_HORNO_HUECO} y micro ${COL_MICRO_HUECO} · la puerta de arriba va SIN gola, con apertura PUSH TO OPEN (se suma sola en Varios)`:`🔧 Columna horno/micro: gavetas de ${COL_HORNO_GAVETA} · horno ${COL_HORNO_HUECO} y micro ${COL_MICRO_HUECO} · la puerta de arriba se queda con el resto`;} // Lote X1
     MDEF={alto:altoPuertaDefecto(SEL,altoArm0),ancho:SEL.anc}; // Lote P
     // Lote Q: frentes de arranque según la subfamilia (gavetero → 1 gaveta; placa / placa horno → 2 gavetas).
     const gvIni=()=>({alto:'',ancho:MDEF.ancho,tir:'on',tipo:'GV',fondo:'F50',ss:'off'});
     if(MHOJA.arranque==='GV'){MPuertas=[];MFrentesCJ=[gvIni()];}
     else if(MHOJA.arranque==='GV2'){MPuertas=[];MFrentesCJ=[gvIni(),gvIni()];}
     else if(MHOJA.arranque==='HORNO'){MHORNO='60';MPuertas=[];MFrentesCJ=[frenteHornoIni(altoArm0)];} // Lote R3: placa horno → 1 cajón bajo el horno
+    else if(MHOJA.arranque==='COLHORNO'){MPuertas=puertasArranque(SEL,SEL.anc);MFrentesCJ=[gavetaColHornoIni(),gavetaColHornoIni()];} // Lote X1: columna horno/micro → 2 gavetas abajo + puerta arriba
     else{MPuertas=puertasArranque(SEL,SEL.anc);MFrentesCJ=[];} // Lote U · W1: doble desde 61; columnas 2 filas (P1 abajo 160)
     MPUERTAS_ARR=!['GV','GV2','HORNO'].includes(MHOJA.arranque);repartirPuertas(); // Lote U: puertas rellenas con su medida
     if(MHOJA.arranque!=='HORNO')MHORNO='60';
@@ -4678,7 +4719,7 @@ function puertasApiladas(arm){return !!arm&&esColumnaFam(arm)&&!isRin(arm);}
 function puertasArranque(arm,anc){
   const nueva=m=>({alto:'',ancho:'',tir:'on',mano:m});
   const doble=!!arm&&((+anc)||arm.anc)>=ANCHO_DOBLE_PUERTA;
-  if(puertasApiladas(arm)){const m=doble?'2':'D';return arm.fam==='Columnas'?[nueva(m),nueva(m)]:[nueva(m)];}
+  if(puertasApiladas(arm)){const m=doble?'2':'D';return (arm.fam==='Columnas'&&!esColHornoMicro(arm,MHOJA))?[nueva(m),nueva(m)]:[nueva(m)];} // Lote X1: la columna horno/micro solo lleva la puerta de arriba
   if(MHOJA&&MHOJA.abatible)return [nueva('AB')];
   return [nueva(doble&&!isRin(arm)&&!(MHOJA&&MHOJA.forma)?'2':'D')];
 }
@@ -4697,10 +4738,18 @@ function repartirPuertas(excepto){
     let usado=0;
     auto.forEach((i,k)=>{const w=peso(MPuertas[i]),v=k<auto.length-1?r1(resto/pesoAuto):r1((resto-usado)/w);usado+=v*w;poner(i,campo,v);});
   };
-  if(puertasApiladas(SEL)){
+  if(puertasApiladas(SEL)&&esColHornoMicro(SEL,MHOJA)&&SEL.fam==='Columnas'){
+    // Lote X1 (24-09-2026): columna horno/micro → la puerta (de arriba) se queda con lo que dejan las gavetas (con gola, cada
+    // una + 3 de hueco), el hueco del horno y el del micro. A.205 sin gola: 205 − 60 − 60 − 40 = 45; con gola: 205 − 65 − 100 = 40.
+    const gola=S.tb.t==='gola';
+    const ocupado=MFrentesCJ.reduce((s,f)=>s+(+f.alto||0)+((gola&&f.tir!=='off')?REBAJE_PUERTA_GOLA:0),0)+COL_HORNO_HUECO+COL_MICRO_HUECO;
+    const resto=r1(Math.max(0,A-ocupado));
+    MPuertas.forEach((p,i)=>{if(!p._mA)poner(i,'alto',resto);if(!p._mW)poner(i,'ancho',r1(W/hojas(p)));});
+  } else if(puertasApiladas(SEL)){
     // Lote W1: columna con 2 filas o más → P1 (abajo) a COL_PUERTA_BAJA (con gola, − 3 → 157) si no está tecleada;
     // las demás se reparten el resto. Si no cabe (columna rara), reparto a partes iguales como antes.
-    const baja=altoPuertaDefecto(SEL,COL_PUERTA_BAJA);
+    // Lote X1: columna caldera → P1 a COL_CALDERA_PUERTA_BAJA (80; 77 con gola).
+    const baja=altoPuertaDefecto(SEL,(MHOJA&&MHOJA.subId==='caldera')?COL_CALDERA_PUERTA_BAJA:COL_PUERTA_BAJA);
     const fijaBaja=SEL.fam==='Columnas'&&MPuertas.length>1&&!MPuertas[0]._mA&&baja<A;
     if(fijaBaja){poner(0,'alto',baja);MPuertas[0]._mA=true;}
     try{repartir('alto','_mA',A,fila);}finally{if(fijaBaja)MPuertas[0]._mA=false;}
@@ -4795,10 +4844,12 @@ function cp(){
       const mult=(m==='2')?2:1;
       const ppUd=precioPuertaItem(a,w,p);const pp=ppUd*mult;ptTot+=pp;const base=GPP_BASE,nota=GPP_NOTA;
       let tp=0,tpUd=0;
-      const llevaTir=(m!=='FF')&&p.tir!=='off'&&admiteTirador(tarEf); // Lote L · R1b
+      const pushP=esPushColHorno(); // Lote X1: puerta de arriba de la columna horno/micro con gola → sin gola, push to open
+      const llevaTir=(m!=='FF')&&p.tir!=='off'&&admiteTirador(tarEf)&&!pushP; // Lote L · R1b · X1
       if(llevaTir){tpUd=precioTirItem(cfg,w,p,ladoBajo);tp=tpUd*mult;}
       tTot+=tp;
       if(tarEf==='Sin puerta')lines.push(`P${i+1} (${a}×${w}): ${MFRCLI?'puerta del cliente':'Sin puerta'} (sin tirador)`);
+      else if(pp>0&&pushP)lines.push(`P${i+1} ${tarEf} (${a}×${w}) ${MANO_LAB[m]||'D'}: ${fmt(GPP_BASE)} €${mult>1?' ×2 = '+fmt(pp):''} · SIN GOLA, PUSH TO OPEN (${fmt(precioPushPuerta())} €${mult>1?' ×2':''} en Varios)`);
       else if(pp>0){
         const cc=tarifaClaveCelda(tarEf,a,w);
         const supl=Math.abs(ppUd-base)>0.005;
@@ -4882,6 +4933,7 @@ function addM(){
   const armP=gapG(armTarifar,optsArm,MARMMAN); // Lote M: precio manual de armazón si lo hay
   const cfg=isBajo(SEL)?S.tb:S.ta;
   let ptTot=0,tTot=0,pd=[],altoPuertaMax=0,manos=[];
+  const pushCol=esPushColHorno(); // Lote X1: columna/semicolumna horno/micro con gola → puerta de arriba sin gola, push to open
   // Snapshot completo de puertas y frentes para permitir edición posterior (Lote M: incluye precios manuales)
   const snapPuertas=MPuertas.map(p=>({alto:+p.alto||0,ancho:+p.ancho||0,tir:p.tir||'on',mano:p.mano||'D',...(p.pMan!=null?{pMan:+p.pMan}:{}),...(p.tMan!=null?{tMan:+p.tMan}:{})}));
   const snapFrentes=MFrentesCJ.map(f=>({alto:+f.alto||0,ancho:+f.ancho||0,tir:f.tir||'on',tipo:f.tipo||'CJ',fondo:f.fondo||'F50',ss:(f.tipo==='GV'&&f.ss==='on')?'on':'off',...(f.pMan!=null?{pMan:+f.pMan}:{}),...(f.tMan!=null?{tMan:+f.tMan}:{})}));
@@ -4891,10 +4943,10 @@ function addM(){
       const m=p.mano||'D';manos.push(m);
       const mult=(m==='2')?2:1;
       const ppUd=precioPuertaItem(a,w,p);ptTot+=ppUd*mult;
-      pd.push(`P${i+1}:${a}×${w} ${MANO_LAB[m]||'D'}`);
+      pd.push(`P${i+1}:${a}×${w} ${MANO_LAB[m]||'D'}${pushCol?' PUSH':''}`); // Lote X1: la puerta push se ve en el presupuesto y en la hoja
       if(a>altoPuertaMax)altoPuertaMax=a;
       let tp=0;
-      const llevaTir=(m!=='FF')&&p.tir!=='off'&&admiteTirador(tarEf); // Lote L · R1b
+      const llevaTir=(m!=='FF')&&p.tir!=='off'&&admiteTirador(tarEf)&&!pushCol; // Lote L · R1b · X1
       if(llevaTir)tp=precioTirItem(cfg,w,p,isBajo(SEL))*mult;
       tTot+=tp;
       // Nota: S.gat / S.gml NO se acumulan aquí. Se recalculan al final desde LN
@@ -4967,7 +5019,8 @@ function addM(){
     // Lote Q — hoja del árbol (subfamilia) y flags de producción derivados
     subfam:snapHoja(MHOJA),sinBaldas:!!(MHOJA&&MHOJA.sinBaldas),abatible:!!(MHOJA&&MHOJA.abatible),
     horno:esHojaHorno()?MHORNO:null, // Lote R3: alto del horno del bajo placa horno ('60' | '45')
-    piezas:Object.keys(pzEf).length?{...pzEf}:undefined // Lote R5: piezas del casco eliminadas / en material de puerta
+    piezas:Object.keys(pzEf).length?{...pzEf}:undefined, // Lote R5: piezas del casco eliminadas / en material de puerta
+    push:pushCol||undefined // Lote X1: puertas sin gola con push to open (no suman gola; línea hija en Varios)
   };
   // Modo edición: si EDIT_ID está activo, sustituye la línea existente. Si no, crea una nueva.
   // Lote J — en alta, si ya existe un mueble IDÉNTICO (misma huella: desc+precio+nota+meta,
@@ -5006,6 +5059,11 @@ function addM(){
       if(!her)return;
       LN.push({id:++LID,sec:'Varios',tab:null,desc:her.descripcion,cnt,p:her.precio,nota:`(auto: ${SEL.nom})`,parentId:idMueble});
     });
+    // Lote X1 (24-09-2026, Álvaro) — push to open auto: una línea hija por cada puerta de la columna/semicolumna horno/micro
+    // con gola (×2 en 2Pta), al precio de «Sistema Push en Puertas» del catálogo de Varios.
+    if(pushCol){const pp=precioPushPuerta();MPuertas.forEach((p,i)=>{const a=+p.alto||0,w=+p.ancho||0;if(!a||!w||p.mano==='FF')return;
+      const mult=p.mano==='2'?2:1;
+      LN.push({id:++LID,sec:'Varios',tab:null,desc:`${PUSH_PUERTA_NOM} · P${i+1}${mult>1?' (2Pta ×2)':''} de la columna horno/micro con gola`,cnt,p:+(pp*mult).toFixed(2),nota:`(auto: ${SEL.nom})`,parentId:idMueble});});}
     // Regleta CVT auto: línea en Costados/Regletas, tarificada por la CVT del modelo, asociada al mueble.
     insertarRegletaCVT(regleta,idMueble,cnt,SEL.nom,MMODELO);
     insertarPiezasPuertaCVT(spPz,idMueble,cnt,SEL.nom,MMODELO); // Lote R5
@@ -6424,7 +6482,7 @@ function recalcularAcumulados(){
     // encima de otra y el perfil intermedio sirve a todas: cuenta una vez el ancho de la fila más ancha.
     // Columna 60 con 2 puertas → 60 cm (no 120); columna 80 con dos filas 2Pta de 40 → 80 cm.
     const golaUnica=!!m.esCol&&!m.esRincon;let anchoCol=0;
-    m.mPuertas.forEach(p=>{
+    if(!m.push)m.mPuertas.forEach(p=>{ // Lote X1: la puerta de arriba de la columna horno/micro va sin gola (push to open)
       const a=+p.alto||0,w=+p.ancho||0;if(!a||!w)return;
       const mano=p.mano||'D';const mult=(mano==='2')?2:1;
       const llevaTir=(mano!=='FF')&&p.tir!=='off';if(!llevaTir)return;
