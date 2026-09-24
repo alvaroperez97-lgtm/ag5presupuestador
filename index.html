@@ -210,6 +210,18 @@ tr:hover td{background:var(--c);}
 .escHuecoForm{border:1.5px solid var(--cd);border-radius:8px;padding:8px 9px;margin-top:6px;background:var(--c);}
 .escHuecoForm label{font-size:9.5px;letter-spacing:.3px;} .escHuecoForm input,.escHuecoForm select{font-size:12px;padding:5px 7px;}
 #escV3d{max-width:min(100%,calc((100vh - 240px) * 1.2));}
+/* Lote V2b (24-09-2026) — fotos del 3D y hoja «Escena» en la impresión */
+.escFotos{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;} .escFoto{width:150px;max-width:46%;} .escFoto img{width:100%;display:block;border:1px solid var(--cd);border-radius:6px;background:#fff;}
+.escFoto div{display:flex;gap:4px;justify-content:space-between;align-items:center;font-size:10.5px;color:var(--mm);margin-top:3px;} .escFoto a,.escFoto button{font-size:11px;padding:3px 7px;}
+.escSelChica{font-size:11px;padding:5px 7px;max-width:100%;}
+.esc-print{display:none;}
+@media print{
+  .esc-print:not(:empty){display:block!important;page-break-before:always;}
+  body.pesc #tp,body.pesc #ws{display:none!important;}
+  .escPrintRes{font-size:10.5px;margin:6px 0 8px;line-height:1.5;}
+  .escPrintTab{width:100%;border-collapse:collapse;font-size:10px;margin-top:8px;page-break-inside:avoid;} .escPrintTab th,.escPrintTab td{border-bottom:1px solid #cfc4b0;padding:2px 6px;text-align:left;vertical-align:top;} .escPrintTab th{font-size:8.5px;text-transform:uppercase;} .escPrintTab td:first-child{width:7%;white-space:nowrap;} .escPrintTab td:last-child{white-space:nowrap;}
+  .escPrintFotos{page-break-before:always;display:flex;flex-wrap:wrap;gap:2%;} .escPrintFotos img{width:49%;max-width:49%;page-break-inside:avoid;border:1px solid #999;margin-bottom:8px;}
+}
 @media print{.r3dModal,#r3dPanel{display:none!important;}}
 @media(max-width:900px){.l2{grid-template-columns:1fr!important;}}
 </style>
@@ -932,6 +944,11 @@ tr:hover td{background:var(--c);}
         <div class="fg"><label>Recorte a lo largo (cm)</label><input type="number" id="escRecW" min="30" step="1" placeholder="p. ej. 150" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
         <div class="fg"><label>Recorte a lo ancho (cm)</label><input type="number" id="escRecH" min="30" step="1" placeholder="p. ej. 120" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
       </div>
+      <!-- Lote V2b: encimera (color y si se ve, en el 3D) -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-bottom:10px">
+        <div class="fg"><label>Encimera: grosor</label><select id="escEncGros"><option value="3.8">38 mm</option><option value="3">30 mm</option></select></div>
+        <div class="fg"><label>Encimera: fondo (cm)</label><input type="number" id="escEncFon" min="40" step="1" placeholder="63" title="Desde la pared hasta el canto delantero" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
+      </div>
       <div style="font-size:11px;color:var(--g);margin-bottom:10px;line-height:1.5">Rectángulo o en L (una esquina que falta). El largo es la pared de arriba de la planta y el ancho, la de la izquierda. Bajos y columnas van sobre las patas del proyecto; los altos, con el canto de arriba a la altura de colgar. Puertas, ventanas, pilares y vigas se añaden después, en la planta.</div>
       <div id="escFormAviso" style="font-size:11.5px;color:#c62828;margin-bottom:8px"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
@@ -946,6 +963,9 @@ tr:hover td{background:var(--c);}
           <button class="tgb" id="escBtn3d" onclick="escenaVista('3d')" style="padding:6px 12px;font-size:11.5px">🧊 Ver en 3D</button>
         </div>
         <span id="escRes" class="escRes" onclick="escenaFormulario(true)" title="Cambiar las medidas de la habitación"></span>
+        <!-- Lote V2b: cotas e impresión -->
+        <button class="btn r3dBtn2" id="escBtnCotas" onclick="escenaToggleCotas()" style="font-size:11px;padding:6px 10px" title="Cotas de muebles y huecos en cada pared">📏 Cotas</button>
+        <button class="btn r3dBtn2" onclick="imprimirEscena()" style="font-size:11px;padding:6px 10px" title="Hoja con la planta acotada, la lista de muebles y las fotos">🖨️ Imprimir escena</button>
       </div>
       <div id="escVPlanta">
         <div id="escSel" class="escSel"></div>
@@ -973,8 +993,15 @@ tr:hover td{background:var(--c);}
           <button class="btn r3dBtn2" onclick="escenaVistaInicial()" style="font-size:11px;padding:6px 12px">↺ Vista inicial</button>
           <span style="font-size:11px;color:var(--g);font-style:italic">arrastra para girar · pellizco o rueda: zoom · dos dedos o botón derecho: mover · las paredes de delante se ocultan solas</span>
         </div>
+        <!-- Lote V2b: encimera, zócalo y foto -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+          <select id="escEncSel" class="escSelChica" onchange="escenaSetEnc(this.value)" title="Encimera sobre los bajos (solo dibujo)"><option value="blanco">Encimera blanca</option><option value="negro">Encimera negra</option><option value="off">Sin encimera</option></select>
+          <select id="escZocSel" class="escSelChica" onchange="escenaSetZoc(this.value)" title="Zócalo bajo los bajos y columnas (solo dibujo)"><option value="puerta">Zócalo material de puerta</option><option value="blanco">Zócalo blanco</option><option value="negro">Zócalo negro</option><option value="aluminio">Zócalo aluminio</option><option value="off">Sin zócalo</option></select>
+          <button class="btn bp" onclick="escenaFoto()" style="font-size:11px;padding:6px 12px" title="Guarda la vista actual del 3D con el proyecto y la imprime con el presupuesto">📷 Foto</button>
+        </div>
         <div id="escV3d" class="r3d"></div>
         <div id="escV3dCap" style="font-size:11px;color:var(--mm);margin-top:8px;line-height:1.5"></div>
+        <div id="escFotos" class="escFotos"></div>
       </div>
     </div>
   </div>
@@ -984,6 +1011,9 @@ tr:hover td{background:var(--c);}
 <div id="ws" class="ws-print">
   <div id="wsContent"></div>
 </div>
+<!-- Lote V2b (24-09-2026): hoja «Escena» (planta acotada, muebles, huecos y fotos del 3D). Se rellena en escenaPintarImpresion
+     y sale en todas las impresiones del presupuesto; con body.pesc (🖨️ Imprimir escena) sale sola. Vacía = no se imprime. -->
+<div id="escPrint" class="esc-print"></div>
 
 <script>
 /* ════════════════════════════════════════════════════════════════════
@@ -1083,7 +1113,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-24.3';
+const APP_BUILD = '2026-09-24.4';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -2815,10 +2845,19 @@ const ESC_CTE={
   huecoMin:10, huecoFranja:2,             // cm: ancho mínimo de un hueco; franja delante de una ventana o de una puerta que abre hacia fuera (un mueble ahí la pisa)
   puertaDef:{w:80,h:205}, ventanaDef:{w:120,h:120,ant:100}, pilarDef:{w:30,s:30}, vigaDef:{w:30,baj:30}, // cm: medidas con las que arranca cada hueco
   hojaGrosor:4, cristalGrosor:2,          // cm: hoja de la puerta (cerrada, enrasada por dentro) y cristal de la ventana en el 3D
-  colHueco:{hoja:'#c9ad86',cristal:'rgba(168,204,232,0.5)',ventanaPlanta:'#cfe1f2',vigaPlanta:'rgba(74,44,14,0.16)'}
+  colHueco:{hoja:'#c9ad86',cristal:'rgba(168,204,232,0.5)',ventanaPlanta:'#cfe1f2',vigaPlanta:'rgba(74,44,14,0.16)'},
+  // Lote V2b (24-09-2026) — encimera, zócalo, cotas, fotos e impresión
+  encGros:3.8, encGrosores:[3.8,3], encFon:63, encFonMin:40, encFonMax:100, // cm: encimera AG5 de 38 mm (o 30), fondo 63 desde la pared (Álvaro, 24-09-2026)
+  colEnc:{blanco:'#f6f6f2',negro:'#2f2f31'},encNom:{blanco:'blanca',negro:'negra'}, // encimera blanca o negra, para que resalte de los muebles
+  zocGrosor:1.6, zocRetr:3,                                      // cm: zócalo de 16 mm, retranqueado 3 cm respecto a la cara de la puerta
+  colZoc:{blanco:'#f4f4f0',negro:'#2b2b2b',aluminio:'#b8bcc2'},  // 'puerta' = color de los frentes (R3D_COL.frente)
+  cotaFila:1.7, cotaTextoMin:2.3,                                // filas de cotas: alto de fila en letras; una cota se escribe si mide más de tantas letras
+  colCota:'#5a4a30',
+  fotosMax:4, fotoAnchoMax:1200, fotoCalidad:0.8,               // fotos del 3D guardadas con el proyecto (JPEG); pesan ~100 KB cada una en localStorage
+  plantaImpresionPx:{vertical:700,verticalAlto:760,apaisada:1000,apaisadaAlto:540} // planta en la hoja impresa: ancho y alto máximos (A4 vertical / apaisada)
 };
 let ESCENA=null; // {v, largo, ancho, alto, altoAltos, items:[{lid, u, x, y, r}], recorte, huecos:[…]} o null (proyecto sin escena). Lote V2: recorte = {esq, w, h} (esquina que falta) o null; huecos = puertas, ventanas, pilares y vigas (ver escenaHuecoValidar)
-let ESC_UI={sel:null,vista:'planta',drag:null,raf:0,imanCm:10,vista3d:false,resize:false,form:'crear',forma:'rect',hueco:null}; // Lote V2: forma del formulario y hueco en edición {i, q}
+let ESC_UI={sel:null,vista:'planta',drag:null,raf:0,imanCm:10,vista3d:false,resize:false,form:'crear',forma:'rect',hueco:null,cotas:false}; // Lote V2b: cotas en pantalla // Lote V2: forma del formulario y hueco en edición {i, q}
 const R3DE=r3dNuevoVisor('escV3d');R3DE.pintar=escenaPintar3D; // visor 3D de la escena: r3dPintar lo desvía a escenaPintar3D
 // ── Lote V2 (24-09-2026) — habitación en L y huecos en las paredes ──
 // Contorno de la habitación en planta (cm, y hacia abajo) en el sentido de las agujas del reloj desde arriba a la
@@ -3057,11 +3096,17 @@ function escenaSanear(e){
   const alto=num(e.alto,C.techoMin,C.techoMax)||C.techoDef,altoAltos=num(e.altoAltos,C.altosMin,alto)||Math.min(C.altoAltos,alto);
   const items=(Array.isArray(e.items)?e.items:[]).filter(it=>it&&isFinite(+it.lid)&&isFinite(+it.u)&&isFinite(+it.x)&&isFinite(+it.y))
     .map(it=>({lid:+it.lid,u:Math.max(0,+it.u|0),x:+it.x,y:+it.y,r:escenaGiro(it.r)}));
-  const E={v:2,largo,ancho,alto,altoAltos,recorte:null,huecos:[],items};
+  const E={v:2,largo,ancho,alto,altoAltos,recorte:null,huecos:[],items,enc:escenaSanearEnc(e.enc),zoc:escenaSanearZoc(e.zoc),fotos:escenaSanearFotos(e.fotos)}; // Lote V2b
   const r=e.recorte;if(r&&['ad','bd','bi','ai'].includes(r.esq)){const w=num(r.w,C.recorteMin,largo-C.restoMin),h=num(r.h,C.recorteMin,ancho-C.restoMin);if(w!=null&&h!=null)E.recorte={esq:r.esq,w,h};}
   (Array.isArray(e.huecos)?e.huecos:[]).forEach(q=>{const b=escenaHuecoValidar(q,E);if(typeof b!=='string')E.huecos.push(b);});
   return E;
 }
+// Lote V2b — encimera, zócalo y fotos de una escena guardada (las v1 arrancan con encimera blanca de 38 y zócalo de puerta).
+function escenaSanearEnc(x){const C=ESC_CTE,o=x&&typeof x==='object'?x:{};const g=+o.gros,f=+o.fon;
+  return {on:o.on!==false,gros:C.encGrosores.includes(g)?g:C.encGros,fon:isFinite(f)&&f>=C.encFonMin&&f<=C.encFonMax?Math.round(f*10)/10:C.encFon,col:C.colEnc[o.col]?o.col:'blanco'};}
+function escenaSanearZoc(x){const C=ESC_CTE,o=x&&typeof x==='object'?x:{};return {on:o.on!==false,col:o.col==='puerta'||C.colZoc[o.col]?o.col:'puerta'};}
+function escenaSanearFotos(x){return (Array.isArray(x)?x:[]).filter(f=>f&&typeof f.img==='string'&&/^data:image\/(jpeg|png);base64,/.test(f.img)&&f.img.length<4e6)
+  .slice(0,ESC_CTE.fotosMax).map(f=>({ts:+f.ts||0,img:f.img,w:+f.w||0,h:+f.h||0}));}
 function escenaEncajarTodo(){if(!ESCENA)return;ESCENA.items.forEach(it=>{const g=escenaGeo(it);if(!g)return;const p=escenaEncajar(g.W,g.H,it.x,it.y);it.x=p.x;it.y=p.y;});}
 // Botón de ⑥ Proyectos: visible con al menos un mueble; con escena, cuántas unidades están colocadas.
 function escenaPintarBoton(){
@@ -3079,7 +3124,7 @@ function abrirEscena(){
   if(!Array.isArray(ESCENA.huecos))ESCENA.huecos=[]; // Lote V2
   ESC_UI.hueco=null;escenaPurgar();escenaEncajarTodo();escenaMostrarTrabajo();
 }
-function cerrarEscena(){document.getElementById('escModal').style.display='none';ESC_UI.drag=null;R3DE.esc=null;escenaPintarBoton();}
+function cerrarEscena(){document.getElementById('escModal').style.display='none';ESC_UI.drag=null;R3DE.esc=null;escenaPintarBoton();escenaPintarImpresion();} // Lote V2b: deja lista la hoja impresa
 function escenaRedimensionar(){if(!escenaAbierta()||!ESCENA)return;if(ESC_UI.vista==='3d')r3dPintar(R3DE);else escenaPintarPlanta();}
 // Formulario de la habitación: crear (sin escena) o cambiar medidas (✏️ del resumen). Lote V2: forma en L.
 function escenaFormulario(editar){
@@ -3090,6 +3135,7 @@ function escenaFormulario(editar){
   document.getElementById('escFormOk').textContent=ed?'✅ Aplicar':'✅ Crear habitación';
   v('escLargo',ed?E.largo:'');v('escAncho',ed?E.ancho:'');v('escAlto',ed?E.alto:'');v('escAltos',ed?E.altoAltos:ESC_CTE.altoAltos);
   const rc=ed&&E.recorte;escenaForma(rc?'L':'rect');v('escRecEsq',rc?rc.esq:'ad');v('escRecW',rc?rc.w:'');v('escRecH',rc?rc.h:'');
+  v('escEncGros',String(ed&&E.enc?E.enc.gros:ESC_CTE.encGros));v('escEncFon',ed&&E.enc?E.enc.fon:ESC_CTE.encFon); // Lote V2b
   document.getElementById('escFormAviso').textContent='';
 }
 function escenaAplicarHabitacion(){
@@ -3104,9 +3150,11 @@ function escenaAplicarHabitacion(){
     if(!(w>=C.recorteMin&&w<=largo-C.restoMin))return mal(`Recorte a lo largo, entre ${C.recorteMin} y ${fmtCm(largo-C.restoMin)} cm (tienen que quedar ${C.restoMin} de pared).`);
     if(!(h>=C.recorteMin&&h<=ancho-C.restoMin))return mal(`Recorte a lo ancho, entre ${C.recorteMin} y ${fmtCm(ancho-C.restoMin)} cm.`);
     recorte={esq,w:r1(w),h:r1(h)};}
+  const encTxt=String(document.getElementById('escEncFon')?.value||'').trim(),encFon=encTxt?n('escEncFon'):C.encFon,encGros=+(document.getElementById('escEncGros')?.value||C.encGros); // Lote V2b (vacío = por defecto)
+  if(!(encFon>=C.encFonMin&&encFon<=C.encFonMax))return mal(`Fondo de la encimera entre ${C.encFonMin} y ${C.encFonMax} cm.`);
   const d={largo:r1(largo),ancho:r1(ancho),alto:r1(alto),altoAltos:r1(altos),recorte};
-  if(!ESCENA)ESCENA=escenaSanear(Object.assign({items:[],huecos:[]},d));
-  else{Object.assign(ESCENA,d);const antes=(ESCENA.huecos||[]).length; // los huecos que ya no caben en la habitación nueva se quitan
+  if(!ESCENA)ESCENA=escenaSanear(Object.assign({items:[],huecos:[],enc:{gros:encGros,fon:r1(encFon)}},d));
+  else{Object.assign(ESCENA,d);ESCENA.enc=escenaSanearEnc(Object.assign({},ESCENA.enc,{gros:encGros,fon:r1(encFon)}));const antes=(ESCENA.huecos||[]).length; // los huecos que ya no caben en la habitación nueva se quitan
     ESCENA.huecos=(ESCENA.huecos||[]).map(q=>escenaHuecoValidar(q)).filter(q=>typeof q!=='string');
     const fuera=antes-ESCENA.huecos.length;if(fuera)flash(`⚠️ ${fuera} hueco${fuera>1?'s':''} de las paredes no cab${fuera>1?'en':'e'} en la habitación nueva: quitado${fuera>1?'s':''}`);}
   ESC_UI.hueco=null;escenaEncajarTodo();escenaMostrarTrabajo();
@@ -3122,8 +3170,148 @@ function escenaVista(v){
   escenaPintarResumen();
   R3DE.esc=escenaPiezas3D();r3dInstalarGiro(R3DE);
   const cap=document.getElementById('escV3dCap');if(cap)cap.innerHTML=escenaCaption3D(R3DE.esc);
+  escenaPintarSelectores();escenaPintarFotos(); // Lote V2b
   if(!ESC_UI.vista3d){ESC_UI.vista3d=true;escenaVistaInicial();}else r3dPintar(R3DE);
 }
+// ── Lote V2b (24-09-2026) — encimera, zócalo, cotas, fotos e impresión ──
+function escenaPintarSelectores(){const E=ESCENA;if(!E)return;const a=document.getElementById('escEncSel'),b=document.getElementById('escZocSel');
+  if(a)a.value=E.enc&&E.enc.on?E.enc.col:'off';if(b)b.value=E.zoc&&E.zoc.on?E.zoc.col:'off';}
+function escenaSetEnc(v){if(!ESCENA)return;ESCENA.enc=escenaSanearEnc(Object.assign({},ESCENA.enc,v==='off'?{on:false}:{on:true,col:v}));escenaRefrescar3D();}
+function escenaSetZoc(v){if(!ESCENA)return;ESCENA.zoc=escenaSanearZoc(Object.assign({},ESCENA.zoc,v==='off'?{on:false}:{on:true,col:v}));escenaRefrescar3D();}
+function escenaRefrescar3D(){if(ESC_UI.vista!=='3d'||!R3DE.esc)return;R3DE.esc=escenaPiezas3D();const cap=document.getElementById('escV3dCap');if(cap)cap.innerHTML=escenaCaption3D(R3DE.esc);r3dPintar(R3DE);}
+function escenaToggleCotas(){ESC_UI.cotas=!ESC_UI.cotas;document.getElementById('escBtnCotas')?.classList.toggle('on',ESC_UI.cotas);escenaPintarPlanta();}
+// Unión de rectángulos [x0, y0, x1, y1] → un polígono por trozo continuo: {pts: contorno (sentido horario con y hacia abajo),
+// rects: descomposición en rectángulos}. Rejilla con todas las x e y; celdas cubiertas; contorno = aristas no compartidas.
+function escenaUnionRects(R){
+  if(!R.length)return [];
+  const xs=[...new Set(R.flatMap(r=>[r[0],r[2]]))].sort((a,b)=>a-b),ys=[...new Set(R.flatMap(r=>[r[1],r[3]]))].sort((a,b)=>a-b),nx=xs.length-1,ny=ys.length-1;
+  const cov=[];for(let j=0;j<ny;j++){cov.push([]);for(let i=0;i<nx;i++){const cx=(xs[i]+xs[i+1])/2,cy=(ys[j]+ys[j+1])/2;cov[j].push(R.some(r=>cx>r[0]&&cx<r[2]&&cy>r[1]&&cy<r[3])?0:-1);}}
+  const out=[];let comp=0;
+  for(let j0=0;j0<ny;j0++)for(let i0=0;i0<nx;i0++){
+    if(cov[j0][i0]!==0)continue;comp++;const cells=[],st=[[i0,j0]];cov[j0][i0]=comp;
+    while(st.length){const [i,j]=st.pop();cells.push([i,j]);[[i+1,j],[i-1,j],[i,j+1],[i,j-1]].forEach(([a,b])=>{if(a>=0&&a<nx&&b>=0&&b<ny&&cov[b][a]===0){cov[b][a]=comp;st.push([a,b]);}});}
+    const has=(i,j)=>i>=0&&i<nx&&j>=0&&j<ny&&cov[j][i]===comp;
+    const rects=[];for(let j=0;j<ny;j++){let i=0;while(i<nx){if(!has(i,j)){i++;continue;}let k=i;while(has(k+1,j))k++;const r=[xs[i],ys[j],xs[k+1],ys[j+1]];
+      const prev=rects.find(q=>q[0]===r[0]&&q[2]===r[2]&&Math.abs(q[3]-r[1])<1e-6);if(prev)prev[3]=r[3];else rects.push(r);i=k+1;}}
+    const A=[];cells.forEach(([i,j])=>{const x0=xs[i],x1=xs[i+1],y0=ys[j],y1=ys[j+1];
+      if(!has(i,j-1))A.push([[x0,y0],[x1,y0]]);if(!has(i+1,j))A.push([[x1,y0],[x1,y1]]);if(!has(i,j+1))A.push([[x1,y1],[x0,y1]]);if(!has(i-1,j))A.push([[x0,y1],[x0,y0]]);});
+    const key=p=>p[0].toFixed(4)+','+p[1].toFixed(4),desde=new Map();A.forEach((a,k)=>{const s=key(a[0]);if(!desde.has(s))desde.set(s,[]);desde.get(s).push(k);});
+    const usada=new Set(),lazos=[];
+    A.forEach((a0,k0)=>{if(usada.has(k0))return;const lazo=[];let k=k0;
+      while(k!=null&&!usada.has(k)){usada.add(k);lazo.push(A[k][0]);k=(desde.get(key(A[k][1]))||[]).find(q=>!usada.has(q));}
+      lazos.push(lazo);});
+    const area=L=>{let s=0;for(let k=0;k<L.length;k++){const a=L[k],b=L[(k+1)%L.length];s+=a[0]*b[1]-b[0]*a[1];}return Math.abs(s);};
+    let pts=lazos.sort((a,b)=>area(b)-area(a))[0]||[];
+    pts=pts.filter((p,k)=>{const a=pts[(k+pts.length-1)%pts.length],b=pts[(k+1)%pts.length];return Math.abs((p[0]-a[0])*(b[1]-p[1])-(p[1]-a[1])*(b[0]-p[0]))>1e-6;}); // fuera los puntos alineados
+    out.push({pts,rects});
+  }
+  return out;
+}
+// Encimera en planta: rectángulos de cada bajo (huella con el fondo de la encimera), unidos por altura de bajo → polígonos.
+// Devuelve [{y (cm, cara inferior), polis:[{pts, rects}]}]. Un chaflán va aparte, con su pentágono (no se une a los vecinos).
+function escenaEncimeraPlanta(E){
+  E=E||ESCENA;if(!E.enc||!E.enc.on)return [];
+  const pa=+S.patas||R3D_CTE.pataAlto,grupos={},sueltos=[];
+  E.items.forEach(it=>{const l=LN.find(x=>x.id===it.lid),h=escenaHuella(l);if(!h||h.nivel!=='bajo')return;
+    const T=escenaRotar(it,h),fon=Math.max(h.F,E.enc.fon),y=pa+h.alt,box=q=>{const a=T(q[0],q[1]),b=T(q[2],q[3]);return [Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[0],b[0]),Math.max(a[1],b[1])];};
+    if(h.forma==='chaf'){sueltos.push({y,polis:[{pts:[[0,0],[h.bw,0],[h.bw,fon],[fon,h.bd],[0,h.bd]].map(q=>T(q[0],q[1])),rects:null}]});return;}
+    const rects=h.forma==='rect'?[[0,0,h.bw,fon]]:[[0,0,h.bw,fon]].concat(h.bd>fon?[[0,fon,fon,h.bd]]:[]);
+    (grupos[y]=grupos[y]||[]).push(...rects.map(box));});
+  return Object.keys(grupos).map(y=>({y:+y,polis:escenaUnionRects(grupos[y])})).concat(sueltos);
+}
+// Piezas 3D de la encimera (prismas sobre los bajos) y de los zócalos (una caja por tramo de frente de cada bajo o columna,
+// retranqueada respecto a la cara de la puerta y de la altura de las patas).
+function escenaExtras3D(E){
+  E=E||ESCENA;const C=ESC_CTE,W=E.ancho,out=[];
+  const colE=E.enc&&C.colEnc[E.enc.col]||C.colEnc.blanco;
+  escenaEncimeraPlanta(E).forEach(g=>g.polis.forEach(p=>out.push({k:'prism',pts:p.pts.map(q=>[q[0],W-q[1]]),rects:p.rects?p.rects.map(r=>[r[0],W-r[3],r[2],W-r[1]]):null,y:g.y,h:E.enc.gros,col:colE,st:'#7a7a74'})));
+  if(E.zoc&&E.zoc.on){const pa=+S.patas||R3D_CTE.pataAlto,col=E.zoc.col==='puerta'?R3D_COL.frente:C.colZoc[E.zoc.col],g=C.zocGrosor,r=C.zocRetr-R3D_CTE.frenteGrosor; // r: retranqueo medido desde el frente del casco
+    E.items.forEach(it=>{const l=LN.find(x=>x.id===it.lid),h=escenaHuella(l);if(!h||h.nivel==='alto'||h.forma==='chaf')return;
+      const T=escenaRotar(it,h),F=h.F,box=q=>{const a=T(q[0],q[1]),b=T(q[2],q[3]),x0=Math.min(a[0],b[0]),y0=Math.min(a[1],b[1]);return {k:'box',x:x0,y:0,z:W-Math.max(a[1],b[1]),w:Math.abs(b[0]-a[0]),h:pa,d:Math.abs(b[1]-a[1]),col,st:'#555'};};
+      if(h.forma==='rect')out.push(box([0,F-r-g,h.bw,F-r]));
+      else{out.push(box([F-r,F-r-g,h.bw,F-r]));out.push(box([F-r-g,F-r-g,F-r,h.bd]));}}); // L: el tramo largo arranca en la cara del corto (sin solaparse)
+  }
+  return out;
+}
+// Cotas de la planta: en cada pared, una cadena con los bajos y columnas pegados a ella y sus huecos (fila 1), otra con
+// los altos (fila 2) y, en las paredes de arriba y de la izquierda, las medidas totales (fila 3). Distancias desde la
+// esquina izquierda de la pared vista desde dentro, como en el formulario de huecos.
+function escenaCotasSVG(P,G,fs){
+  const E=ESCENA,C=ESC_CTE,pw=C.paredPlanta,rh=fs*C.cotaFila,col=C.colCota,tol=1;let s='';
+  const pt=(p,t,off)=>[p.p0[0]+p.dir[0]*t,p.p0[1]+p.dir[1]*t].map((v,k)=>v-p.n[k]*off),tOf=(p,q)=>(q[0]-p.p0[0])*p.dir[0]+(q[1]-p.p0[1])*p.dir[1];
+  const num=v=>fmtCm(Math.round(v*10)/10),ln=(a,b,w)=>`<line x1="${r1(a[0])}" y1="${r1(a[1])}" x2="${r1(b[0])}" y2="${r1(b[1])}" stroke="${col}" stroke-width="${w}" vector-effect="non-scaling-stroke"/>`;
+  const txt=(c,t,vert)=>`<text x="${r1(c[0])}" y="${r1(c[1])}" font-size="${r1(fs*0.85)}" text-anchor="middle" dominant-baseline="central" fill="${col}"${vert?` transform="rotate(-90 ${r1(c[0])} ${r1(c[1])})"`:''} style="pointer-events:none">${t}</text>`;
+  const cadena=(p,I,fila)=>{ // I = [[t0, t1], …] a lo largo de la pared p; fila 0, 1, 2 hacia fuera
+    const off=pw+rh*(fila+0.55),B=[...new Set([0,p.len].concat(I.flatMap(q=>[Math.min(p.len,Math.max(0,q[0])),Math.min(p.len,Math.max(0,q[1]))]).map(v=>Math.round(v*10)/10)))].sort((a,b)=>a-b);
+    s+=ln(pt(p,0,off),pt(p,p.len,off),0.8);B.forEach(t=>{s+=ln(pt(p,t,pw),pt(p,t,off+rh*0.22),0.8);});
+    const vert=p.o==='d'||p.o==='i';
+    for(let k=0;k<B.length-1;k++){const L=B[k+1]-B[k];if(L<0.5||L<fs*C.cotaTextoMin*0.55)continue;s+=txt(pt(p,(B[k]+B[k+1])/2,off+rh*0.42),num(L),vert);}
+  };
+  const tipoDe=['a','d','b','i']; // giro r → orientación de la pared en la que apoya la trasera (r = 0: arriba)
+  P.forEach(p=>{
+    const enPared=(g,i,nivelOK)=>{ // tramos [t0, t1] de los rectángulos del mueble apoyados con la TRASERA en la pared p
+      if(!g||!nivelOK(g.h.nivel))return [];const r=escenaGiro(E.items[i].r),out=[];
+      if(p.o!==tipoDe[r]&&!(g.h.forma!=='rect'&&p.o===tipoDe[(r+3)%4]))return out; // una L apoya sus dos brazos en dos paredes
+      g.rects.forEach(q=>{const d=p.o==='a'?Math.abs(q[1]-p.p0[1]):p.o==='b'?Math.abs(q[3]-p.p0[1]):p.o==='d'?Math.abs(q[2]-p.p0[0]):Math.abs(q[0]-p.p0[0]);if(d>tol)return;
+        const a=tOf(p,[q[0],q[1]]),b=tOf(p,[q[2],q[3]]),t0=Math.min(a,b),t1=Math.max(a,b);if(t1<-tol||t0>p.len+tol)return;out.push([t0,t1]);});
+      return out;};
+    const I1=G.flatMap((g,i)=>enPared(g,i,n=>n!=='alto')).concat((E.huecos||[]).filter(q=>q.pared===p.id).map(q=>[q.d,q.d+q.w])),I2=G.flatMap((g,i)=>enPared(g,i,n=>n==='alto'));
+    if(I1.length)cadena(p,I1,0);if(I2.length)cadena(p,I2,1);
+  });
+  // medidas totales: largo por arriba, ancho por la izquierda (fila 3 desde el rectángulo envolvente)
+  const off=pw+rh*2.55;
+  s+=ln([0,-off],[E.largo,-off],1)+ln([0,-pw],[0,-off-rh*0.22],1)+ln([E.largo,-pw],[E.largo,-off-rh*0.22],1)+txt([E.largo/2,-off-rh*0.42],num(E.largo)+' cm',false);
+  s+=ln([-off,0],[-off,E.ancho],1)+ln([-pw,0],[-off-rh*0.22,0],1)+ln([-pw,E.ancho],[-off-rh*0.22,E.ancho],1)+txt([-off-rh*0.42,E.ancho/2],num(E.ancho)+' cm',true);
+  return s;
+}
+// Foto del 3D: se pinta y se lee el lienzo en el mismo paso (el búfer de WebGL no se conserva), se reduce a fotoAnchoMax y
+// se guarda como JPEG en la escena (y por tanto con el proyecto). Máximo fotosMax por escena.
+function escenaFoto(){
+  const C=ESC_CTE,E=ESCENA,X=R3DE.glx;if(!E)return;
+  if(ESC_UI.vista!=='3d'||!R3DE.esc||!X||!X.cv||!X.cv.width){flash('⚠️ Abre la vista 3D y encuadra la foto');return;}
+  E.fotos=E.fotos||[];if(E.fotos.length>=C.fotosMax){flash(`⚠️ Máximo ${C.fotosMax} fotos por escena: quita alguna`);return;}
+  r3dPintar(R3DE);
+  const cv=X.cv,k=Math.min(1,C.fotoAnchoMax/cv.width),t=document.createElement('canvas');t.width=Math.max(1,Math.round(cv.width*k));t.height=Math.max(1,Math.round(cv.height*k));
+  const g=t.getContext('2d');g.drawImage(cv,0,0,t.width,t.height);
+  let img='';try{img=t.toDataURL('image/jpeg',C.fotoCalidad);}catch(_){img='';}
+  if(!/^data:image\/jpeg;base64,./.test(img)){flash('⚠️ No se ha podido hacer la foto en este navegador');return;}
+  E.fotos.push({ts:Date.now(),img,w:t.width,h:t.height});escenaPintarFotos();flash(`📷 Foto ${E.fotos.length} guardada con la escena`);
+}
+function escenaFotoQuitar(i){if(!ESCENA||!ESCENA.fotos||!ESCENA.fotos[i])return;ESCENA.fotos.splice(i,1);escenaPintarFotos();}
+function escenaPintarFotos(){
+  const cont=document.getElementById('escFotos'),E=ESCENA;if(!cont||!E)return;const F=E.fotos||[],qn=(S.qn||'escena').replace(/[^\w-]+/g,'_');
+  cont.innerHTML=F.map((f,i)=>`<div class="escFoto"><img src="${f.img}" alt="Foto ${i+1}"><div><span>Foto ${i+1}</span><span><a class="btn bs" download="${qn}-foto${i+1}.jpg" href="${f.img}" title="Descargar">⬇</a> <button class="btn bs" onclick="escenaFotoQuitar(${i})" title="Quitar">🗑</button></span></div></div>`).join('')
+    +(F.length?'':'<span class="escAyuda">Gira el 3D hasta la vista que quieras y pulsa 📷 Foto: se guarda con el proyecto y sale en la hoja «Escena» de la impresión.</span>');
+}
+// Hoja «Escena» de la impresión (#escPrint): cabecera, resumen, planta acotada, muebles, huecos y fotos. Se rellena al
+// pintar el presupuesto, al cerrar la escena y justo antes de imprimir; vacía si no hay escena con muebles ni fotos.
+function escenaImpresionHTML(anchoPx,altoPx){
+  const E=ESCENA;if(!E||(!E.items.length&&!(E.fotos||[]).length))return '';
+  const R=escenaPlantaSVG({wPx:anchoPx,maxHpx:altoPx,sel:null,selHueco:-1,id:'escPr',cotas:true}),P=escenaParedes(E),M=escenaMuebles();
+  let h=`<div class="wshead"><div><img src="https://almacengrupocinco.es/wp-content/uploads/2016/05/cropped-logo.png" height="36" onerror="this.style.display='none'"><div style="font-weight:900;font-size:13px;color:#4A2C0E">ESCENA · ${esc(S.qn||'(sin número)')}</div></div><div style="text-align:right;font-size:10.5px"><b>${esc(gv('cNom')||S.nom||'')}</b><br>${esc(gv('pFecha')||'')}</div></div>`;
+  h+=`<div class="escPrintRes">Habitación ${fmtCm(E.largo)} × ${fmtCm(E.ancho)} cm${E.recorte?' en L':''} · techo ${fmtCm(E.alto)} · altura de colgar ${fmtCm(E.altoAltos)} · patas ${S.patas||'10'}`+
+    ` · encimera ${E.enc&&E.enc.on?`${ESC_CTE.encNom[E.enc.col]||E.enc.col} de ${fmtCm(E.enc.gros*10)} mm, fondo ${fmtCm(E.enc.fon)}`:'no'} · zócalo ${E.zoc&&E.zoc.on?(E.zoc.col==='puerta'?'material de puerta':E.zoc.col):'no'}. Cotas en cm, desde la esquina izquierda de cada pared vista desde dentro.</div>`;
+  h+=R.svg;
+  if(E.items.length){h+=`<table class="escPrintTab"><tr><th>Ref.</th><th>Mueble</th><th>Sitio</th></tr>`;
+    E.items.forEach(it=>{const m=M.find(x=>x.l.id===it.lid),g=escenaGeo(it);if(!m||!g)return;
+      h+=`<tr><td><b>${escenaEtiqueta(m,it.u)}</b></td><td>${esc(escenaNombre(m.l))} · ${fmtCm(g.h.alt)} × ${fmtCm(g.h.bw)} × ${fmtCm(g.h.F)}</td><td>x ${fmtCm(it.x)} · y ${fmtCm(it.y)} · giro ${escenaGiro(it.r)*90}°</td></tr>`;});
+    h+='</table>';
+    const falta=escenaUnidades()-E.items.length;if(falta>0)h+=`<div style="font-size:10px;color:#8a0000;margin-top:4px">⚠️ ${falta} unidad${falta>1?'es':''} del presupuesto sin colocar en la escena.</div>`;}
+  if((E.huecos||[]).length){h+=`<table class="escPrintTab"><tr><th>Pared</th><th>Puertas, ventanas, pilares y vigas</th></tr>`;
+    E.huecos.forEach((q,i)=>{h+=`<tr><td><b>${escenaHuecoEtq(q,i)}</b></td><td>${ESC_HUECO_NOM[q.t]} ${esc(escenaHuecoTexto(q,P))}</td></tr>`;});h+='</table>';}
+  if((E.fotos||[]).length)h+=`<div class="escPrintFotos">${E.fotos.map(f=>`<img src="${f.img}">`).join('')}</div>`;
+  return h;
+}
+function escenaPintarImpresion(){const el=document.getElementById('escPrint');if(!el)return;const px=ESC_CTE.plantaImpresionPx;
+  const apaisada=document.getElementById('escPageStyle')!=null;let h='';try{h=escenaImpresionHTML(apaisada?px.apaisada:px.vertical,apaisada?px.apaisadaAlto:px.verticalAlto);}catch(_){h='';}el.innerHTML=h;}
+// 🖨️ Imprimir escena: solo la hoja «Escena», apaisada si la habitación es más larga que ancha.
+function imprimirEscena(){
+  const E=ESCENA;if(!E)return;if(!E.items.length&&!(E.fotos||[]).length){flash('⚠️ Coloca algún mueble o haz una foto antes de imprimir');return;}
+  const st=document.createElement('style');st.id='escPageStyle';st.textContent=E.largo>E.ancho*1.15?'@page{size:A4 landscape}':'@page{size:A4 portrait}';document.head.appendChild(st);
+  const quitar=()=>{st.remove();escenaPintarImpresion();};window.addEventListener('afterprint',quitar,{once:true});setTimeout(quitar,3000);
+  escenaPintarImpresion();imprimirConClase('pesc');
+}
+if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('beforeprint',()=>{try{escenaPintarImpresion();}catch(_){}});
 function escenaVistaInicial(){const C=ESC_CTE;R3DE.th=C.th0*Math.PI/180;R3DE.ph=C.ph0*Math.PI/180;R3DE.zoom=C.zoom0;R3DE.px=0;R3DE.py=0;r3dPintar(R3DE);}
 function escenaPintarTodo(){escenaPintarPlanta();escenaPintarSel();escenaPintarMenu();escenaPintarHuecos();escenaPintarResumen();}
 function escenaPintarResumen(){
@@ -3169,15 +3357,18 @@ function escenaPintarPlanta(){
   const cont=document.getElementById('escPlanta');if(!cont||!ESCENA)return;
   const E=ESCENA,C=ESC_CTE,mg=C.paredPlanta+C.margenPlanta,vbW=E.largo+2*mg,vbH=E.ancho+2*mg;
   const disp=Math.max(160,(cont.clientWidth||600)-12),maxH=Math.max(200,((typeof window!=='undefined'&&window.innerHeight)||800)*C.planoAltoMax);
-  const R=escenaPlantaSVG({wPx:Math.min(disp,maxH*vbW/vbH),sel:ESC_UI.sel,selHueco:ESC_UI.hueco?ESC_UI.hueco.i:-1,id:'escP'});
+  const R=escenaPlantaSVG({wPx:Math.min(disp,maxH*vbW/vbH),sel:ESC_UI.sel,selHueco:ESC_UI.hueco?ESC_UI.hueco.i:-1,id:'escP',cotas:ESC_UI.cotas}); // Lote V2b: cotas
   ESC_UI.imanCm=C.imanPx/R.k;cont.innerHTML=R.svg;
   const av=document.getElementById('escAviso');if(av)av.textContent=R.mal.size?(R.obst?'⚠️ Hay muebles en rojo: pisan a otro de su nivel o una pared, pilar, viga, puerta o ventana.':'⚠️ Hay muebles que se pisan (en rojo). Los altos pueden ir encima de los bajos; las columnas, no.'):'';
 }
 // SVG de la planta. o.wPx = ancho en px; o.sel = clave del mueble elegido; o.selHueco = índice del hueco en edición;
-// o.id = prefijo de los ids internos (si hay dos plantas en la misma página). Devuelve {svg, k (px por cm), mal, obst}.
+// o.id = prefijo de los ids internos (si hay dos plantas en la misma página); o.cotas = con cotas (Lote V2b: el margen
+// crece tres filas de cotas y la escala se recalcula). Devuelve {svg, k (px por cm), mal, obst}.
 function escenaPlantaSVG(o){
-  const E=ESCENA,C=ESC_CTE,K=C.colPlanta,pw=C.paredPlanta,mg=pw+C.margenPlanta,vbW=E.largo+2*mg,vbH=E.ancho+2*mg;
-  const wPx=o.wPx,k=wPx/vbW,fs=r1(C.letraPx/k),num={};escenaMuebles().forEach(m=>{num[m.l.id]=m;});
+  const E=ESCENA,C=ESC_CTE,K=C.colPlanta,pw=C.paredPlanta,mg0=pw+C.margenPlanta;
+  const medir=w=>{const fs=r1(C.letraPx/(w/(E.largo+2*mg0))),mg=mg0+(o.cotas?3*fs*C.cotaFila:0);return {fs,mg,vbW:E.largo+2*mg,vbH:E.ancho+2*mg};};
+  let wPx=o.wPx,M=medir(wPx);if(o.maxHpx&&wPx*M.vbH/M.vbW>o.maxHpx){wPx=o.maxHpx*M.vbW/M.vbH;M=medir(wPx);} // impresión: que quepa también de alto
+  const {fs,mg,vbW,vbH}=M,k=wPx/vbW,num={};escenaMuebles().forEach(m=>{num[m.l.id]=m;});
   const pts=a=>a.map(q=>r1(q[0])+','+r1(q[1])).join(' '),cid=(o.id||'esc')+'Suelo',Q=escenaPoligono(E),P=escenaParedes(E);
   const G=E.items.map(escenaGeo),mal=escenaSolapes(G),obst=escenaObstaculos(E);
   const peso=i=>(G[i].h.nivel==='alto'?1:0)+(escenaClave(E.items[i])===o.sel?2:0);
@@ -3187,6 +3378,8 @@ function escenaPlantaSVG(o){
   let rj='';for(let x=C.rejilla;x<E.largo;x+=C.rejilla)rj+=`M${x} 0V${E.ancho}`;for(let y=C.rejilla;y<E.ancho;y+=C.rejilla)rj+=`M0 ${y}H${E.largo}`;
   if(rj)s+=`<path d="${rj}" fill="none" stroke="${K.rejilla}" stroke-width="1" vector-effect="non-scaling-stroke" clip-path="url(#${cid})"/>`;
   s+=escenaHuecosSVG(P,fs,o.selHueco==null?-1:o.selHueco);
+  if(E.enc&&E.enc.on)escenaEncimeraPlanta(E).forEach(g=>g.polis.forEach(p=>{s+=`<polygon points="${pts(p.pts)}" fill="none" stroke="${K.borde}" stroke-width="0.8" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" style="pointer-events:none"/>`;})); // Lote V2b: contorno de la encimera
+  if(o.cotas)s+=escenaCotasSVG(P,G,fs); // Lote V2b
   G.map((g,i)=>i).filter(i=>G[i]).sort((a,b)=>peso(a)-peso(b)).forEach(i=>{
     const g=G[i],it=E.items[i],m=num[it.lid],sel=escenaClave(it)===o.sel,alto=g.h.nivel==='alto',roj=mal.has(i);
     const fill=alto?K.alto:(g.h.nivel==='col'?K.col:K.bajo),st=sel?K.sel:(roj?K.mal:K.borde);
@@ -3298,7 +3491,7 @@ function escenaPiezas3D(){
     if(q.t==='viga'){const g=rz(q.dir==='x'?[0,q.d,L,q.d+q.w]:[q.d,0,q.d+q.w,W]);fijas.push(bx(g.x,H-q.baj,g.z,g.w,q.baj,g.d,K.pared));return;}
     if(q.t!=='pilar')return;const p=PA.find(w=>w.id===q.pared);if(!p)return;const g=rz(escenaRectPared(p,q.d,q.w,q.s));fijas.push(bx(g.x,0,g.z,g.w,H,g.d,K.pared));});
   const marco=[bx(-e,-s,-e,L+2*e,H+s,W+2*e,K.pared)]; // encuadre: la habitación entera, con sus paredes
-  return {P,suelo,paredes,fijas,marco,sp:{anc:L,alt:H,fon:W,patas:false},macizos,huecos:(E.huecos||[]).length};
+  return {P,suelo,paredes,fijas,extras:escenaExtras3D(E),marco,sp:{anc:L,alt:H,fon:W,patas:false},macizos,huecos:(E.huecos||[]).length}; // Lote V2b: extras = encimera y zócalos
 }
 // Tramos de pared que se ven con la cámara (th, ph): fuera los que quedan entre la cámara y la habitación.
 function escenaParedesVistas(E,th,ph){
@@ -3317,7 +3510,7 @@ function escenaPintar3D(vis){
   const dpr=Math.min(3,window.devicePixelRatio||1),Wd=Math.round(cssW*dpr),Hd=Math.round(cssW*R3D_H/R3D_W*dpr);
   if(X.cv.width!==Wd||X.cv.height!==Hd){X.cv.width=Wd;X.cv.height=Hd;}
   vis.ph=Math.max(ESC_CTE.phMin*Math.PI/180,vis.ph);vis.glUlt=null; // sin selección de piezas en la escena
-  const P=E.P.concat([E.suelo],E.fijas||[],escenaParedesVistas(E,vis.th,vis.ph).map(w=>w.p));
+  const P=E.P.concat([E.suelo],E.fijas||[],E.extras||[],escenaParedesVistas(E,vis.th,vis.ph).map(w=>w.p));
   const cam=r3dCamara(E.sp,vis,R3D_W,R3D_H,E.marco),M=r3dMallaGL(P,cam,vis,false,R3D_GL.linea*R3D_W/cssW/2),gl=X.gl,F=R3D_GL.fondo;
   gl.viewport(0,0,Wd,Hd);gl.clearColor(F[0],F[1],F[2],1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   gl.useProgram(X.pr);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(true);gl.disable(gl.BLEND);
@@ -3328,6 +3521,7 @@ function escenaPintar3D(vis){
 function escenaCaption3D(E){
   let t=`${ESCENA.items.length} de ${escenaUnidades()} muebles colocados · bajos y columnas sobre patas de ${S.patas||'10'} · altura de colgar ${fmtCm(ESCENA.altoAltos)} cm`;
   if(E.huecos)t+=` · ${E.huecos} en las paredes (puertas, ventanas, pilares o vigas)`;
+  const en=ESCENA.enc,zo=ESCENA.zoc;t+=` · encimera ${en&&en.on?`${ESC_CTE.encNom[en.col]||en.col} de ${fmtCm(en.gros*10)} mm y fondo ${fmtCm(en.fon)}`:'oculta'} · zócalo ${zo&&zo.on?(zo.col==='puerta'?'del material de puerta':zo.col):'oculto'} (solo dibujo)`;
   if(E.macizos)t+=` · ${E.macizos} sin construcción 3D (rincones altos o de columna): caja maciza con sus medidas`;
   return esc(t);
 }
@@ -6251,7 +6445,7 @@ function rP(){
       rows+=`<tr style="${bg?`background:${bg};-webkit-print-color-adjust:exact;print-color-adjust:exact`:''}"><td>${n++}</td><td>${chip}<strong style="cursor:${l.tab?'pointer':'default'};${l.tab?'text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;':''}" ${l.tab?`onclick="goTab('${l.tab}')" title="Ir a pestaña"`:''} >${esc(l.desc)}</strong>${l.nota?`<br><span style="font-size:10.5px;color:var(--g)">${esc(l.nota)}</span>`:''}</td><td style="text-align:center"><input class="qi" type="number" value="${l.cnt}" min="1" ${esHija?'disabled':''} onchange="uL(${l.id},this.value)"></td><td class="pr">${fmt(l.p)}</td><td class="tr">${fmt(l.p*l.cnt)}</td><td class="np" style="text-align:center">${botones}</td></tr>`;
     });
   });
-  body.innerHTML=rows;cTot();buildWS();
+  body.innerHTML=rows;cTot();buildWS();escenaPintarImpresion(); // Lote V2b
 }
 // Calcula tiras/accesorios de gola bajos para una cantidad de ml (cm) dada.
 function calcGolaTiras(ml){
