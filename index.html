@@ -18,6 +18,8 @@ header{background:var(--m);color:var(--c);padding:10px 20px;display:flex;align-i
 .hl{display:flex;align-items:center;gap:12px;} .hl img{height:42px;}
 .he{font-size:11px;line-height:1.55;color:var(--cd);}
 .he strong{font-family:'Playfair Display',serif;font-size:15px;color:var(--dc);font-weight:700;display:block;}
+.he a{color:var(--cd);text-decoration:underline;} /* Lote G1 (24-09-2026): el correo salía en azul de enlace sobre el marrón y no se leía; va como el resto del texto */
+.ph a[href^="mailto:"]{color:#000;text-decoration:none;} /* Lote G1: correo de la hoja de presupuesto en negro (pantalla e impresión) */
 .hq{text-align:right;font-size:11px;color:var(--cd);}
 .hq span{font-family:'Playfair Display',serif;font-size:19px;color:var(--dc);font-weight:700;display:block;}
 /* Lote K — botón "Actualizar" (recarga la app para coger la última versión subida a Netlify; el
@@ -455,7 +457,7 @@ tr:hover td{background:var(--c);}
           <button class="btn r3dBtn2" id="r3dRestBtn" onclick="restaurarPiezas()" style="font-size:11px;padding:6px 12px;display:none">↩️ Restaurar piezas</button>
         </div>
         <div id="r3dCont" class="r3d"></div>
-        <div style="font-size:10px;color:var(--g);font-style:italic;margin-top:5px;text-align:center">✋ Mantén pulsada una pieza del casco (o clic derecho) para eliminarla o pasarla a material de puerta</div>
+        <div style="font-size:10px;color:var(--g);font-style:italic;margin-top:5px;text-align:center">✋ Mantén pulsada una pieza del casco (o clic derecho) para ver sus medidas y cantos, eliminarla o pasarla a material de puerta</div>
         <div id="r3dCap" style="font-size:11px;color:var(--mm);margin-top:8px;line-height:1.5"></div>
       </div>
       <div class="qadd">
@@ -1113,7 +1115,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-24.5';
+const APP_BUILD = '2026-09-24.8';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1624,6 +1626,15 @@ const R3D_CTE={
   golaChapa:0.2,       // cm: espesor de la chapa de aluminio del perfil
   golaAlaInf:0.6,      // cm: fondo del ala inferior del perfil en C (golas intermedias)
   golaSombra:0.45,     // factor de oscurecimiento del fondo del hueco respecto al color del perfil
+  // Lote G1 (24-09-2026, Álvaro): en los bajos con gola cada costado lleva un CAJEO arriba y delante de 5,7 (alto) × 2,5
+  // (fondo) donde encaja el perfil; la misma tira de gola atraviesa todos los muebles puestos juntos a la misma altura. El
+  // perfil de arriba se dibuja de lado a lado del mueble metido en ese cajeo (no delante del casco, como la gola intermedia).
+  golaCajeoAlto:5.7, golaCajeoFondo:2.5, // cm [confirmado 24-09-2026]
+  // Lote G1b (24-09-2026, Álvaro): la gola va enlazada al MUEBLE, no a los frentes (con frentes de AG5 o del cliente el
+  // casco es igual). La intermedia (entre dos frentes) es el mismo perfil de 5,7 × 2,5 con su cajeo: quedan 3 libres para
+  // los dedos y cada frente monta (5,7 − 3) / 2 = 1,35 sobre el perfil. El cajeo va SIN CANTEAR. Con gola, el paletón
+  // delantero de arriba se hace de 8 y va enrasado al frente, justo DEBAJO del cajeo de arriba.
+  paletonGola:8,       // cm [confirmado 24-09-2026]
   tirLargo:16, tirAlto:1.2, tirSaliente:2.8, tirMargen:3, // tirador genérico (se afinará por modelo en R2)
   cajLatH:{CJ:8.5,GV:18.5}, cajPared:{IATIRA:1.6,AVYOU:1.2}, cajHolgura:0.6, cajFondoGros:1.6, cajRetranqueo:2,
   cajAltoMin:8,        // cm: alto mínimo que se supone a un frente sin alto tecleado
@@ -1680,19 +1691,40 @@ const CONSTR=(()=>{
   // Costado visto integrado (Álvaro, 23-09-2026): va en material de puerta, al grosor de la puerta, baja hasta el suelo con
   // el alto completo y en ese lado la base pasa a ser INTERIOR (se acorta su grosor); 4 cantos del color de puerta. El ancho
   // exterior del mueble no cambia: las piezas interiores se acortan la diferencia.
-  const cost=(id,lado,fecha,der)=>({id,nombre:'Costado',pos:`sobre la base, lado ${lado}`,estado:'confirmado',fecha,ud:1,grosor:'t',
-    posPuerta:`costado visto integrado, lado ${lado}: hasta el suelo, a todo el alto`,
+  // Lote G1 (24-09-2026): con gola, cajeo arriba y delante (c.gcA × c.gcF) para el perfil: en el 3D dos cajas que se tocan.
+  // Lote G1b: uno por gola (la de arriba y cada intermedia), c.golas = [[y0, y1]…] en cm desde el suelo del casco; la altura
+  // del texto se da desde el canto inferior del costado (y0c: tb, o 0 si es costado integrado).
+  const cajeoTxt=(c,y0c)=>{if(!c.golaCaj)return '';
+    const alt=c.golas.map(([a,b])=>b>=c.A-1e-6?'arriba':`a ${fmtCm(Math.round((a-y0c)*100)/10)} mm del canto inferior`);
+    return ` · ${alt.length>1?'cajeos':'cajeo'} de gola ${fmtCm(c.gcA)}×${fmtCm(c.gcF)} delante (${alt.join(', ')}), sin canto`;};
+  const cost=(id,lado,fecha,der)=>({id,nombre:'Costado',pos:c=>`sobre la base, lado ${lado}${cajeoTxt(c,c.tb)}`,estado:'confirmado',fecha,ud:1,grosor:'t',
+    posPuerta:c=>`costado visto integrado, lado ${lado}: hasta el suelo, a todo el alto${cajeoTxt(c,0)}`,
     corte:c=>c.pz[id]==='p'?{largo:c.A,ancho:c.F}:{largo:c.A-c.tb,ancho:c.F},cantos:{L:2,A:1},cantosPuerta:{L:2,A:2},
-    cajas:c=>{const integ=c.pz[id]==='p',w=integ?c.g:c.t,y=integ?0:c.tb;return [{x:der?c.W-w:0,y,z:0,w,h:c.A-y,d:c.F,col:'costado'}];}});
+    cajas:c=>{const integ=c.pz[id]==='p',w=integ?c.g:c.t,y=integ?0:c.tb,x=der?c.W-w:0;
+      if(!c.golaCaj)return [{x,y,z:0,w,h:c.A-y,d:c.F,col:'costado'}];
+      // Tramos enteros entre cajeos y, en cada cajeo, el costado solo detrás de gcF: cajas que se tocan, sin cruces.
+      const out=[];let ys=y;
+      c.golas.forEach(([a,b])=>{a=Math.max(a,ys);if(b<=a)return;if(a>ys)out.push({x,y:ys,z:0,w,h:a-ys,d:c.F,col:'costado'});
+        out.push({x,y:a,z:c.gcF,w,h:b-a,d:c.F-c.gcF,col:'costado'});ys=b;});
+      if(c.A>ys+1e-6)out.push({x,y:ys,z:0,w,h:c.A-ys,d:c.F,col:'costado'});
+      return out;}});
   const base=(fecha,cantos,pos)=>({id:'base',nombre:'Base',pos:pos||'por debajo de los costados, a todo el ancho',estado:'confirmado',fecha,ud:1,grosor:'t',
     corte:c=>({largo:c.bW,ancho:c.Fb}),cantos,cajas:c=>[{x:c.bx0,y:0,z:0,w:c.bW,h:c.tb,d:c.Fb,col:'suelo'}]}); // cantos: {L,A} o función(c) (Lote X1)
   // Paletón = travesaño = refuerzo (22-09-2026): ancho interior × 12, canto en los 2 largos. Cambia solo cómo va puesto.
   // caja(c, e): e = grosor de ESTA pieza (t, o el de puerta si va en material de puerta: misma medida de corte, 23-09-2026).
-  const paleton=(id,nombre,pos,fecha,caja)=>({id,nombre,pos,estado:'confirmado',fecha,ud:1,grosor:'t',
-    corte:c=>({largo:c.Wi,ancho:c.C.paleton}),cantos:{L:2,A:0},cajas:c=>[Object.assign({col:'trav'},caja(c,c.th(id)))]});
+  const paleton=(id,nombre,pos,fecha,caja,anch)=>({id,nombre,pos,estado:'confirmado',fecha,ud:1,grosor:'t',
+    corte:c=>({largo:c.Wi,ancho:anch?anch(c):c.C.paleton}),cantos:{L:2,A:0},cajas:c=>[Object.assign({col:'trav'},caja(c,c.th(id)))]});
   // En la lista de corte todos se llaman «Paletón» (misma pieza); plano / de canto va en la posición.
-  const plano=(id,pos,fecha,caja)=>paleton(id,'Paletón','plano (tumbado), '+pos,fecha,caja);
-  const canto=(id,pos,fecha,caja)=>paleton(id,'Paletón','de canto (de pie), '+pos,fecha,caja);
+  const conPre=(pre,pos)=>typeof pos==='function'?c=>pre+pos(c):pre+pos; // Lote G1: posición texto o función(c)
+  const plano=(id,pos,fecha,caja,anch)=>paleton(id,'Paletón',conPre('plano (tumbado), ',pos),fecha,caja,anch);
+  const canto=(id,pos,fecha,caja,anch)=>paleton(id,'Paletón',conPre('de canto (de pie), ',pos),fecha,caja,anch);
+  // Lote G1b (24-09-2026, Álvaro) — con gola el paletón delantero de arriba se hace de 8 (c.palDelAn). De canto (fregadero,
+  // placa puertas): enrasado al frente, justo DEBAJO del cajeo de la gola (c.palDelTop = A − 5,7). Lote G1e: el PLANO (bajo
+  // puerta, gavetero/cajonero, rincón recto) chocaría con la gola: se queda arriba y se desplaza 2,5 hacia atrás (c.gcF).
+  const posDel=c=>c.golaCaj?`delantero, de ${fmtCm(c.palDelAn)}, enrasado al frente, justo debajo del cajeo de la gola`:'delantero, arriba, enrasado al frente';
+  const posDelPlano=c=>c.golaCaj?`delantero, de ${fmtCm(c.palDelAn)}, arriba, desplazado ${fmtCm(c.gcF)} hacia atrás (detrás de la gola)`:'delantero, arriba, enrasado al frente';
+  const anchDel=c=>c.palDelAn;
+  const ciegoTop=c=>c.golas.reduce((m,[a])=>a>c.tb?Math.min(m,a):m,c.A-c.th('palDel')); // Lote G1b · G1e (rincón recto): con gola, hasta el cajeo
   const balda=(fecha)=>({id:'balda',nombre:'Balda',pos:'suelta (herrajes sueltos), centrada o repartida',estado:'confirmado',fecha,ud:'nBaldas',grosor:'t',
     corte:c=>({largo:c.Wi,ancho:c.fonBalda}),cantos:{L:2,A:2},cajas:null}); // el 3D la dibuja aparte (r3dPiezas)
   // Trasera: solo se puede eliminar, no pasar a material de puerta (una trasera de 19 no entra en la ranura; Álvaro, 23-09-2026).
@@ -1704,21 +1736,35 @@ const CONSTR=(()=>{
   const costados=(f1,f2)=>[cost('cI','izquierdo',f1,false),cost('cD','derecho',f2||f1,true)];
   // Lote R8 — base / techo del rincón escuadra: una pieza en L (prisma) de y a y + h. Con costado integrado en un brazo
   // se acorta en ese extremo (eZ0 en el izquierdo, eX1 en el derecho). rects = la misma L en rectángulos (visor SVG).
-  const escL=(c,y,h,col)=>({pts:[[0,c.eZ0],[c.F,c.eZ0],[c.F,c.H-c.F],[c.eX1,c.H-c.F],[c.eX1,c.H],[0,c.H]],
-    rects:[[0,c.eZ0,c.F,c.H-c.F],[0,c.H-c.F,c.eX1,c.H]],y,h,col});
+  // Lote G1e: rec = recorte de los dos frentes (techo con gola: 2,5, para que entre el perfil; base: 0).
+  const escL=(c,y,h,col,rec)=>{const r=rec||0,xf=c.F-r,zf=c.H-c.F+r;return {pts:[[0,c.eZ0],[xf,c.eZ0],[xf,zf],[c.eX1,zf],[c.eX1,c.H],[0,c.H]],
+    rects:[[0,c.eZ0,xf,zf],[0,zf,c.eX1,c.H]],y,h,col};};
+  // Lote G1e (24-09-2026, Álvaro) — rincones escuadra y chaflán con gola: el techo va por encima, así que se le quitan 2,5
+  // (gcF) por delante y el costado lleva el mismo cajeo MENOS el grosor del techo; entre los dos queda el hueco justo de
+  // 5,7 × 2,5 para el perfil. Recorte y cajeo SIN canto. Escuadra: un costado por brazo, cajeo en su canto delantero.
+  const cajeoRin=(c,integ,extra)=>{if(!c.golaCaj)return '';const h=integ?c.gcA:c.gcA-c.th('techo');
+    return ` · cajeo de gola arriba y delante de ${fmtCm(h)}×${fmtCm(c.gcF)}${extra||''}, sin canto`;};
+  const cajasCostEsc=(c,izq)=>{const i=c.pz[izq?'cI':'cD']==='p',y=i?0:c.eTb,top=i?c.A:c.A-c.eTt,yc=c.A-c.gcA,f=c.gcF;
+    const caja=(y0,y1,rec)=>izq?{x:0,y:y0,z:0,w:c.F-rec,h:y1-y0,d:c.eI,col:'costado'}:{x:c.W-c.eD,y:y0,z:c.H-c.F+rec,w:c.eD,h:y1-y0,d:c.F-rec,col:'costado'};
+    if(!c.golaCaj||yc<=y+1e-6)return [caja(y,top,0)];
+    return [caja(y,yc,0),caja(yc,top,f)];};
   // Lote C1 — ayudas del bajo chaflán. chafX0 / chafX1: extremos de base y techo (se acortan si un costado va integrado).
   const chafX0=c=>c.pz.cI==='p'?c.th('cI'):0,chafX1=c=>c.W-(c.pz.cD==='p'?c.th('cD'):0);
   const chafTxt=c=>`fondo izq ${fmtCm(c.chI)} · dcho ${fmtCm(c.chD)} · diagonal ${fmtCm(r1(c.chL))}`;
-  const chafTapa=(c,y,h,col)=>{const a=chafX0(c),b=chafX1(c);return {pts:[[a,c.chZ(a)],[b,c.chZ(b)],[b,c.chM],[a,c.chM]],y,h,col};};
-  const chafCorteTapa=c=>{const a=chafX0(c),b=chafX1(c);return {largo:b-a+CHAF_DEMASIA_TAPA,ancho:c.chM-Math.min(c.chZ(a),c.chZ(b))+CHAF_DEMASIA_TAPA};}; // veta a lo ancho, como la base de los bajos; +1 cm de demasía en cada medida
+  // Lote G1e: dz = recorte de la diagonal medido a lo largo de z (techo con gola: c.chDz = 2,5 en perpendicular; base: 0).
+  const chafTapa=(c,y,h,col,dz)=>{const a=chafX0(c),b=chafX1(c),d=dz||0;return {pts:[[a,c.chZ(a)+d],[b,c.chZ(b)+d],[b,c.chM],[a,c.chM]],y,h,col};};
+  const chafCorteTapa=(c,dz)=>{const a=chafX0(c),b=chafX1(c);return {largo:b-a+CHAF_DEMASIA_TAPA,ancho:c.chM-Math.min(c.chZ(a),c.chZ(b))-(dz||0)+CHAF_DEMASIA_TAPA};}; // veta a lo ancho, como la base de los bajos; +1 cm de demasía en cada medida
   const chafCost=(id,lado,der)=>({id,nombre:'Costado',
-    pos:c=>`por dentro, entre base y techo, lado ${lado} (fondo ${fmtCm(der?c.chD:c.chI)}); delante a inglete siguiendo la diagonal, cortado ${fmtCm(CHAF_INGLETE_SOBREMEDIDA)} más ancho para sacar la caída; canto en los dos largos (también el del inglete)`,
-    posPuerta:`costado visto integrado, lado ${lado}: del suelo arriba, base y techo se acortan en ese lado`,
+    pos:c=>`por dentro, entre base y techo, lado ${lado} (fondo ${fmtCm(der?c.chD:c.chI)}); delante a inglete siguiendo la diagonal, cortado ${fmtCm(CHAF_INGLETE_SOBREMEDIDA)} más ancho para sacar la caída; canto en los dos largos (también el del inglete)${cajeoRin(c,false,chafCajeoTxt(c))}`,
+    posPuerta:c=>`costado visto integrado, lado ${lado}: del suelo arriba, base y techo se acortan en ese lado${cajeoRin(c,true,chafCajeoTxt(c))}`,
     estado:'confirmado',fecha:'24-09-2026',ud:1,grosor:'t', // Álvaro, 24-09-2026: canto en los dos largos aunque uno vaya a inglete
     corte:c=>({largo:c.pz[id]==='p'?c.A:c.A-c.th('base')-c.th('techo'),ancho:(der?c.chD:c.chI)+CHAF_INGLETE_SOBREMEDIDA}),
     cantos:{L:2,A:0},cantosPuerta:{L:2,A:2},
-    cajas:c=>{const i=c.pz[id]==='p',e=c.th(id),y=i?0:c.th('base'),x0=der?c.W-e:0,x1=x0+e;
-      return [{pts:[[x0,c.chZ(x0)],[x1,c.chZ(x1)],[x1,c.chM],[x0,c.chM]],y,h:(i?c.A:c.A-c.th('techo'))-y,col:'costado'}];}});
+    cajas:c=>{const i=c.pz[id]==='p',e=c.th(id),y=i?0:c.th('base'),x0=der?c.W-e:0,x1=x0+e,top=i?c.A:c.A-c.th('techo'),yc=c.A-c.gcA;
+      const pr=(y0,y1,d)=>({pts:[[x0,c.chZ(x0)+d],[x1,c.chZ(x1)+d],[x1,c.chM],[x0,c.chM]],y:y0,h:y1-y0,col:'costado'});
+      if(!c.golaCaj||yc<=y+1e-6)return [pr(y,top,0)];
+      return [pr(y,yc,0),pr(yc,top,c.chDz)];}}); // Lote G1e: cajeo de gola arriba, paralelo al inglete
+  const chafCajeoTxt=c=>` perpendicular a la diagonal (${fmtCm(r1(c.chDz))} a lo largo del costado), siguiendo el inglete`;
   // Balda: de costado a costado, detrás hasta la cara de la trasera (zt) y delante paralela a la diagonal, retranqueada lo
   // mismo que la del bajo puerta respecto al fondo mayor (fonBalda de chM: 58 → 51,5, es decir 0,7 detrás del frente).
   const chafBalda=c=>{const x0=c.tL,x1=c.W-c.tR,zt=c.chM-c.C.traseraRemetida-c.tr,off=Math.max(0.5,zt-c.fonBalda),z0=c.chZ(x0)+off,z1=c.chZ(x1)+off;
@@ -1726,7 +1772,8 @@ const CONSTR=(()=>{
   // Casco del bajo puerta (18-09-2026). Lote R6: en una función para reutilizarlo tal cual en el bajo rincón recto.
   const cascoBajo=()=>[
       base('18-09-2026',{L:2,A:2}),...costados('18-09-2026'),
-      plano('palDel','delantero, arriba, enrasado al frente','18-09-2026',(c,e)=>({x:c.tL,y:c.A-e,z:0,w:c.Wi,h:e,d:c.C.travesano})),
+      plano('palDel',posDelPlano,'18-09-2026',(c,e)=>({x:c.tL,y:c.A-e,z:c.gcF,w:c.Wi,h:e,d:c.palDelAn,
+        obst:c.golaCaj?[c.A-e,c.A,c.gcF,c.gcF+c.palDelAn]:null}),anchDel),
       plano('palTras','trasero, arriba, enrasado atrás','18-09-2026',(c,e)=>({x:c.tL,y:c.A-e,z:c.F-c.C.travesano,w:c.Wi,h:e,d:c.C.travesano})),
       trasera({pos:'en ranura, cara trasera a 5 del fondo',estado:'confirmado',fecha:'22-09-2026',
         corte:c=>({largo:c.A-Math.max(c.tb,c.th('palTras')),ancho:c.trAncho}),
@@ -1741,15 +1788,17 @@ const CONSTR=(()=>{
     // el largo que se ve al abrir la puerta; veta vertical. Delante, pegada a la puerta, va la regleta vista de 20 (material
     // de puerta, línea CVT aparte: no es pieza del casco) sobre la que giran las bisagras. 5 patas. Baldas: fondo − 7 mm.
     rinRec:{lab:'Bajo rincón recto',pendiente:false,piezas:[...cascoBajo(),
-      {id:'ciego',nombre:'Ciego',pos:'interior, enrasado delante, entre la base y el paletón delantero, pegado al costado del lado ciego',
+      {id:'ciego',nombre:'Ciego',pos:c=>`interior, enrasado delante, entre la base y ${c.golaCaj?'el cajeo de la gola':'el paletón delantero'}, pegado al costado del lado ciego`,
         estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',cuando:c=>c.cW>0,
-        corte:c=>({largo:c.A-c.tb-c.th('palDel'),ancho:c.cW}),cantos:{L:1,A:0},
-        cajas:c=>[{x:c.cX,y:c.tb,z:0,w:c.cW,h:c.A-c.tb-c.th('palDel'),d:c.th('ciego'),col:'costado'}]},
+        // Lote G1b: hasta el paletón delantero (con gola, debajo del cajeo) o hasta el primer cajeo de gola intermedio que
+        // lo cruce (puerta más baja que el mueble) [supuesto en ese caso: el ciego no se cajea]
+        corte:c=>({largo:ciegoTop(c)-c.tb,ancho:c.cW}),cantos:{L:1,A:0},
+        cajas:c=>[{x:c.cX,y:c.tb,z:0,w:c.cW,h:ciegoTop(c)-c.tb,d:c.th('ciego'),col:'costado'}]},
       balda('23-09-2026')],
       huecos:c=>Object.assign(huecosBajo(c),{zBaldaMin:c.cW>0?c.th('ciego'):0})},
     fregadero:{lab:'Bajo fregadero',pendiente:false,piezas:[
       base('22-09-2026',{L:2,A:2},'por debajo de los costados, 5 más corta (53), enrasada delante'),...costados('18-09-2026'),
-      canto('palDel','delantero, arriba, enrasado al frente','18-09-2026',(c,e)=>({x:c.tL,y:c.A-c.C.paleton,z:0,w:c.Wi,h:c.C.paleton,d:e,obst:[c.A-c.C.paleton,c.A,0,e]})),
+      canto('palDel',posDel,'18-09-2026',(c,e)=>({x:c.tL,y:c.palDelTop-c.palDelAn,z:0,w:c.Wi,h:c.palDelAn,d:e,obst:[c.palDelTop-c.palDelAn,c.palDelTop,0,e]}),anchDel),
       canto('palTras','trasero, arriba, enrasado atrás','22-09-2026',(c,e)=>({x:c.tL,y:c.A-c.C.paleton,z:c.F-e,w:c.Wi,h:c.C.paleton,d:e})),
       canto('refuerzo','refuerzo de pie sobre el final de la base','18-09-2026',(c,e)=>({x:c.tL,y:c.tb,z:c.Fb-e,w:c.Wi,h:c.C.refuerzo,d:e})),
       balda('Lote H')],
@@ -1770,17 +1819,19 @@ const CONSTR=(()=>{
       {id:'base',nombre:'Base',pos:c=>`una pieza en L, por debajo de los costados; cajeo ${fmtCm(c.eX1-c.F)}×${fmtCm(c.H-c.F-c.eZ0)}; canto en todo el perímetro, cajeo incluido`,
         estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',corte:c=>({largo:c.eX1,ancho:c.H-c.eZ0}),cantos:{L:2,A:2},
         cajas:c=>[escL(c,0,c.th('base'),'suelo')]},
-      {id:'techo',nombre:'Techo',pos:c=>`una pieza en L, por encima de los costados; cajeo ${fmtCm(c.eX1-c.F)}×${fmtCm(c.H-c.F-c.eZ0)}; canto en todo el perímetro, cajeo incluido`,
+      {id:'techo',nombre:'Techo',pos:c=>c.golaCaj
+          ?`una pieza en L, por encima de los costados; cajeo ${fmtCm(c.eX1-c.F+c.gcF)}×${fmtCm(c.H-c.F+c.gcF-c.eZ0)} (recortado ${fmtCm(c.gcF)} en los dos frentes para la gola: esos bordes sin canto); canto en el resto del perímetro`
+          :`una pieza en L, por encima de los costados; cajeo ${fmtCm(c.eX1-c.F)}×${fmtCm(c.H-c.F-c.eZ0)}; canto en todo el perímetro, cajeo incluido`,
         estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',corte:c=>({largo:c.eX1,ancho:c.H-c.eZ0}),cantos:{L:2,A:2},
-        cajas:c=>[escL(c,c.A-c.th('techo'),c.th('techo'),'techo')]},
-      {id:'cI',nombre:'Costado',pos:'entre base y techo, al final del brazo izquierdo',estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',
-        posPuerta:'costado visto integrado, brazo izquierdo: del suelo arriba, base y techo se acortan en ese brazo',
+        cajas:c=>[escL(c,c.A-c.th('techo'),c.th('techo'),'techo',c.gcF)]},
+      {id:'cI',nombre:'Costado',pos:c=>'entre base y techo, al final del brazo izquierdo'+cajeoRin(c,false),estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',
+        posPuerta:c=>'costado visto integrado, brazo izquierdo: del suelo arriba, base y techo se acortan en ese brazo'+cajeoRin(c,true),
         corte:c=>({largo:c.pz.cI==='p'?c.A:c.A-c.eTb-c.eTt,ancho:c.F}),cantos:{L:2,A:0},cantosPuerta:{L:2,A:2},
-        cajas:c=>{const i=c.pz.cI==='p',y=i?0:c.eTb;return [{x:0,y,z:0,w:c.F,h:(i?c.A:c.A-c.eTt)-y,d:c.eI,col:'costado'}];}},
-      {id:'cD',nombre:'Costado',pos:'entre base y techo, al final del brazo derecho',estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',
-        posPuerta:'costado visto integrado, brazo derecho: del suelo arriba, base y techo se acortan en ese brazo',
+        cajas:c=>cajasCostEsc(c,true)},
+      {id:'cD',nombre:'Costado',pos:c=>'entre base y techo, al final del brazo derecho'+cajeoRin(c,false),estado:'confirmado',fecha:'23-09-2026',ud:1,grosor:'t',
+        posPuerta:c=>'costado visto integrado, brazo derecho: del suelo arriba, base y techo se acortan en ese brazo'+cajeoRin(c,true),
         corte:c=>({largo:c.pz.cD==='p'?c.A:c.A-c.eTb-c.eTt,ancho:c.F}),cantos:{L:2,A:0},cantosPuerta:{L:2,A:2},
-        cajas:c=>{const i=c.pz.cD==='p',y=i?0:c.eTb;return [{x:c.W-c.eD,y,z:c.H-c.F,w:c.eD,h:(i?c.A:c.A-c.eTt)-y,d:c.F,col:'costado'}];}},
+        cajas:c=>cajasCostEsc(c,false)},
       // Trasera en ranura (media pieza en base, techo y costado): alto = hueco + la mitad de base y techo (A − t con t).
       // Fondo: de la cara trasera de la izquierda (x = 5) a la ranura del costado derecho. Izquierda: de la ranura del
       // costado izquierdo a la cara de la del fondo (norma: la del fondo va entera y la izquierda muere contra ella).
@@ -1813,7 +1864,7 @@ const CONSTR=(()=>{
       huecos:c=>({zCaja:c.F,zBalda:0,yHueco:c.A-c.t})},
     placap:{lab:'Bajo placa puertas',pendiente:false,piezas:[
       base('22-09-2026',{L:1,A:2},'por debajo de los costados, 53 de fondo; sin canto atrás (trasera clavada)'),...costados('18-09-2026'),
-      canto('palDel','delantero, arriba, enrasado al frente','22-09-2026',(c,e)=>({x:c.tL,y:c.A-c.C.paleton,z:0,w:c.Wi,h:c.C.paleton,d:e,obst:[c.A-c.C.paleton,c.A,0,e]})),
+      canto('palDel',posDel,'22-09-2026',(c,e)=>({x:c.tL,y:c.palDelTop-c.palDelAn,z:0,w:c.Wi,h:c.palDelAn,d:e,obst:[c.palDelTop-c.palDelAn,c.palDelTop,0,e]}),anchDel),
       canto('palTras','trasero, arriba, remetido a 53','22-09-2026',(c,e)=>({x:c.tL,y:c.A-c.C.paleton,z:c.Fb-e,w:c.Wi,h:c.C.paleton,d:e})),
       trasera({pos:'entera, clavada a la testa de la base y al paletón trasero (2 mm menos a lo alto), en ranura en los costados',estado:'confirmado',fecha:'24-09-2026',
         corte:c=>({largo:c.A-c.C.traseraClavadaRebaje,ancho:c.trAncho}),cajas:c=>[trasVista(c,0,c.A,c.Fb)]}),
@@ -1859,9 +1910,11 @@ const CONSTR=(()=>{
       {id:'base',nombre:'Base',pos:c=>`trapecio por debajo de los costados (${chafTxt(c)}); se corta el rectángulo con ${fmtCm(CHAF_DEMASIA_TAPA)} cm de demasía en cada medida y se saca la diagonal; canto en todo el perímetro, diagonal incluida`,
         estado:'confirmado',fecha:'24-09-2026',ud:1,grosor:'t',corte:c=>chafCorteTapa(c),cantos:{L:2,A:2},
         cajas:c=>[chafTapa(c,0,c.th('base'),'suelo')]},
-      {id:'techo',nombre:'Techo',pos:c=>`trapecio por encima de los costados, igual que la base (${chafTxt(c)}); con ${fmtCm(CHAF_DEMASIA_TAPA)} cm de demasía en cada medida; canto en todo el perímetro, diagonal incluida`,
-        estado:'confirmado',fecha:'24-09-2026',ud:1,grosor:'t',corte:c=>chafCorteTapa(c),cantos:{L:2,A:2},
-        cajas:c=>[chafTapa(c,c.A-c.th('techo'),c.th('techo'),'techo')]},
+      {id:'techo',nombre:'Techo',pos:c=>c.golaCaj
+          ?`trapecio por encima de los costados (${chafTxt(c)}); con ${fmtCm(CHAF_DEMASIA_TAPA)} cm de demasía en cada medida; la diagonal va recortada ${fmtCm(c.gcF)} en paralelo para la gola, sin canto; canto en el resto del perímetro`
+          :`trapecio por encima de los costados, igual que la base (${chafTxt(c)}); con ${fmtCm(CHAF_DEMASIA_TAPA)} cm de demasía en cada medida; canto en todo el perímetro, diagonal incluida`,
+        estado:'confirmado',fecha:'24-09-2026',ud:1,grosor:'t',corte:c=>chafCorteTapa(c,c.chDz),cantos:c=>c.golaCaj?{L:1,A:2}:{L:2,A:2}, // Lote G1e
+        cajas:c=>[chafTapa(c,c.A-c.th('techo'),c.th('techo'),'techo',c.chDz)]},
       chafCost('cI','izquierdo',false),chafCost('cD','derecho',true),
       trasera({pos:'como en el bajo puerta: en ranura (base, techo y costados), cara trasera a 5 del fondo',estado:'confirmado',fecha:'24-09-2026',
         corte:c=>({largo:c.A-(c.th('base')+c.th('techo'))/2,ancho:c.trAncho}),
@@ -1910,7 +1963,13 @@ function constrCtx(sp){
   // Lote C1 — bajo chaflán: fondo izquierdo (chI) y derecho (chD), fondo mayor chM (trasera), frente de cada lado chZL /
   // chZR, diagonal chZ(x) y su largo chL (= ancho de la puerta). En el resto de muebles chI = chD = F.
   const chI=+sp.fonI||F,chD=+sp.fonD||F,chM=Math.max(chI,chD),chZL=chM-chI,chZR=chM-chD;
-  return {A,W,F,Fb,t,tr:sp.tr||grosorTrasera('')/10,yB,hornoAbajo,hueco,fonBalda:fondoBaldaMueble(sp.fam,F,!!sp.rincon),C,
+  // Lote G1 · G1b · G1e — cajeo de gola en los costados: bajos regulares y rincones (recto, escuadra, chaflán) con gola,
+  // lleve o no frentes de AG5 (la gola va con el MUEBLE). Uno arriba y otro por cada gola intermedia (rincones: solo arriba).
+  const golaCaj=GOLA_CAJEO_TIPOS.includes(sp.tipo)&&!!sp.tg&&sp.tg.t==='gola';
+  const golas=golaCaj?golaIntervalos(sp,yB,hornoAbajo):[];
+  return {golaCaj,golas,gcA:golaCaj?C.golaCajeoAlto:0,gcF:golaCaj?C.golaCajeoFondo:0,
+    palDelAn:golaCaj?C.paletonGola:C.paleton,palDelTop:golaCaj?A-C.golaCajeoAlto:A,
+    chDz:golaCaj?C.golaCajeoFondo*Math.hypot(W,chZR-chZL)/(W||1):0,/* Lote G1e: 2,5 perpendicular a la diagonal, medidos en z */A,W,F,Fb,t,tr:sp.tr||grosorTrasera('')/10,yB,hornoAbajo,hueco,fonBalda:fondoBaldaMueble(sp.fam,F,!!sp.rincon),C,
     pz,g,th,tL,tR,tb,Wi:W-tL-tR,bx0,bW:W-bx0-(pz.cD==='p'?g:0),trAncho:W-Math.max(tL,tR),tTop:Math.max(th('palDel'),th('palTras')),
     cW,cDer,cX:cDer?W-tR-cW:tL,xLo:(cW>0&&!cDer)?tL+cW:tL,xHi:(cW>0&&cDer)?W-tR-cW:W-tR,
     H,zb:H-C.traseraRemetida-trE,xi:C.traseraRemetida+trE,nB:sp.nBaldas||0, // Lote R7
@@ -1918,6 +1977,34 @@ function constrCtx(sp){
     // techo empieza en z = eI (brazo izquierdo) o termina en x = W − eD (brazo derecho).
     eI:th('cI'),eD:th('cD'),eTb:th('base'),eTt:th('techo'),eZ0:pz.cI==='p'?th('cI'):0,eX1:W-(pz.cD==='p'?th('cD'):0),
     chI,chD,chM,chZL,chZR,chZ:x=>chZL+(chZR-chZL)*x/(W||1),chL:Math.hypot(W,chZR-chZL)}; // Lote C1
+}
+const GOLA_CAJEO_TIPOS=['bajo','fregadero','placap','placa','placah','rinRec','rinEsc','chaflan']; // Lote G1 · G1b · G1e: cascos con cajeo de gola en los costados
+// Lote G1b — el frente es de gola si el mueble lo es y lleva gola en ese frente (el tirador la excluye en su puerta). Con
+// frentes del cliente el reparto de alturas es el mismo que con los de AG5 (el mueble es igual).
+function golaReparto(sp){return !!sp.tg&&sp.tg.t==='gola'&&(!!sp.admiteTir||!!sp.sinFrentes);}
+// Lote G1b — huecos de gola del mueble (cara de arriba de cada frente que lleva gola), con el MISMO reparto que r3dPiezas:
+// frentes apilados desde arriba (en los cascos con cajeo nunca desde abajo) y puertas desde el suelo. Devuelve los
+// cajeos [y0, y1] en cm: el de arriba de A − 5,7 a A y cada intermedio centrado en su hueco de 3 (1,35 por encima y por
+// debajo). Siempre lleva el de arriba. Fusiona los que se tocan.
+function golaIntervalos(sp,yB,hornoAbajo){
+  const C=R3D_CTE,A=sp.alt,G=C.golaAlto,s=(C.golaCajeoAlto-G)/2,gola=golaReparto(sp),huecos=[];
+  const res=f=>(gola&&f.tir)?G:0,fr=sp.frentes||[],nVac=fr.filter(f=>!f.alto).length;
+  const libre=Math.max(0,A-(hornoAbajo?yB:0)-fr.reduce((q,f)=>q+f.alto+res(f),0)),auto=nVac?Math.max(C.cajAltoMin,libre/nVac):0;
+  let yTop=A;
+  fr.forEach(f=>{const h=f.alto||auto,y0=yTop-h-res(f);if(res(f))huecos.push(y0+h);yTop=y0;});
+  if(!sp.apiladas&&sp.tipo!=='rinEsc'&&sp.tipo!=='chaflan'){
+    (sp.puertas||[]).forEach(p=>{if(gola&&p.tir)huecos.push(p.alto||(yTop-G));});
+    const rin=sp.tipo==='rinRec'?sp.rin:null;
+    if(gola&&rin&&rin.pw>0&&Math.min(rin.rw,sp.anc-rin.pw)>0)huecos.push(rin.hReg||(yTop-G)); // regleta del rincón recto
+  }
+  const iv=[[A-C.golaCajeoAlto,A]];
+  // Una intermedia no puede meterse en la zona del paletón delantero (8 bajo el cajeo de arriba): pasa solo con una puerta
+  // tecleada más baja que el mueble; esa gola no se cajea ni se dibuja.
+  const tope=A-C.golaCajeoAlto-(['fregadero','placap'].includes(sp.tipo)?C.paletonGola:0); // Lote G1e: solo los de paletón de canto
+  huecos.forEach(y=>{if(y>0&&y+G<A-0.01&&y+G+s<=tope+1e-6)iv.push([Math.max(0,y-s),Math.min(A,y+G+s)]);});
+  iv.sort((a,b)=>a[0]-b[0]);
+  const out=[];iv.forEach(v=>{const u=out[out.length-1];if(u&&v[0]<=u[1]+1e-6)u[1]=Math.max(u[1],v[1]);else out.push(v.slice());});
+  return out.map(([a,b])=>[r1(a*100)/100,r1(b*100)/100]);
 }
 function constrTabla(tipo){return CONSTR[tipo]||CONSTR.generico;}
 // Piezas de la tabla que van en este casco (filtra `cuando`).
@@ -1991,7 +2078,7 @@ function avisoPiezasHoja(l){
 // quita lo que pone), canto de armazón 0,8, trasera sin canto, veta «en círculo». Mecanizados: después.
 const DESPIECE_MM=v=>Math.round((+v||0)*10); // cm → mm entero
 // Lote R7 — la posición de una pieza puede depender de las medidas (cajeos del rincón escuadra): texto o función(c).
-function posPieza(pz,c){return typeof pz.pos==='function'?pz.pos(c):pz.pos;}
+function posPieza(pz,c,enP){const v=(enP&&pz.posPuerta)?pz.posPuerta:pz.pos;return typeof v==='function'?v(c):v;} // Lote G1: enP → posPuerta
 function despieceCasco(sp,ud,ref){
   const tabla=constrTabla(sp.tipo),c=constrCtx(sp),n=Math.max(1,+ud||1);
   const mueble=`${sp.lab||sp.nombre} ${fmtCm(sp.anc)}×${fmtCm(sp.alt)}×${fmtCm(sp.fon)}`;
@@ -2014,7 +2101,7 @@ function despieceCasco(sp,ud,ref){
       const enP=st==='p';let can=(enP&&pz.cantosPuerta)||pz.cantos;if(typeof can==='function')can=can(c); // Lote X1
       const p={cantidad:cant*n,descripcion:`${pz.nombre}${enP?' (material de puerta)':''} · ${mueble}`,largo:DESPIECE_MM(m.largo),ancho:DESPIECE_MM(m.ancho),
         grueso:enP?Math.round(c.g*10):(esTr?out.tr:out.gros),material:enP?(sp.matPuerta||'Material de puerta'):out.material,caras:0,cantosL:can.L,cantosA:can.A,
-        pieza:pz.nombre,pos:enP?(pz.posPuerta||posPieza(pz,c))+' · EN MATERIAL DE PUERTA':posPieza(pz,c),estado:pz.estado,mueble,lineaId:ref!=null?ref:null,enPuerta:enP};
+        pieza:pz.nombre,pos:enP?posPieza(pz,c,true)+' · EN MATERIAL DE PUERTA':posPieza(pz,c),estado:pz.estado,mueble,lineaId:ref!=null?ref:null,enPuerta:enP};
       // Piezas iguales del mismo mueble (los dos paletones del bajo puerta, los tres del fregadero…) van en una sola
       // línea, como en la hoja manuscrita: misma pieza, medidas, grosor, material, cantos y estado → se suman.
       const igual=out.piezas.find(q=>q.pieza===p.pieza&&q.largo===p.largo&&q.ancho===p.ancho&&q.grueso===p.grueso&&q.material===p.material&&q.cantosL===p.cantosL&&q.cantosA===p.cantosA&&q.estado===p.estado);
@@ -2201,6 +2288,7 @@ function r3dPiezas(sp,conFrentes,est){
         if(b.pts){P.push(Object.assign({k:'prism',pts:b.pts,rects:b.rects,y:b.y,h:b.h,col,st:R3D_COL.stroke},ex||{}));return;} // Lote R8: pieza en L de una pieza
         box(b.x,b.y,b.z,b.w,b.h,b.d,col,null,ex);if(b.obst)obst.push(b.obst);});});
     const hu=tabla.huecos(cx);zCaja=hu.zCaja;zBalda=hu.zBalda;yHueco=hu.yHueco;yB=cx.yB;zBaldaMin=hu.zBaldaMin||0;
+    cx.golas.forEach(([a,b])=>obst.push([a,b,0,cx.gcF])); // Lote G1 · G1b: ninguna caja de cajón entra en un perfil gola
   }
   if(sp.patas){
     const r=C.pataDiam/2,i=C.pataInset,pa=sp.pataAlto||C.pataAlto; // Lote D1: alto 10/15 del proyecto; van en la base: las traseras se retranquean desde el final de la base
@@ -2216,7 +2304,7 @@ function r3dPiezas(sp,conFrentes,est){
   // Frentes cajón/gaveta apilados desde arriba (en el placa horno sin gola, desde abajo: el horno va encima; con gola el
   // horno va abajo y el cajón arriba, Lote D1). Alto vacío → se reparte el hueco que dejan los que sí tienen alto.
   const hg=C.frenteHolgura,g=C.frenteGrosor;
-  const lleva=sp.admiteTir, esGola=lleva&&sp.tg.t==='gola', esTir=lleva&&sp.tg.t==='tirador';
+  const lleva=sp.admiteTir, esGola=golaReparto(sp), esTir=lleva&&sp.tg.t==='tirador'; // Lote G1b: gola del mueble
   const reservaGola=f=>(esGola&&f.tir)?C.golaAlto:0; // hueco del perfil gola encima del frente
   const nVacios=sp.frentes.filter(f=>!f.alto).length;
   const desdeAbajo=(esPlacaH&&!hornoAbajo)||!!sp.colHorno; // Lote D1 · X1 (columna horno/micro: gavetas abajo)
@@ -2230,6 +2318,7 @@ function r3dPiezas(sp,conFrentes,est){
       // Lote R4 — perfil hueco (ver R3D_CTE): tres cajas que se tocan y no se cruzan, todas en la franja de 3 cm encima
       // del frente y dentro del grosor de los frentes (z de −g a 0), fijas al casco aunque el frente se abra.
       const e=C.golaChapa,H=C.golaAlto,interm=top+H<A-0.01; // intermedia: queda otro frente encima (perfil en C)
+      if(cx.golaCaj){golaTops.push(top);return;} // Lote G1 · G1b: arriba e intermedias van en los cajeos (se dibujan al final)
       box(x,top,-e,w,H,e,r3dOscurecer(colHerr,C.golaSombra),R3D_COL.strokeHerr);   // fondo del hueco, en sombra
       box(x,top+H-e,-g,w,e,g-e,colHerr,R3D_COL.strokeHerr);                         // ala superior, enrasada con los frentes
       if(interm)box(x,top,-Math.min(C.golaAlaInf,g-e)-e,w,e,Math.min(C.golaAlaInf,g-e),colHerr,R3D_COL.strokeHerr); // ala inferior corta
@@ -2242,7 +2331,7 @@ function r3dPiezas(sp,conFrentes,est){
       box(x+(w-L)/2,top-C.tirMargen,-g-C.tirSaliente-(dz||0),L,C.tirAlto,C.tirSaliente,colHerr,R3D_COL.strokeHerr,rot?{rot,delante:P.length-1,nrm:r3dNormal({rot},[0,0,-1])}:null);
     }
   };
-  let yTop=A,yBot=0,yFrenteMin=Infinity;
+  let yTop=A,yBot=0,yFrenteMin=Infinity;const golaTops=[]; // Lote G1b
   // Lote R6 — rincón recto: puertas y frentes van del lado contrario al ciego (sin ancho tecleado, el de las puertas).
   const rin=tipo==='rinRec'?sp.rin:null,xLado=w=>(rin&&!rin.der)?W-w:0;
   sp.frentes.forEach((f,i)=>{
@@ -2370,6 +2459,43 @@ function r3dPiezas(sp,conFrentes,est){
       if(rw>0&&hr>0){box(xr+hg,hg,-g,rw-2*hg,hr-2*hg,g,R3D_COL.frente);if(esGola)herraje(xr,rw,hr,true,null,0);}
     }
   }
+  // Lote G1 (24-09-2026) — perfil gola de arriba metido en el cajeo de los costados (gcA × gcF), de lado a lado del mueble:
+  // con varios muebles juntos a la misma altura se ve una sola tira continua. Cajas que se tocan y no se cruzan: fondo del
+  // perfil (en sombra) contra la cara del cajeo, ala inferior detrás del canto de la puerta y ala superior hasta la cara de
+  // los frentes. Forma exacta de la chapa [supuesto], solo dibujo.
+  // Lote G1b: las intermedias son el mismo perfil (en C, dentro del cajeo); los frentes montan 1,35 por encima y por debajo.
+  if(conFrentes&&golaTops.length&&tipo==='rinEsc'){
+    // Lote G1e — rincón escuadra: perfil por el frente de cada brazo (x = F y z = H − F), del costado a la esquina, metido en
+    // el hueco del techo recortado y del cajeo de los costados. Cajas que se tocan y no se cruzan, también en la esquina.
+    const e=C.golaChapa,f=cx.gcF,y0=A-cx.gcA,L1=cx.H-F,xf=F-f,sombra=r3dOscurecer(colHerr,C.golaSombra),sh=R3D_COL.strokeHerr;
+    box(xf,y0,0,e,cx.gcA,L1+f,sombra,sh);              // fondo, brazo izquierdo
+    box(xf+e,y0,L1+f-e,W-xf-e,cx.gcA,e,sombra,sh);     // fondo, brazo derecho
+    box(xf+e,y0,0,F-xf-e,e,L1+f-e,colHerr,sh);          // ala inferior, brazo izquierdo
+    box(F,y0,L1,W-F,e,f-e,colHerr,sh);                  // ala inferior, brazo derecho
+    box(xf+e,A-e,0,F+g-xf-e,e,L1+f-e,colHerr,sh);       // ala superior, brazo izquierdo (hasta la cara de las puertas)
+    box(F+g,A-e,L1-g,W-F-g,e,g+f-e,colHerr,sh);         // ala superior, brazo derecho
+  }
+  else if(conFrentes&&golaTops.length&&tipo==='chaflan'){
+    // Lote G1e — chaflán: el perfil sigue la diagonal. Se dibuja como el de un bajo (a lo largo de x, fondo hacia dentro) y se
+    // lleva a la diagonal con r3dLlevar, igual que las puertas. Cada caja se recorta para no salirse de los lados del mueble.
+    const e=C.golaChapa,f=cx.gcF,L=cx.chL,c=W/L,s=(cx.chZR-cx.chZL)/L,s0=P.length,sombra=r3dOscurecer(colHerr,C.golaSombra),sh=R3D_COL.strokeHerr;
+    const tira=(y,h,v0,v1,col)=>{const u0=Math.max(v0*s,v1*s)/c,u1=L+Math.min(v0*s,v1*s)/c;box(u0,y,v0,u1-u0,h,v1-v0,col,sh);};
+    tira(A-cx.gcA,cx.gcA,f-e,f,sombra);  // fondo, en sombra
+    tira(A-cx.gcA,e,0,f-e,colHerr);      // ala inferior, detrás de la puerta
+    tira(A-e,e,-g,f-e,colHerr);          // ala superior, hasta la cara de las puertas
+    for(let k=s0;k<P.length;k++)r3dLlevar(P[k],c,s,0,cx.chZL);
+  }
+  else if(conFrentes&&golaTops.length){
+    const e=C.golaChapa,zf=cx.gcF;
+    cx.golas.forEach(([y0,y1])=>{
+      if(!golaTops.some(tp=>tp>=y0-0.01&&tp<=y1+0.01))return; // cajeo sin frente de gola debajo: se queda vacío
+      const arriba=y1>=A-1e-6;
+      box(0,y0,zf-e,W,y1-y0,e,r3dOscurecer(colHerr,C.golaSombra),R3D_COL.strokeHerr); // fondo, en sombra
+      box(0,y0,0,W,e,zf-e,colHerr,R3D_COL.strokeHerr);                                // ala inferior, detrás del frente de abajo
+      if(arriba)box(0,A-e,-g,W,e,g+zf-e,colHerr,R3D_COL.strokeHerr);                 // ala superior hasta la cara de los frentes
+      else box(0,y1-e,0,W,e,zf-e,colHerr,R3D_COL.strokeHerr);                         // ala superior, detrás del frente de arriba
+    });
+  }
   // Lote R3 — baldas: las mismas que salen en herrajes sueltos (o las manuales), de las medidas de Lote N. Una: centrada
   // en el hueco; varias: repartidas a alturas iguales (Álvaro, 22-09-2026). Pegadas a la trasera (o al paletón trasero),
   // y solo en el hueco que dejan libre los cajones. El placa horno no lleva balda suelta (la fija ya está en el casco).
@@ -2472,8 +2598,8 @@ function r3dCamara(sp,vis,Wpx,Hpx,P){
   const pa=sp.patas?(sp.pataAlto||R3D_CTE.pataAlto):0; // Lote D1: patas 10/15
   const fz=sp.fonVis||sp.fon,cx=sp.anc/2,cy=(sp.alt-pa)/2,cz=fz/2; // Lote R7: el rincón escuadra ocupa H en z
   let R=Math.sqrt(cx*cx+(sp.alt+pa)*(sp.alt+pa)/4+cz*cz)*1.06||1,kx=cx,ky=cy,kz=cz;
-  // Lote R8 — encuadre con las piezas en su posición actual: centro y radio de la caja que envuelve todo (puertas a 180°
-  // al lado del mueble, cajones fuera). No depende del giro de la vista: al girar no cambia de tamaño; al abrir, se aleja.
+  // Lote R8 — encuadre: centro y radio de la caja que envuelve las piezas P. No depende del giro de la vista: al girar no
+  // cambia de tamaño. Lote G1e: el visor del mueble le pasa las piezas CERRADAS (r3dPiezasEncuadre): al abrir no se aleja.
   if(P&&P.length){const mn=[0,-pa,0],mx=[sp.anc,sp.alt,fz],v3=v=>{for(let k=0;k<3;k++){if(v[k]<mn[k])mn[k]=v[k];if(v[k]>mx[k])mx[k]=v[k];}};
     P.forEach(p=>{if(p.k==='box')r3dVerts(p).forEach(v3);else if(p.k==='cyl'){v3([p.x+p.r,p.y,p.z+p.r]);v3([p.x-p.r,p.y+p.h,p.z-p.r]);}
       else if(p.k==='prism')p.pts.forEach(q=>{v3([q[0],p.y,q[1]]);v3([q[0],p.y+p.h,q[1]]);});});
@@ -2499,9 +2625,15 @@ function r3dSoloCajas(P){
   out.forEach(p=>{if(p.delante!=null)p.delante=nuevo[p.delante];});
   return out;
 }
+// Lote G1e (24-09-2026, Álvaro): el encuadre se calcula con el mueble CERRADO y se guarda mientras no cambie el mueble ni
+// el botón de frentes: abrir o cerrar una puerta o un cajón ya no aleja ni acerca la vista (antes daba un «rebote» de zoom).
+function r3dPiezasEncuadre(vis,sp){
+  if(vis.encSp!==sp||vis.encFr!==vis.frentes){vis.encSp=sp;vis.encFr=vis.frentes;vis.encP=r3dPiezas(sp,vis.frentes,{});}
+  return vis.encP;
+}
 function r3dSVG(sp,vis,Wpx,Hpx){
   const P=r3dSoloCajas(r3dPiezas(sp,vis.frentes,vis.est)); // Lote R3: con el estado de apertura del visor · R8: L en cajas
-  const cam=r3dCamara(sp,vis,Wpx,Hpx,P),{pa,fz,proy,nCam,dirVista}=cam; // Lote R8: cámara común
+  const cam=r3dCamara(sp,vis,Wpx,Hpx,r3dPiezasEncuadre(vis,sp)),{pa,fz,proy,nCam,dirVista}=cam; // Lote R8: cámara común
   const hex=(col,k)=>{const m=col.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);if(!m)return col;
     return '#'+[1,2,3].map(i=>Math.round(parseInt(m[i],16)*k).toString(16).padStart(2,'0')).join('');};
   const sombra=(col,n)=>hex(col,cam.luz(n));
@@ -2650,7 +2782,7 @@ function r3dPintarGL(vis){
   const cssW=X.cv.clientWidth||cont.clientWidth;if(!cssW)return true; // visor oculto: nada que pintar todavía
   const dpr=Math.min(3,window.devicePixelRatio||1),Wd=Math.round(cssW*dpr),Hd=Math.round(cssW*R3D_H/R3D_W*dpr);
   if(X.cv.width!==Wd||X.cv.height!==Hd){X.cv.width=Wd;X.cv.height=Hd;}
-  const sp=vis.spec,P=r3dPiezas(sp,vis.frentes,vis.est),cam=r3dCamara(sp,vis,R3D_W,R3D_H,P);
+  const sp=vis.spec,P=r3dPiezas(sp,vis.frentes,vis.est),cam=r3dCamara(sp,vis,R3D_W,R3D_H,r3dPiezasEncuadre(vis,sp)); // Lote G1e
   const hw=R3D_GL.linea*R3D_W/cssW/2; // media anchura de arista: px CSS → unidades del viewBox
   vis.glUlt={P,cam}; // para averiguar la pieza tocada con la misma escena
   const M=r3dMallaGL(P,cam,vis,false,hw),gl=X.gl,F=R3D_GL.fondo;
@@ -2725,21 +2857,23 @@ function r3dAnimar(vis){
 // Lote R5 (23-09-2026) — menú de una pieza del casco (pulsación larga en móvil, clic derecho en PC). Solo en el visor de la
 // pestaña Muebles: cambia MPIEZAS y recalcula el mueble (precio, líneas CVT, dibujo) con cp().
 let R3D_MENU=null;
+// Lote G1 (24-09-2026): el menú sale también en el visor de Proyecto (solo «Información de pieza», sin editar).
 function r3dMenuPieza(vis,clave,cx,cy){
-  if(!vis||!vis.editable||!vis.spec)return;
+  if(!vis||!vis.spec||vis.pintar)return;
   const e=piezasEditables(vis.spec).find(q=>q.clave===clave);if(!e)return;
   cerrarMenuPieza();
-  const st=MPIEZAS[clave]||'',ct=(MODELOS[MMODELO]&&MODELOS[MMODELO].cvt)||TCVT[S.tar]||null;
-  vis.sel='pz:'+clave;r3dPintar(vis);R3D_MENU={vis,clave,t0:performance.now()};
+  const ed=!!vis.editable,st=(ed?MPIEZAS[clave]:(vis.spec.piezas||{})[clave])||'',ct=(MODELOS[MMODELO]&&MODELOS[MMODELO].cvt)||TCVT[S.tar]||null;
+  vis.sel='pz:'+clave;r3dPintar(vis);R3D_MENU={vis,clave,t0:performance.now(),cx,cy};
   let m=document.getElementById('r3dMenu');
   if(!m){m=document.createElement('div');m.id='r3dMenu';document.body.appendChild(m);
     document.addEventListener('pointerdown',ev=>{if(R3D_MENU&&!(ev.target&&ev.target.closest&&ev.target.closest('#r3dMenu')))cerrarMenuPieza();},true);}
   const bt=(txt,v,dis,tit)=>`<button class="btn bs"${dis?' disabled':''}${tit?` title="${esc(tit)}"`:''} onclick="r3dPiezaAccion('${v}')" style="font-size:12px;padding:9px 12px;text-align:left">${txt}</button>`;
   m.innerHTML=`<div style="font-weight:700;font-size:12px;color:var(--m);margin-bottom:2px">${esc(e.etq)}${st?` · <i style="color:#c0392b">${PIEZA_ESTADO_LAB[st]}</i>`:''}</div>`+
-    (st!=='x'?bt('🗑️ Eliminar (no cambia el precio)','x'):'')+
+    bt('ℹ️ Información de pieza','i')+ // Lote G1
+    (!ed?'':(st!=='x'?bt('🗑️ Eliminar (no cambia el precio)','x'):'')+
     (st!=='p'&&!e.soloEliminar?bt('🎨 Material de puerta (armazón ×2 + CVT)','p',!ct,ct?'':'El modelo no tiene tarifa CVT'):'')+
     (e.soloEliminar&&st!=='x'?'<div style="font-size:10px;color:var(--g)">La trasera solo se puede eliminar</div>':'')+
-    (st?bt('↩️ Restaurar esta pieza','r'):'')+bt('Cancelar','c');
+    (st?bt('↩️ Restaurar esta pieza','r'):''))+bt('Cancelar','c');
   // Debajo del dedo, no encima: al soltar la pulsación larga no se pulsa ningún botón sin querer.
   const W=window.innerWidth||360,H=window.innerHeight||640;
   m.style.cssText=`position:fixed;z-index:9999;background:#fff;border:1px solid var(--d);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.25);padding:8px;display:flex;flex-direction:column;gap:6px;min-width:220px;left:${Math.max(6,Math.min(cx-110,W-236))}px;top:${Math.max(6,Math.min(cy+28,H-230))}px`;
@@ -2747,9 +2881,45 @@ function r3dMenuPieza(vis,clave,cx,cy){
 function r3dPiezaAccion(v){
   const s=R3D_MENU;if(!s)return;
   if(v!=='c'&&performance.now()-s.t0<350)return; // pulsación que abrió el menú: no cuenta como elección
+  if(v==='i'){r3dInfoPieza(s);return;} // Lote G1: el menú se queda abierto con la ficha
+  if(v==='v'){r3dMenuPieza(s.vis,s.clave,s.cx,s.cy);return;}
   cerrarMenuPieza();if(v==='c')return;
   if(v==='x'||v==='p')MPIEZAS[s.clave]=v;else delete MPIEZAS[s.clave];
   if(SEL&&isRin(SEL))rdsg();else cp(); // Lote R8: rincones
+}
+// Lote G1 (24-09-2026) — ficha de una pieza del casco: medidas de CORTE (mm, largo = a favor de veta), grosor, material y
+// cantos, con las mismas reglas que el despiece (despieceCasco) y la notación de la app de corte: medida subrayada = lado
+// canteado (una raya, un canto; dos, dos).
+function infoPiezaCasco(sp,clave){
+  const id=String(clave).split('#')[0],tabla=constrTabla(sp.tipo);if(tabla.pendiente)return null;
+  const c=constrCtx(sp),pz=constrPiezas(tabla,c).find(q=>q.id===id);if(!pz||!pz.corte)return null;
+  const st=c.pz[clave]||'',enP=st==='p',esTr=pz.grosor==='tr',m=pz.corte(c);
+  let can=(enP&&pz.cantosPuerta)||pz.cantos;if(typeof can==='function')can=can(c);
+  return {etq:etqPieza(clave),nombre:pz.nombre,st,enP,largo:DESPIECE_MM(m.largo),ancho:DESPIECE_MM(m.ancho),
+    grueso:enP?Math.round(c.g*10):Math.round((esTr?c.tr:sp.gros)*10),
+    material:enP?(sp.matPuerta||'material de puerta'):(sp.colorArm||''),cantosL:can.L,cantosA:can.A,
+    canto:enP?'del material de puerta':`${String(CANTO_ARMAZON).replace('.',',')} mm`,pos:posPieza(pz,c,enP),estado:pz.estado};
+}
+function r3dInfoPieza(s){
+  const m=document.getElementById('r3dMenu'),inf=s&&s.vis&&s.vis.spec?infoPiezaCasco(s.vis.spec,s.clave):null;if(!m||!inf)return;
+  const sub=(v,n)=>n>0?`<span style="text-decoration:underline;text-decoration-style:${n>1?'double':'solid'};text-underline-offset:3px">${v}</span>`:String(v);
+  const nc=n=>n>1?'2 cantos':(n===1?'1 canto':'sin canto');
+  const fila=(k,v)=>`<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:2px 0;border-bottom:1px dotted var(--cd)"><span style="color:var(--g)">${k}</span><b style="text-align:right">${v}</b></div>`;
+  const tot=inf.cantosL+inf.cantosA;
+  m.innerHTML=`<div style="font-weight:700;font-size:13px;color:var(--m)">ℹ️ ${esc(inf.etq)}</div>`+
+    `<div style="font-size:15px;font-weight:900;margin:2px 0 4px">${sub(inf.largo,inf.cantosL)} × ${sub(inf.ancho,inf.cantosA)} × ${inf.grueso} mm</div>`+
+    fila('Largo (a favor de veta)',`${inf.largo} mm · ${nc(inf.cantosL)}`)+
+    fila('Ancho',`${inf.ancho} mm · ${nc(inf.cantosA)}`)+
+    fila('Grosor',`${inf.grueso} mm`)+
+    fila('Material',inf.material?esc(inf.material):'<i style="color:#c0392b">sin color de armazón</i>')+
+    fila('Cantos',tot?`${tot} · ${esc(inf.canto)}`:'sin canto')+
+    `<div style="font-size:11px;color:var(--t);margin-top:4px;line-height:1.35">${esc(inf.pos)}</div>`+
+    (inf.st==='x'?'<div style="font-size:11px;color:#c0392b;font-weight:700">Eliminada: no se fabrica</div>':'')+
+    (inf.estado==='supuesto'?'<div style="font-size:11px;color:#c0392b;font-weight:700">Medida supuesta: confirmar antes de cortar</div>':'')+
+    `<div style="font-size:10px;color:var(--g)">Medida de corte final (la canteadora ya quita lo que pone). Subrayado = lado canteado.</div>`+
+    `<div style="display:flex;gap:6px;margin-top:4px"><button class="btn bs" onclick="r3dPiezaAccion('v')" style="font-size:12px;padding:9px 12px;flex:1">← Volver</button><button class="btn bs" onclick="r3dPiezaAccion('c')" style="font-size:12px;padding:9px 12px;flex:1">Cerrar</button></div>`;
+  const H=window.innerHeight||640;m.style.maxWidth='300px';m.style.maxHeight=(H-12)+'px';m.style.overflowY='auto';
+  const r=m.getBoundingClientRect();if(r.bottom>H-6)m.style.top=Math.max(6,H-6-r.height)+'px';
 }
 function cerrarMenuPieza(){
   const m=document.getElementById('r3dMenu');if(m)m.style.display='none';
@@ -2820,7 +2990,8 @@ function r3dInstalarGiro(vis){
     vis.hit=k||null;vis.down={x:e.clientX,y:e.clientY,btn:e.button};
     // Lote R5 — pulsación larga (sin mover) sobre una pieza del casco → menú de la pieza
     clearTimeout(vis.lp);vis.lp=0;vis.lpHecho=false;
-    if(vis.editable&&k&&k.startsWith('pz:')&&e.button!==2){const cx0=e.clientX,cy0=e.clientY;
+    // Lote G1: también en el visor de Proyecto (solo información); nunca en la escena (vis.pintar)
+    if(!vis.pintar&&k&&k.startsWith('pz:')&&e.button!==2){const cx0=e.clientX,cy0=e.clientY;
       vis.lp=setTimeout(()=>{vis.lp=0;if(!vis.down||vis.ptrs.size!==1)return;vis.lpHecho=true;vis.drag=null;r3dMenuPieza(vis,k.slice(3),cx0,cy0);},R3D_CTE.pulsacionLarga);}
     vis.ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});try{cont.setPointerCapture(e.pointerId);}catch(_){}e.preventDefault();
     if(vis.ptrs.size>=2){clearTimeout(vis.lp);vis.lp=0;pinza();vis.hit=null;return;}
@@ -2852,7 +3023,7 @@ function r3dInstalarGiro(vis){
     const quieto=vis.ptrs.size===0&&vis.hit&&vis.down&&e.type==='pointerup'&&Math.hypot(e.clientX-vis.down.x,e.clientY-vis.down.y)<R3D_CTE.clickMaxPx;
     const esPz=!!vis.hit&&vis.hit.startsWith('pz:');
     if(vis.lpHecho){if(vis.ptrs.size===0)vis.lpHecho=false;}
-    else if(quieto&&vis.down.btn===2){if(esPz&&vis.editable)r3dMenuPieza(vis,vis.hit.slice(3),e.clientX,e.clientY);}
+    else if(quieto&&vis.down.btn===2){if(esPz&&!vis.pintar)r3dMenuPieza(vis,vis.hit.slice(3),e.clientX,e.clientY);}
     else if(quieto&&!esPz)r3dClick(vis,vis.hit);
     if(vis.ptrs.size===0){vis.hit=null;vis.down=null;}
     if(vis.ptrs.size>=2){pinza();return;}
