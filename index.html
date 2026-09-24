@@ -203,6 +203,12 @@ tr:hover td{background:var(--c);}
 .escFichas{display:flex;flex-wrap:wrap;gap:6px;max-height:42vh;overflow-y:auto;align-content:flex-start;}
 .escFicha{border:1.5px solid var(--cd);background:var(--c);color:var(--m);border-radius:14px;padding:5px 10px;font-family:'Lato',sans-serif;font-size:11px;cursor:pointer;text-align:left;max-width:100%;}
 .escFicha b{font-weight:900;} .escFicha.on{background:#e8f1e4;border-color:#8bb07e;color:#2f5a25;} .escFicha.sel{outline:2px solid #3b6ea5;outline-offset:1px;}
+/* Lote V2 (24-09-2026) — huecos en las paredes: lista y formulario */
+.escHuecos{display:flex;flex-direction:column;gap:4px;max-height:30vh;overflow-y:auto;}
+.escHueco{display:flex;gap:6px;align-items:center;font-size:11px;line-height:1.35;border:1px solid var(--cd);border-radius:8px;padding:4px 8px;background:var(--c);color:var(--m);cursor:pointer;text-align:left;}
+.escHueco b{font-weight:900;white-space:nowrap;} .escHueco.sel{outline:2px solid #3b6ea5;outline-offset:1px;}
+.escHuecoForm{border:1.5px solid var(--cd);border-radius:8px;padding:8px 9px;margin-top:6px;background:var(--c);}
+.escHuecoForm label{font-size:9.5px;letter-spacing:.3px;} .escHuecoForm input,.escHuecoForm select{font-size:12px;padding:5px 7px;}
 #escV3d{max-width:min(100%,calc((100vh - 240px) * 1.2));}
 @media print{.r3dModal,#r3dPanel{display:none!important;}}
 @media(max-width:900px){.l2{grid-template-columns:1fr!important;}}
@@ -914,9 +920,19 @@ tr:hover td{background:var(--c);}
         <div class="fg"><label>Largo (cm)</label><input type="number" id="escLargo" min="100" step="1" placeholder="p. ej. 400" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
         <div class="fg"><label>Ancho (cm)</label><input type="number" id="escAncho" min="100" step="1" placeholder="p. ej. 300" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
         <div class="fg"><label>Alto de techo (cm)</label><input type="number" id="escAlto" min="200" step="1" placeholder="p. ej. 250" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
-        <div class="fg"><label>Altos: canto de arriba (cm)</label><input type="number" id="escAltos" min="100" step="1" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
+        <div class="fg"><label>Altura de colgar (cm)</label><input type="number" id="escAltos" min="100" step="1" title="Canto de arriba de los altos" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
       </div>
-      <div style="font-size:11px;color:var(--g);margin-bottom:10px;line-height:1.5">Habitación rectangular. El largo es la pared de arriba de la planta y el ancho, la de la izquierda. Bajos y columnas van sobre las patas del proyecto; los altos, con el canto de arriba a la altura indicada.</div>
+      <!-- Lote V2 (24-09-2026): forma en L = una esquina que falta -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:9px">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--mm)">Forma</span>
+        <div class="tgg" style="margin-top:0"><button class="tgb on" id="escFormaRect" onclick="escenaForma('rect')" style="padding:5px 11px;font-size:11px">▭ Rectángulo</button><button class="tgb" id="escFormaL" onclick="escenaForma('L')" style="padding:5px 11px;font-size:11px">⌐ En L</button></div>
+      </div>
+      <div id="escRecorteBox" style="display:none;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-bottom:10px">
+        <div class="fg"><label>Esquina que falta</label><select id="escRecEsq"><option value="ad">Arriba derecha</option><option value="bd">Abajo derecha</option><option value="bi">Abajo izquierda</option><option value="ai">Arriba izquierda</option></select></div>
+        <div class="fg"><label>Recorte a lo largo (cm)</label><input type="number" id="escRecW" min="30" step="1" placeholder="p. ej. 150" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
+        <div class="fg"><label>Recorte a lo ancho (cm)</label><input type="number" id="escRecH" min="30" step="1" placeholder="p. ej. 120" onkeydown="if(event.key==='Enter')escenaAplicarHabitacion()"></div>
+      </div>
+      <div style="font-size:11px;color:var(--g);margin-bottom:10px;line-height:1.5">Rectángulo o en L (una esquina que falta). El largo es la pared de arriba de la planta y el ancho, la de la izquierda. Bajos y columnas van sobre las patas del proyecto; los altos, con el canto de arriba a la altura de colgar. Puertas, ventanas, pilares y vigas se añaden después, en la planta.</div>
       <div id="escFormAviso" style="font-size:11.5px;color:#c62828;margin-bottom:8px"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
         <button class="btn bs" onclick="escenaCancelarForm()" style="font-size:11px;padding:7px 12px">Cancelar</button>
@@ -935,7 +951,19 @@ tr:hover td{background:var(--c);}
         <div id="escSel" class="escSel"></div>
         <div class="escLay">
           <div><div id="escPlanta" class="escPlanta"></div><div id="escAviso" class="escAviso"></div></div>
-          <div><div id="escMenuTit" class="escMenuTit"></div><div id="escMenu" class="escFichas"></div></div>
+          <div><div id="escMenuTit" class="escMenuTit"></div><div id="escMenu" class="escFichas"></div>
+            <!-- Lote V2 (24-09-2026): puertas, ventanas, pilares y vigas -->
+            <div class="escMenuTit" style="margin-top:14px">🧱 Paredes · puertas, ventanas, pilares y vigas</div>
+            <div class="escAyuda" style="display:block;margin-bottom:5px">Las distancias se miden desde la esquina izquierda de cada pared, mirándola desde dentro. Los muebles que pisen un hueco, pilar o viga salen en rojo.</div>
+            <div id="escHuecos" class="escHuecos"></div>
+            <div id="escHuecoBtns" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+              <button class="btn bs" onclick="escenaHuecoNuevo('puerta')" style="font-size:11px;padding:5px 9px">+ Puerta</button>
+              <button class="btn bs" onclick="escenaHuecoNuevo('ventana')" style="font-size:11px;padding:5px 9px">+ Ventana</button>
+              <button class="btn bs" onclick="escenaHuecoNuevo('pilar')" style="font-size:11px;padding:5px 9px">+ Pilar</button>
+              <button class="btn bs" onclick="escenaHuecoNuevo('viga')" style="font-size:11px;padding:5px 9px">+ Viga</button>
+            </div>
+            <div id="escHuecoForm" class="escHuecoForm" style="display:none"></div>
+          </div>
         </div>
       </div>
       <div id="escV3dWrap" style="display:none">
@@ -1055,7 +1083,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-24.2';
+const APP_BUILD = '2026-09-24.3';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -2781,11 +2809,150 @@ const ESC_CTE={
   paredOculta:0.05,               // se oculta la pared cuya cara interior mira hacia donde mira la cámara más que esto
   colPlanta:{pared:'#4A2C0E',suelo:'#fbf8f1',rejilla:'#ece3d0',bajo:'#e2cea6',col:'#c9a86a',alto:'rgba(123,74,30,0.12)',
     borde:'#7B4A1E',frente:'#C4973A',sel:'#3b6ea5',mal:'#c62828',texto:'#2A1A0A'},
-  col3d:{suelo:'#d6ccb8',pared:'#efe9df',borde:'#8a7a60'}
+  col3d:{suelo:'#d6ccb8',pared:'#efe9df',borde:'#8a7a60'},
+  // Lote V2 (24-09-2026) — habitación en L y huecos en las paredes
+  recorteMin:30, restoMin:60,             // cm: recorte de esquina mínimo y pared que debe quedar en cada sentido
+  huecoMin:10, huecoFranja:2,             // cm: ancho mínimo de un hueco; franja delante de una ventana o de una puerta que abre hacia fuera (un mueble ahí la pisa)
+  puertaDef:{w:80,h:205}, ventanaDef:{w:120,h:120,ant:100}, pilarDef:{w:30,s:30}, vigaDef:{w:30,baj:30}, // cm: medidas con las que arranca cada hueco
+  hojaGrosor:4, cristalGrosor:2,          // cm: hoja de la puerta (cerrada, enrasada por dentro) y cristal de la ventana en el 3D
+  colHueco:{hoja:'#c9ad86',cristal:'rgba(168,204,232,0.5)',ventanaPlanta:'#cfe1f2',vigaPlanta:'rgba(74,44,14,0.16)'}
 };
-let ESCENA=null; // {v, largo, ancho, alto, altoAltos, items:[{lid, u, x, y, r}]} o null (proyecto sin escena)
-let ESC_UI={sel:null,vista:'planta',drag:null,raf:0,imanCm:10,vista3d:false,resize:false,form:'crear'};
+let ESCENA=null; // {v, largo, ancho, alto, altoAltos, items:[{lid, u, x, y, r}], recorte, huecos:[…]} o null (proyecto sin escena). Lote V2: recorte = {esq, w, h} (esquina que falta) o null; huecos = puertas, ventanas, pilares y vigas (ver escenaHuecoValidar)
+let ESC_UI={sel:null,vista:'planta',drag:null,raf:0,imanCm:10,vista3d:false,resize:false,form:'crear',forma:'rect',hueco:null}; // Lote V2: forma del formulario y hueco en edición {i, q}
 const R3DE=r3dNuevoVisor('escV3d');R3DE.pintar=escenaPintar3D; // visor 3D de la escena: r3dPintar lo desvía a escenaPintar3D
+// ── Lote V2 (24-09-2026) — habitación en L y huecos en las paredes ──
+// Contorno de la habitación en planta (cm, y hacia abajo) en el sentido de las agujas del reloj desde arriba a la
+// izquierda. Con recorte (esquina que falta: 'ad' arriba dcha., 'bd' abajo dcha., 'bi' abajo izq., 'ai' arriba izq.), seis lados.
+function escenaPoligono(E){
+  E=E||ESCENA;const L=E.largo,W=E.ancho,r=E.recorte;
+  if(!r)return [[0,0],[L,0],[L,W],[0,W]];
+  const w=r.w,h=r.h;
+  return r.esq==='ad'?[[0,0],[L-w,0],[L-w,h],[L,h],[L,W],[0,W]]:r.esq==='bd'?[[0,0],[L,0],[L,W-h],[L-w,W-h],[L-w,W],[0,W]]:
+    r.esq==='bi'?[[0,0],[L,0],[L,W],[w,W],[w,W-h],[0,W-h]]:[[w,0],[L,0],[L,W],[0,W],[0,h],[w,h]];
+}
+function escenaRectRecorte(E){E=E||ESCENA;const r=E.recorte;if(!r)return null;const x0=r.esq[1]==='d'?E.largo-r.w:0,y0=r.esq[0]==='b'?E.ancho-r.h:0;return [x0,y0,x0+r.w,y0+r.h];}
+// Suelo como rectángulos (uno, o dos con recorte).
+function escenaSueloRects(E){E=E||ESCENA;const L=E.largo,W=E.ancho,rr=escenaRectRecorte(E);if(!rr)return [[0,0,L,W]];
+  return [rr[0]===0?[rr[2],0,L,W]:[0,0,rr[0],W],rr[1]===0?[rr[0],rr[3],rr[2],W]:[rr[0],0,rr[2],rr[1]]];}
+// Paredes = lados del contorno: p0 → p1 (p0 es el extremo IZQUIERDO visto desde dentro), dir unitario a lo largo y n = normal
+// hacia dentro. Ids estables: a / d / b / i para las que están sobre el rectángulo envolvente (arriba, derecha, abajo,
+// izquierda); a2 / d2 / b2 / i2 para las dos del recorte, por su orientación. convexo0 / convexo1: la esquina de cada
+// extremo es saliente (el 3D alarga ahí el grosor de la pared; en la esquina entrante del recorte, no).
+function escenaParedes(E){
+  E=E||ESCENA;const Q=escenaPoligono(E),n=Q.length,out=[],NOM={a:'Arriba',d:'Derecha',b:'Abajo',i:'Izquierda'};
+  const cruz=(a,b,c)=>(b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]); // > 0: giro a la derecha (esquina saliente; sentido horario con y hacia abajo)
+  for(let k=0;k<n;k++){const p0=Q[k],p1=Q[(k+1)%n],dx=p1[0]-p0[0],dy=p1[1]-p0[1],len=Math.hypot(dx,dy),dir=[dx/len,dy/len],nn=[-dir[1],dir[0]];
+    const o=nn[1]>0.5?'a':nn[0]<-0.5?'d':nn[1]<-0.5?'b':'i';
+    const envol=(o==='a'&&p0[1]===0)||(o==='d'&&p0[0]===E.largo)||(o==='b'&&p0[1]===E.ancho)||(o==='i'&&p0[0]===0);
+    out.push({id:envol?o:o+'2',o,p0,p1,len,dir,n:nn,convexo0:cruz(Q[(k+n-1)%n],p0,p1)>0,convexo1:cruz(p0,p1,Q[(k+2)%n])>0});}
+  out.forEach(p=>{const otra=out.find(q=>q!==p&&q.o===p.o),j=p.o==='a'||p.o==='b'?0:1;let s='';
+    if(otra){const c=(p.p0[j]+p.p1[j])/2,c2=(otra.p0[j]+otra.p1[j])/2;s=j===0?(c<c2?' (izquierda)':' (derecha)'):(c<c2?' (arriba)':' (abajo)');}
+    p.nom=NOM[p.o]+s;});
+  return out;
+}
+// Rectángulo [x0, y0, x1, y1] pegado a la pared p: de d a d + w a lo largo, y de prof0 a prof1 hacia dentro (negativo = hacia
+// fuera, dentro del grosor de la pared). Con un solo valor: de 0 a prof.
+function escenaRectPared(p,d,w,prof0,prof1){
+  if(prof1==null){prof1=prof0;prof0=0;}
+  const P=[[d,prof0],[d+w,prof0],[d,prof1],[d+w,prof1]].map(([t,q])=>[p.p0[0]+p.dir[0]*t+p.n[0]*q,p.p0[1]+p.dir[1]*t+p.n[1]*q]);
+  return [Math.min(...P.map(q=>q[0])),Math.min(...P.map(q=>q[1])),Math.max(...P.map(q=>q[0])),Math.max(...P.map(q=>q[1]))];
+}
+// Obstáculos en planta con su tramo de altura [y0, y1] cm desde el suelo: el recorte de la habitación, los pilares, las
+// vigas (colgando del techo) y el hueco de puertas y ventanas (la puerta que abre hacia dentro, con su barrido). Un mueble
+// los pisa si coinciden en planta Y en altura: un bajo cabe debajo de una ventana alta, un alto no.
+function escenaObstaculos(E){
+  E=E||ESCENA;const C=ESC_CTE,H=E.alto,out=[],P=escenaParedes(E),rr=escenaRectRecorte(E);
+  if(rr)out.push({t:'recorte',rect:rr,y0:0,y1:H});
+  (E.huecos||[]).forEach((q,i)=>{
+    if(q.t==='viga'){out.push({t:'viga',i,rect:q.dir==='x'?[0,q.d,E.largo,q.d+q.w]:[q.d,0,q.d+q.w,E.ancho],y0:H-q.baj,y1:H});return;}
+    const p=P.find(w=>w.id===q.pared);if(!p)return;
+    const prof=q.t==='pilar'?q.s:(q.t==='puerta'&&!q.fuera?q.w:C.huecoFranja);
+    out.push({t:q.t,i,rect:escenaRectPared(p,q.d,q.w,prof),y0:q.t==='ventana'?q.ant:0,y1:q.t==='ventana'?q.ant+q.h:(q.t==='puerta'?q.h:H)});
+  });
+  return out;
+}
+// Tramo de altura que ocupa un mueble en la habitación (con la encimera encima de los bajos si la hay).
+function escenaRangoAlto(h,E){E=E||ESCENA;if(h.nivel==='alto')return [E.altoAltos-h.alt,E.altoAltos];const pa=+S.patas||R3D_CTE.pataAlto;return [0,pa+h.alt+(h.nivel==='bajo'&&E.enc&&E.enc.on?+E.enc.gros||0:0)];}
+// Obstáculos que pisa un mueble colocado (geometría g), en planta y en altura.
+function escenaPisaObst(g,obst,E){const e=ESC_CTE.solapeMin,[y0,y1]=escenaRangoAlto(g.h,E);return (obst||escenaObstaculos(E)).filter(o=>o.y0<y1-e&&y0<o.y1-e&&escenaPisan(g.rects,[o.rect]));}
+// ── Huecos: validación, lista y formulario ──
+const ESC_HUECO_NOM={puerta:'Puerta',ventana:'Ventana',pilar:'Pilar',viga:'Viga'},ESC_HUECO_ETQ={puerta:'Pta',ventana:'Ven',pilar:'Pil',viga:'Vig'};
+// Comprueba un hueco contra la habitación E: devuelve el hueco saneado (solo sus campos, redondeado a mm) o un texto de error.
+function escenaHuecoValidar(q,E){
+  E=E||ESCENA;const C=ESC_CTE,H=E.alto,r=v=>Math.round(v*10)/10,ok=(v,a,b)=>isFinite(v)&&v>=a&&v<=b;
+  if(!q||!ESC_HUECO_NOM[q.t])return 'Tipo de hueco desconocido.';
+  if(q.t==='viga'){const dir=q.dir==='y'?'y':'x',tot=dir==='y'?E.largo:E.ancho;
+    if(!ok(q.w,C.huecoMin,tot))return `Ancho de la viga entre ${C.huecoMin} y ${fmtCm(tot)} cm.`;
+    if(!ok(q.d,0,tot-q.w))return `La viga se sale: distancia entre 0 y ${fmtCm(tot-q.w)} cm.`;
+    if(!ok(q.baj,1,H-C.altosMin))return `Bajada de la viga entre 1 y ${fmtCm(H-C.altosMin)} cm.`;
+    return {t:'viga',dir,d:r(q.d),w:r(q.w),baj:r(q.baj)};}
+  const p=escenaParedes(E).find(w=>w.id===q.pared);if(!p)return 'Elige la pared.';
+  if(!ok(q.w,C.huecoMin,p.len))return `Ancho entre ${C.huecoMin} y ${fmtCm(p.len)} cm (lo que mide esa pared).`;
+  if(!ok(q.d,0,p.len-q.w))return `Se sale de la pared: distancia entre 0 y ${fmtCm(p.len-q.w)} cm.`;
+  const b={t:q.t,pared:p.id,d:r(q.d),w:r(q.w)};
+  if(q.t==='puerta'){if(!ok(q.h,C.huecoMin,H))return `Alto de la puerta entre ${C.huecoMin} y ${fmtCm(H)} cm (el techo).`;b.h=r(q.h);b.bis=q.bis==='D'?'D':'I';b.fuera=!!q.fuera;}
+  if(q.t==='ventana'){if(!ok(q.h,C.huecoMin,H))return `Alto de la ventana entre ${C.huecoMin} y ${fmtCm(H)} cm.`;if(!ok(q.ant,0,H-q.h))return `Antepecho entre 0 y ${fmtCm(H-q.h)} cm.`;b.h=r(q.h);b.ant=r(q.ant);}
+  if(q.t==='pilar'){const max=Math.min(E.largo,E.ancho)-C.restoMin;if(!ok(q.s,1,max))return `Saliente del pilar entre 1 y ${fmtCm(max)} cm.`;b.s=r(q.s);}
+  return b;
+}
+function escenaHuecoEtq(q,i){const n=(ESCENA.huecos||[]).slice(0,i+1).filter(x=>x.t===q.t).length;return ESC_HUECO_ETQ[q.t]+n;}
+function escenaHuecoTexto(q,P){
+  P=P||escenaParedes();const p=P.find(w=>w.id===q.pared);
+  if(q.t==='viga')return `${fmtCm(q.w)} de ancho, baja ${fmtCm(q.baj)} · ${q.dir==='x'?'a lo largo':'a lo ancho'}, a ${fmtCm(q.d)} de la pared de ${q.dir==='x'?'arriba':'la izquierda'}`;
+  const donde=`${p?p.nom:'?'}, a ${fmtCm(q.d)} de la esquina`;
+  if(q.t==='puerta')return `${fmtCm(q.w)} × ${fmtCm(q.h)} · ${donde} · bisagra ${q.bis==='D'?'dcha.':'izq.'}, abre hacia ${q.fuera?'fuera':'dentro'}`;
+  if(q.t==='ventana')return `${fmtCm(q.w)} × ${fmtCm(q.h)}, antepecho ${fmtCm(q.ant)} · ${donde}`;
+  return `${fmtCm(q.w)} de ancho, sale ${fmtCm(q.s)} · ${donde}`;
+}
+function escenaPintarHuecos(){
+  const cont=document.getElementById('escHuecos');if(!cont||!ESCENA)return;const P=escenaParedes(),h=ESC_UI.hueco;
+  cont.innerHTML=(ESCENA.huecos||[]).map((q,i)=>`<button class="escHueco${h&&h.i===i?' sel':''}" onclick="escenaHuecoEditar(${i})"><b>${escenaHuecoEtq(q,i)}</b><span style="flex:1">${ESC_HUECO_NOM[q.t]} ${esc(escenaHuecoTexto(q,P))}</span></button>`).join('')
+    ||'<span class="escAyuda">Sin puertas, ventanas, pilares ni vigas. Añádelos con los botones; se tienen en cuenta al colocar los muebles (en rojo si los pisan).</span>';
+}
+function escenaHuecoNuevo(t){
+  if(!ESCENA)return;const C=ESC_CTE,p0=escenaParedes()[0].id;ESCENA.huecos=ESCENA.huecos||[];
+  const q=t==='puerta'?{t,pared:p0,d:0,w:C.puertaDef.w,h:C.puertaDef.h,bis:'I',fuera:false}:t==='ventana'?{t,pared:p0,d:0,w:C.ventanaDef.w,h:C.ventanaDef.h,ant:C.ventanaDef.ant}:
+    t==='pilar'?{t,pared:p0,d:0,w:C.pilarDef.w,s:C.pilarDef.s}:{t:'viga',dir:'x',d:0,w:C.vigaDef.w,baj:C.vigaDef.baj};
+  ESC_UI.hueco={i:-1,q};escenaHuecoFormPintar();escenaPintarHuecos();escenaPintarPlanta();
+}
+function escenaHuecoEditar(i){const q=ESCENA&&ESCENA.huecos[i];if(!q)return;ESC_UI.hueco={i,q:JSON.parse(JSON.stringify(q))};escenaHuecoFormPintar();escenaPintarHuecos();escenaPintarPlanta();}
+function escenaHuecoCerrarForm(){ESC_UI.hueco=null;const f=document.getElementById('escHuecoForm');if(f)f.style.display='none';}
+function escenaHuecoCancelar(){escenaHuecoCerrarForm();escenaPintarHuecos();escenaPintarPlanta();}
+function escenaHuecoFormPintar(){
+  const f=document.getElementById('escHuecoForm'),h=ESC_UI.hueco;if(!f||!h)return;const q=h.q,P=escenaParedes();
+  const inp=(id,lab,val)=>`<div class="fg"><label>${lab}</label><input type="number" id="${id}" value="${val}" step="1" min="0" onkeydown="if(event.key==='Enter')escenaHuecoGuardar()"></div>`;
+  const opt=(v,t,on)=>`<option value="${v}"${on?' selected':''}>${t}</option>`;
+  let s=`<div style="font-size:11.5px;font-weight:700;color:var(--mm);margin-bottom:6px">${h.i<0?'Nueva':'Editar'} ${ESC_HUECO_NOM[q.t].toLowerCase()}${h.i>=0?' '+escenaHuecoEtq(q,h.i):''}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:7px">`;
+  if(q.t==='viga')s+=`<div class="fg"><label>Dirección</label><select id="ehDir">${opt('x','A lo largo (paralela a la pared de arriba)',q.dir!=='y')}${opt('y','A lo ancho (paralela a la de la izquierda)',q.dir==='y')}</select></div>`+
+    inp('ehD','Distancia a esa pared (cm)',q.d)+inp('ehW','Ancho (cm)',q.w)+inp('ehBaj','Bajada desde el techo (cm)',q.baj);
+  else{s+=`<div class="fg"><label>Pared</label><select id="ehPared">${P.map(p=>opt(p.id,`${p.nom} · ${fmtCm(p.len)} cm`,p.id===q.pared)).join('')}</select></div>`+inp('ehD','Desde la esquina izq., visto desde dentro (cm)',q.d)+inp('ehW','Ancho (cm)',q.w);
+    if(q.t==='puerta')s+=inp('ehH','Alto (cm)',q.h)+`<div class="fg"><label>Bisagra</label><select id="ehBis">${opt('I','Izquierda',q.bis!=='D')}${opt('D','Derecha',q.bis==='D')}</select></div><div class="fg"><label>Abre hacia</label><select id="ehFuera">${opt('0','Dentro',!q.fuera)}${opt('1','Fuera',!!q.fuera)}</select></div>`;
+    if(q.t==='ventana')s+=inp('ehH','Alto (cm)',q.h)+inp('ehAnt','Antepecho (cm)',q.ant);
+    if(q.t==='pilar')s+=inp('ehS','Saliente (cm)',q.s);}
+  s+=`</div><div id="ehAviso" style="font-size:11px;color:#c62828;margin-top:5px"></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:7px">`+
+    (h.i>=0?`<button class="btn bs" onclick="escenaHuecoBorrar()" style="font-size:11px;padding:5px 9px;margin-right:auto">🗑 Quitar</button>`:'')+
+    `<button class="btn bs" onclick="escenaHuecoCancelar()" style="font-size:11px;padding:5px 9px">Cancelar</button><button class="btn bp" onclick="escenaHuecoGuardar()" style="font-size:11px;padding:5px 11px">✅ Guardar</button></div>`;
+  f.innerHTML=s;f.style.display='';
+}
+function escenaHuecoLeer(){ // formulario → hueco (sin validar)
+  const h=ESC_UI.hueco;if(!h)return null;const q=Object.assign({},h.q);
+  const v=id=>{const el=document.getElementById(id),x=parseFloat(String(el?el.value:'').replace(',','.'));return isFinite(x)?x:NaN;},sel=id=>{const el=document.getElementById(id);return el?el.value:'';};
+  q.d=v('ehD');q.w=v('ehW');
+  if(q.t==='viga'){q.dir=sel('ehDir')==='y'?'y':'x';q.baj=v('ehBaj');}
+  else{q.pared=sel('ehPared');if(q.t==='puerta'){q.h=v('ehH');q.bis=sel('ehBis')==='D'?'D':'I';q.fuera=sel('ehFuera')==='1';}if(q.t==='ventana'){q.h=v('ehH');q.ant=v('ehAnt');}if(q.t==='pilar')q.s=v('ehS');}
+  return q;
+}
+function escenaHuecoGuardar(){
+  const h=ESC_UI.hueco,q=escenaHuecoLeer();if(!h||!q)return;const r=escenaHuecoValidar(q),av=document.getElementById('ehAviso');
+  if(typeof r==='string'){if(av)av.textContent='⚠️ '+r;return;}
+  ESCENA.huecos=ESCENA.huecos||[];if(h.i<0)ESCENA.huecos.push(r);else ESCENA.huecos[h.i]=r;
+  escenaHuecoCerrarForm();escenaPintarTodo();
+}
+function escenaHuecoBorrar(){const h=ESC_UI.hueco;if(!h||h.i<0||!ESCENA)return;ESCENA.huecos.splice(h.i,1);escenaHuecoCerrarForm();escenaPintarTodo();}
+// Forma del formulario de la habitación (rectángulo / en L)
+function escenaForma(f){ESC_UI.forma=f==='L'?'L':'rect';const L=ESC_UI.forma==='L';
+  document.getElementById('escFormaRect')?.classList.toggle('on',!L);document.getElementById('escFormaL')?.classList.toggle('on',L);
+  const b=document.getElementById('escRecorteBox');if(b)b.style.display=L?'grid':'none';}
 function escenaClave(it){return it.lid+':'+it.u;}
 function escenaGiro(r){return ((+r|0)%4+4)%4;}
 // Muebles del presupuesto (líneas padre con meta de mueble) en el orden de las líneas, numerados M1, M2…
@@ -2829,9 +2996,10 @@ function escenaCompat(a,b){return a==='col'||b==='col'||a===b;} // altos con alt
 function escenaPisan(A,B){const e=ESC_CTE.solapeMin;return A.some(a=>B.some(b=>Math.min(a[2],b[2])-Math.max(a[0],b[0])>e&&Math.min(a[3],b[3])-Math.max(a[1],b[1])>e));}
 // Índices de los muebles que pisan a otro de su nivel (se pintan en rojo).
 function escenaSolapes(G){
-  const mal=new Set();
+  const mal=new Set(),obst=escenaObstaculos();
   for(let i=0;i<G.length;i++)for(let j=i+1;j<G.length;j++){const a=G[i],b=G[j];
     if(a&&b&&escenaCompat(a.h.nivel,b.h.nivel)&&escenaPisan(a.rects,b.rects)){mal.add(i);mal.add(j);}}
+  G.forEach((g,i)=>{if(g&&escenaPisaObst(g,obst).length)mal.add(i);}); // Lote V2: recorte, pilares, vigas, puertas y ventanas
   return mal;
 }
 // Deja una caja W × H dentro de la habitación (centrada si no cabe), en décimas de cm.
@@ -2845,7 +3013,8 @@ function escenaEncajar(W,H,x,y){
 function escenaIman(i,x,y){
   const E=ESCENA,g=escenaGeo(E.items[i]);if(!g)return {x,y};
   const W=g.W,H=g.H,t=ESC_UI.imanCm,cx=[0,E.largo-W],cy=[0,E.ancho-H],e=ESC_CTE.solapeMin;
-  E.items.forEach((o,j)=>{if(j===i)return;const q=escenaGeo(o);if(!q||!escenaCompat(g.h.nivel,q.h.nivel))return;
+  const fijos=escenaObstaculos().filter(o=>o.t==='recorte'||o.t==='pilar').map(o=>({x0:o.rect[0],y0:o.rect[1],x1:o.rect[2],y1:o.rect[3]})); // Lote V2: paredes del recorte y pilares atraen a todos los niveles
+  E.items.map((o,j)=>j===i?null:escenaGeo(o)).filter(q=>q&&escenaCompat(g.h.nivel,q.h.nivel)).concat(fijos).forEach(q=>{
     const sy=Math.min(y+H,q.y1)-Math.max(y,q.y0),sx=Math.min(x+W,q.x1)-Math.max(x,q.x0); // cruce en cada eje (< 0 = hueco)
     if(sy>-t){cx.push(q.x1,q.x0-W);if(sy<=e)cx.push(q.x0,q.x1-W);}
     if(sx>-t){cy.push(q.y1,q.y0-H);if(sx<=e)cy.push(q.y0,q.y1-H);}});
@@ -2856,11 +3025,11 @@ function escenaIman(i,x,y){
 // derecha, abajo izquierda); el resto, con la trasera contra la pared (arriba, izquierda, derecha, abajo), en el primer
 // hueco desde la esquina. Si no cabe en ninguno, en el centro (y se verá en rojo si pisa a otro).
 function escenaSitioLibre(it,h){
-  const E=ESCENA,dims=r=>r%2?[h.bd,h.bw]:[h.bw,h.bd],otros=E.items.map(escenaGeo).filter(q=>q&&escenaCompat(h.nivel,q.h.nivel));
-  const libre=(x,y,r)=>{const g=escenaGeo({lid:it.lid,u:it.u,x,y,r});return !!g&&g.x0>-0.1&&g.y0>-0.1&&g.x1<E.largo+0.1&&g.y1<E.ancho+0.1&&!otros.some(q=>escenaPisan(g.rects,q.rects));};
+  const E=ESCENA,dims=r=>r%2?[h.bd,h.bw]:[h.bw,h.bd],otros=E.items.map(escenaGeo).filter(q=>q&&escenaCompat(h.nivel,q.h.nivel)),obst=escenaObstaculos();
+  const libre=(x,y,r)=>{const g=escenaGeo({lid:it.lid,u:it.u,x,y,r});return !!g&&g.x0>-0.1&&g.y0>-0.1&&g.x1<E.largo+0.1&&g.y1<E.ancho+0.1&&!otros.some(q=>escenaPisan(g.rects,q.rects))&&!escenaPisaObst(g,obst).length;};
   if(h.forma!=='rect')for(const r of [0,1,2,3]){const [W,H]=dims(r),x=(r===1||r===2)?E.largo-W:0,y=r>=2?E.ancho-H:0;if(libre(x,y,r))return {x,y,r};}
   for(const r of [0,3,1,2]){
-    const [W,H]=dims(r),lat=r%2===1,cand=[0].concat(otros.map(q=>lat?q.y1:q.x1)).sort((a,b)=>a-b);
+    const [W,H]=dims(r),lat=r%2===1,cand=[0].concat(otros.map(q=>lat?q.y1:q.x1),obst.map(o=>lat?o.rect[3]:o.rect[2])).sort((a,b)=>a-b); // Lote V2: también detrás de puertas, pilares y recorte
     for(const c of cand){const x=lat?(r===3?0:E.largo-W):c,y=lat?c:(r===0?0:E.ancho-H);if(libre(x,y,r))return {x,y,r};}
   }
   const [W,H]=dims(0);return Object.assign({r:0},escenaEncajar(W,H,(E.largo-W)/2,(E.ancho-H)/2));
@@ -2879,7 +3048,8 @@ function escenaPurgar(){
     if(ok)vistos.add(k);return ok;});
   if(ESC_UI.sel&&!ESCENA.items.some(it=>escenaClave(it)===ESC_UI.sel))ESC_UI.sel=null;
 }
-// Escena de un proyecto guardado, del borrador o de una copia importada: se valida todo.
+// Escena de un proyecto guardado, del borrador o de una copia importada: se valida todo. Lote V2: recorte y huecos (los
+// que no caben en la habitación se quitan); una escena v1 se carga tal cual, sin recorte ni huecos.
 function escenaSanear(e){
   if(!e||typeof e!=='object')return null;
   const C=ESC_CTE,num=(v,a,b)=>{v=+v;return isFinite(v)&&v>=a&&v<=b?v:null;};
@@ -2887,7 +3057,10 @@ function escenaSanear(e){
   const alto=num(e.alto,C.techoMin,C.techoMax)||C.techoDef,altoAltos=num(e.altoAltos,C.altosMin,alto)||Math.min(C.altoAltos,alto);
   const items=(Array.isArray(e.items)?e.items:[]).filter(it=>it&&isFinite(+it.lid)&&isFinite(+it.u)&&isFinite(+it.x)&&isFinite(+it.y))
     .map(it=>({lid:+it.lid,u:Math.max(0,+it.u|0),x:+it.x,y:+it.y,r:escenaGiro(it.r)}));
-  return {v:1,largo,ancho,alto,altoAltos,items};
+  const E={v:2,largo,ancho,alto,altoAltos,recorte:null,huecos:[],items};
+  const r=e.recorte;if(r&&['ad','bd','bi','ai'].includes(r.esq)){const w=num(r.w,C.recorteMin,largo-C.restoMin),h=num(r.h,C.recorteMin,ancho-C.restoMin);if(w!=null&&h!=null)E.recorte={esq:r.esq,w,h};}
+  (Array.isArray(e.huecos)?e.huecos:[]).forEach(q=>{const b=escenaHuecoValidar(q,E);if(typeof b!=='string')E.huecos.push(b);});
+  return E;
 }
 function escenaEncajarTodo(){if(!ESCENA)return;ESCENA.items.forEach(it=>{const g=escenaGeo(it);if(!g)return;const p=escenaEncajar(g.W,g.H,it.x,it.y);it.x=p.x;it.y=p.y;});}
 // Botón de ⑥ Proyectos: visible con al menos un mueble; con escena, cuántas unidades están colocadas.
@@ -2903,11 +3076,12 @@ function abrirEscena(){
   if(!ESC_UI.resize&&typeof window!=='undefined'&&window.addEventListener){ESC_UI.resize=true;window.addEventListener('resize',escenaRedimensionar);}
   escenaInstalarPlanta();ESC_UI.drag=null;ESC_UI.vista3d=false;
   if(!ESCENA){escenaFormulario(false);return;}
-  escenaPurgar();escenaEncajarTodo();escenaMostrarTrabajo();
+  if(!Array.isArray(ESCENA.huecos))ESCENA.huecos=[]; // Lote V2
+  ESC_UI.hueco=null;escenaPurgar();escenaEncajarTodo();escenaMostrarTrabajo();
 }
 function cerrarEscena(){document.getElementById('escModal').style.display='none';ESC_UI.drag=null;R3DE.esc=null;escenaPintarBoton();}
 function escenaRedimensionar(){if(!escenaAbierta()||!ESCENA)return;if(ESC_UI.vista==='3d')r3dPintar(R3DE);else escenaPintarPlanta();}
-// Formulario de la habitación: crear (sin escena) o cambiar medidas (✏️ del resumen).
+// Formulario de la habitación: crear (sin escena) o cambiar medidas (✏️ del resumen). Lote V2: forma en L.
 function escenaFormulario(editar){
   const E=ESCENA,ed=!!(editar&&E),v=(id,x)=>{const el=document.getElementById(id);if(el)el.value=x==null?'':String(x);};
   ESC_UI.form=ed?'editar':'crear';
@@ -2915,6 +3089,7 @@ function escenaFormulario(editar){
   document.getElementById('escFormTit').textContent=ed?'Medidas de la habitación':'Nueva escena · medidas de la habitación';
   document.getElementById('escFormOk').textContent=ed?'✅ Aplicar':'✅ Crear habitación';
   v('escLargo',ed?E.largo:'');v('escAncho',ed?E.ancho:'');v('escAlto',ed?E.alto:'');v('escAltos',ed?E.altoAltos:ESC_CTE.altoAltos);
+  const rc=ed&&E.recorte;escenaForma(rc?'L':'rect');v('escRecEsq',rc?rc.esq:'ad');v('escRecW',rc?rc.w:'');v('escRecH',rc?rc.h:'');
   document.getElementById('escFormAviso').textContent='';
 }
 function escenaAplicarHabitacion(){
@@ -2923,10 +3098,18 @@ function escenaAplicarHabitacion(){
   const mal=t=>{if(av)av.textContent='⚠️ '+t;};
   if(!(largo>=C.medMin&&largo<=C.medMax&&ancho>=C.medMin&&ancho<=C.medMax))return mal(`Largo y ancho, entre ${C.medMin} y ${C.medMax} cm.`);
   if(!(alto>=C.techoMin&&alto<=C.techoMax))return mal(`Alto de techo, entre ${C.techoMin} y ${C.techoMax} cm.`);
-  if(!(altos>=C.altosMin&&altos<=alto))return mal(`Canto de arriba de los altos, entre ${C.altosMin} cm y el techo (${fmtCm(alto)} cm).`);
-  const d={largo:r1(largo),ancho:r1(ancho),alto:r1(alto),altoAltos:r1(altos)};
-  if(!ESCENA)ESCENA=Object.assign({v:1,items:[]},d);else Object.assign(ESCENA,d);
-  escenaEncajarTodo();escenaMostrarTrabajo();
+  if(!(altos>=C.altosMin&&altos<=alto))return mal(`Altura de colgar (canto de arriba de los altos), entre ${C.altosMin} cm y el techo (${fmtCm(alto)} cm).`);
+  let recorte=null;
+  if(ESC_UI.forma==='L'){const esq=document.getElementById('escRecEsq')?.value||'ad',w=n('escRecW'),h=n('escRecH');
+    if(!(w>=C.recorteMin&&w<=largo-C.restoMin))return mal(`Recorte a lo largo, entre ${C.recorteMin} y ${fmtCm(largo-C.restoMin)} cm (tienen que quedar ${C.restoMin} de pared).`);
+    if(!(h>=C.recorteMin&&h<=ancho-C.restoMin))return mal(`Recorte a lo ancho, entre ${C.recorteMin} y ${fmtCm(ancho-C.restoMin)} cm.`);
+    recorte={esq,w:r1(w),h:r1(h)};}
+  const d={largo:r1(largo),ancho:r1(ancho),alto:r1(alto),altoAltos:r1(altos),recorte};
+  if(!ESCENA)ESCENA=escenaSanear(Object.assign({items:[],huecos:[]},d));
+  else{Object.assign(ESCENA,d);const antes=(ESCENA.huecos||[]).length; // los huecos que ya no caben en la habitación nueva se quitan
+    ESCENA.huecos=(ESCENA.huecos||[]).map(q=>escenaHuecoValidar(q)).filter(q=>typeof q!=='string');
+    const fuera=antes-ESCENA.huecos.length;if(fuera)flash(`⚠️ ${fuera} hueco${fuera>1?'s':''} de las paredes no cab${fuera>1?'en':'e'} en la habitación nueva: quitado${fuera>1?'s':''}`);}
+  ESC_UI.hueco=null;escenaEncajarTodo();escenaMostrarTrabajo();
 }
 function escenaCancelarForm(){if(ESC_UI.form==='editar'&&ESCENA)escenaMostrarTrabajo();else cerrarEscena();}
 function escenaMostrarTrabajo(){document.getElementById('escForm').style.display='none';document.getElementById('escTrabajo').style.display='';escenaVista('planta');}
@@ -2942,10 +3125,10 @@ function escenaVista(v){
   if(!ESC_UI.vista3d){ESC_UI.vista3d=true;escenaVistaInicial();}else r3dPintar(R3DE);
 }
 function escenaVistaInicial(){const C=ESC_CTE;R3DE.th=C.th0*Math.PI/180;R3DE.ph=C.ph0*Math.PI/180;R3DE.zoom=C.zoom0;R3DE.px=0;R3DE.py=0;r3dPintar(R3DE);}
-function escenaPintarTodo(){escenaPintarPlanta();escenaPintarSel();escenaPintarMenu();escenaPintarResumen();}
+function escenaPintarTodo(){escenaPintarPlanta();escenaPintarSel();escenaPintarMenu();escenaPintarHuecos();escenaPintarResumen();}
 function escenaPintarResumen(){
   const el=document.getElementById('escRes');if(!el||!ESCENA)return;const E=ESCENA;
-  el.textContent=`Habitación ${fmtCm(E.largo)} × ${fmtCm(E.ancho)} cm · techo ${fmtCm(E.alto)} · altos a ${fmtCm(E.altoAltos)} · patas ${S.patas||'10'} ✏️`;
+  el.textContent=`Habitación ${fmtCm(E.largo)} × ${fmtCm(E.ancho)} cm${E.recorte?' en L':''} · techo ${fmtCm(E.alto)} · altura de colgar ${fmtCm(E.altoAltos)} · patas ${S.patas||'10'} ✏️`;
 }
 function escenaIndiceSel(){return ESCENA&&ESC_UI.sel?ESCENA.items.findIndex(it=>escenaClave(it)===ESC_UI.sel):-1;}
 function escenaPintarSel(){
@@ -2978,32 +3161,65 @@ function escenaGirar(){
   const p=escenaIman(i,cx-g.H/2,cy-g.W/2);it.x=p.x;it.y=p.y;escenaPintarTodo();
 }
 function escenaQuitar(){const i=escenaIndiceSel();if(i<0)return;ESCENA.items.splice(i,1);ESC_UI.sel=null;escenaPintarTodo();}
-// Planta a escala: suelo con rejilla, paredes, y los muebles (bajos y columnas; encima los altos, rayados; el elegido,
-// el último). Raya dorada = frente. Rojo = pisa a otro de su nivel. El tamaño en pantalla se ajusta al ancho del panel y
-// al alto de la ventana; de ahí salen la distancia del imán y el tamaño de las etiquetas.
+// Planta a escala: suelo con rejilla, paredes (Lote V2: contorno en L; puertas, ventanas, pilares y vigas), y los muebles
+// (bajos y columnas; encima los altos, rayados; el elegido, el último). Raya dorada = frente. Rojo = pisa a otro de su
+// nivel o un obstáculo. El tamaño en pantalla se ajusta al ancho del panel y al alto de la ventana; de ahí salen la
+// distancia del imán y el tamaño de las etiquetas.
 function escenaPintarPlanta(){
   const cont=document.getElementById('escPlanta');if(!cont||!ESCENA)return;
-  const E=ESCENA,C=ESC_CTE,K=C.colPlanta,pw=C.paredPlanta,mg=pw+C.margenPlanta,vbW=E.largo+2*mg,vbH=E.ancho+2*mg;
+  const E=ESCENA,C=ESC_CTE,mg=C.paredPlanta+C.margenPlanta,vbW=E.largo+2*mg,vbH=E.ancho+2*mg;
   const disp=Math.max(160,(cont.clientWidth||600)-12),maxH=Math.max(200,((typeof window!=='undefined'&&window.innerHeight)||800)*C.planoAltoMax);
-  const wPx=Math.min(disp,maxH*vbW/vbH),k=wPx/vbW; // px de pantalla por cm
-  ESC_UI.imanCm=C.imanPx/k;
-  const fs=r1(C.letraPx/k),num={};escenaMuebles().forEach(o=>{num[o.l.id]=o;});
-  const G=E.items.map(escenaGeo),mal=escenaSolapes(G),pts=a=>a.map(q=>r1(q[0])+','+r1(q[1])).join(' ');
-  const peso=i=>(G[i].h.nivel==='alto'?1:0)+(escenaClave(E.items[i])===ESC_UI.sel?2:0);
+  const R=escenaPlantaSVG({wPx:Math.min(disp,maxH*vbW/vbH),sel:ESC_UI.sel,selHueco:ESC_UI.hueco?ESC_UI.hueco.i:-1,id:'escP'});
+  ESC_UI.imanCm=C.imanPx/R.k;cont.innerHTML=R.svg;
+  const av=document.getElementById('escAviso');if(av)av.textContent=R.mal.size?(R.obst?'⚠️ Hay muebles en rojo: pisan a otro de su nivel o una pared, pilar, viga, puerta o ventana.':'⚠️ Hay muebles que se pisan (en rojo). Los altos pueden ir encima de los bajos; las columnas, no.'):'';
+}
+// SVG de la planta. o.wPx = ancho en px; o.sel = clave del mueble elegido; o.selHueco = índice del hueco en edición;
+// o.id = prefijo de los ids internos (si hay dos plantas en la misma página). Devuelve {svg, k (px por cm), mal, obst}.
+function escenaPlantaSVG(o){
+  const E=ESCENA,C=ESC_CTE,K=C.colPlanta,pw=C.paredPlanta,mg=pw+C.margenPlanta,vbW=E.largo+2*mg,vbH=E.ancho+2*mg;
+  const wPx=o.wPx,k=wPx/vbW,fs=r1(C.letraPx/k),num={};escenaMuebles().forEach(m=>{num[m.l.id]=m;});
+  const pts=a=>a.map(q=>r1(q[0])+','+r1(q[1])).join(' '),cid=(o.id||'esc')+'Suelo',Q=escenaPoligono(E),P=escenaParedes(E);
+  const G=E.items.map(escenaGeo),mal=escenaSolapes(G),obst=escenaObstaculos(E);
+  const peso=i=>(G[i].h.nivel==='alto'?1:0)+(escenaClave(E.items[i])===o.sel?2:0);
   let s=`<svg viewBox="${-mg} ${-mg} ${r1(vbW)} ${r1(vbH)}" width="${Math.round(wPx)}" height="${Math.round(wPx*vbH/vbW)}" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto;max-width:100%;height:auto;touch-action:none">`+
-    `<rect x="${-pw}" y="${-pw}" width="${r1(E.largo+2*pw)}" height="${r1(E.ancho+2*pw)}" fill="${K.pared}"/><rect x="0" y="0" width="${E.largo}" height="${E.ancho}" fill="${K.suelo}"/>`;
+    `<defs><clipPath id="${cid}"><polygon points="${pts(Q)}"/></clipPath></defs>`+
+    `<polygon points="${pts(Q)}" fill="${K.pared}" stroke="${K.pared}" stroke-width="${2*pw}" stroke-linejoin="miter"/><polygon points="${pts(Q)}" fill="${K.suelo}"/>`;
   let rj='';for(let x=C.rejilla;x<E.largo;x+=C.rejilla)rj+=`M${x} 0V${E.ancho}`;for(let y=C.rejilla;y<E.ancho;y+=C.rejilla)rj+=`M0 ${y}H${E.largo}`;
-  if(rj)s+=`<path d="${rj}" fill="none" stroke="${K.rejilla}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+  if(rj)s+=`<path d="${rj}" fill="none" stroke="${K.rejilla}" stroke-width="1" vector-effect="non-scaling-stroke" clip-path="url(#${cid})"/>`;
+  s+=escenaHuecosSVG(P,fs,o.selHueco==null?-1:o.selHueco);
   G.map((g,i)=>i).filter(i=>G[i]).sort((a,b)=>peso(a)-peso(b)).forEach(i=>{
-    const g=G[i],it=E.items[i],o=num[it.lid],sel=escenaClave(it)===ESC_UI.sel,alto=g.h.nivel==='alto',roj=mal.has(i);
+    const g=G[i],it=E.items[i],m=num[it.lid],sel=escenaClave(it)===o.sel,alto=g.h.nivel==='alto',roj=mal.has(i);
     const fill=alto?K.alto:(g.h.nivel==='col'?K.col:K.bajo),st=sel?K.sel:(roj?K.mal:K.borde);
     const q=g.h,fz=q.forma==='rect'?q.bd:q.F,lab=escenaRotar(it,q)(q.lab[0],alto?Math.min(q.lab[1],fs*0.8):Math.max(q.lab[1],fz-fs*0.8));
     s+=`<g data-i="${i}" style="cursor:grab"><polygon points="${pts(g.poly)}" fill="${fill}" stroke="${st}" stroke-width="${sel||roj?2.5:1.2}" vector-effect="non-scaling-stroke" stroke-linejoin="round"${alto?' stroke-dasharray="6 3"':''}/>`+
       `<polyline points="${pts(g.frente)}" fill="none" stroke="${K.frente}" stroke-width="3" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`+
-      `<text x="${r1(lab[0])}" y="${r1(lab[1])}" font-size="${fs}" text-anchor="middle" dominant-baseline="central" font-weight="700" fill="${K.texto}" stroke="#fff" stroke-width="${r1(fs*0.28)}" paint-order="stroke" style="pointer-events:none">${o?escenaEtiqueta(o,it.u):'?'}</text></g>`;
+      `<text x="${r1(lab[0])}" y="${r1(lab[1])}" font-size="${fs}" text-anchor="middle" dominant-baseline="central" font-weight="700" fill="${K.texto}" stroke="#fff" stroke-width="${r1(fs*0.28)}" paint-order="stroke" style="pointer-events:none">${m?escenaEtiqueta(m,it.u):'?'}</text></g>`;
   });
-  cont.innerHTML=s+'</svg>';
-  const av=document.getElementById('escAviso');if(av)av.textContent=mal.size?'⚠️ Hay muebles que se pisan (en rojo). Los altos pueden ir encima de los bajos; las columnas, no.':'';
+  return {svg:s+'</svg>',k,mal,obst:G.some((g,i)=>g&&mal.has(i)&&escenaPisaObst(g,obst,E).length>0)};
+}
+// Huecos en la planta: puerta = hueco en la pared con la hoja abierta a 90° y su barrido; ventana = franja clara en la
+// pared con la línea del cristal; pilar = macizo pegado a la pared; viga = franja punteada de pared a pared.
+function escenaHuecosSVG(P,fs,selIdx){
+  const E=ESCENA,C=ESC_CTE,K=C.colPlanta,pw=C.paredPlanta,fz=r1(fs*0.8);let s='';
+  const rect=(r,fill,extra)=>`<rect x="${r1(r[0])}" y="${r1(r[1])}" width="${r1(r[2]-r[0])}" height="${r1(r[3]-r[1])}" fill="${fill}" ${extra||''}/>`;
+  const etq=(x,y,t)=>`<text x="${r1(x)}" y="${r1(y)}" font-size="${fz}" text-anchor="middle" dominant-baseline="central" font-weight="700" fill="${K.texto}" stroke="#fff" stroke-width="${r1(fz*0.28)}" paint-order="stroke" style="pointer-events:none">${t}</text>`;
+  const linea=(a,b,w,dash)=>`<line x1="${r1(a[0])}" y1="${r1(a[1])}" x2="${r1(b[0])}" y2="${r1(b[1])}" stroke="${K.borde}" stroke-width="${w}"${dash?' stroke-dasharray="4 3"':''} vector-effect="non-scaling-stroke"/>`;
+  (E.huecos||[]).forEach((q,i)=>{
+    const sel=i===selIdx,st=`stroke="${sel?K.sel:K.borde}" stroke-width="${sel?2.5:0.8}" vector-effect="non-scaling-stroke"`,lab=escenaHuecoEtq(q,i);
+    if(q.t==='viga'){const r=q.dir==='x'?[0,q.d,E.largo,q.d+q.w]:[q.d,0,q.d+q.w,E.ancho];
+      s+=rect(r,C.colHueco.vigaPlanta,st.replace('vector-effect',' stroke-dasharray="6 4" vector-effect'))+etq((r[0]+r[2])/2,(r[1]+r[3])/2,lab);return;}
+    const p=P.find(w=>w.id===q.pared);if(!p)return;
+    const en=(t,prof)=>[p.p0[0]+p.dir[0]*t+p.n[0]*prof,p.p0[1]+p.dir[1]*t+p.n[1]*prof],mid=q.d+q.w/2;
+    if(q.t==='pilar'){s+=rect(escenaRectPared(p,q.d,q.w,q.s),K.pared,st);const c=en(mid,q.s/2);s+=etq(c[0],c[1],lab);}
+    else if(q.t==='ventana'){s+=rect(escenaRectPared(p,q.d,q.w,0,-pw),C.colHueco.ventanaPlanta,st)+linea(en(q.d,-pw/2),en(q.d+q.w,-pw/2),1.2);const c=en(mid,-pw/2);s+=etq(c[0],c[1],lab);}
+    else{ // puerta: la hoja gira desde la bisagra hacia el otro extremo; hacia dentro o hacia fuera
+      s+=rect(escenaRectPared(p,q.d,q.w,0,-pw),K.suelo,st);
+      const sg=q.fuera?-1:1,dH=q.bis==='D'?-1:1,bis=en(q.bis==='D'?q.d+q.w:q.d,0);let arc='';
+      for(let j=0;j<=12;j++){const a=j/12*Math.PI/2,x=bis[0]+(p.dir[0]*dH*Math.cos(a)+p.n[0]*sg*Math.sin(a))*q.w,y=bis[1]+(p.dir[1]*dH*Math.cos(a)+p.n[1]*sg*Math.sin(a))*q.w;arc+=(j?' L':'M')+r1(x)+' '+r1(y);}
+      s+=linea(bis,[bis[0]+p.n[0]*sg*q.w,bis[1]+p.n[1]*sg*q.w],2)+`<path d="${arc}" fill="none" stroke="${K.borde}" stroke-width="1" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>`;
+      const c=en(mid,-pw/2);s+=etq(c[0],c[1],lab);}
+  });
+  return s;
 }
 function escenaPunto(svg,cx,cy){const m=svg&&svg.getScreenCTM&&svg.getScreenCTM();if(!m)return null;const p=svg.createSVGPoint();p.x=cx;p.y=cy;const q=p.matrixTransform(m.inverse());return {x:q.x,y:q.y};}
 // Planta: tocar un mueble lo selecciona y arrastrarlo lo mueve con imán; tocar el suelo quita la selección.
@@ -3063,13 +3279,28 @@ function escenaPiezas3D(){
     loc.forEach(p=>P.push(escenaPiezaEnSala(p,T,yB)));
   });
   const e=C.paredGrosor,s=C.sueloGrosor,L=E.largo,W=E.ancho,H=E.alto,K=C.col3d,bx=(x,y,z,w,h,d,col)=>({k:'box',x,y,z,w,h,d,col,st:K.borde});
-  const suelo=bx(0,-s,0,L,s,W,K.suelo);
-  // n = normal de la cara interior: fondo (pared de arriba de la planta), delante, izquierda y derecha
-  const paredes=[{p:bx(-e,-s,W,L+2*e,H+s,e,K.pared),n:[0,0,-1]},{p:bx(-e,-s,-e,L+2*e,H+s,e,K.pared),n:[0,0,1]},
-    {p:bx(-e,-s,0,e,H+s,W,K.pared),n:[1,0,0]},{p:bx(L,-s,0,e,H+s,W,K.pared),n:[-1,0,0]}];
-  return {P,suelo,paredes,marco:[suelo].concat(paredes.map(w=>w.p)),sp:{anc:L,alt:H,fon:W,patas:false},macizos};
+  const rz=r=>({x:r[0],z:W-r[3],w:r[2]-r[0],d:r[3]-r[1]}); // rectángulo de planta → x, z, w, d del 3D (Z = ancho − y)
+  // Lote V2 — suelo en L (prisma con dos rectángulos) y paredes por tramos: cada pared se parte en cajas alrededor de sus
+  // puertas y ventanas; todas las cajas de una pared llevan la misma normal interior n y se ocultan juntas. En las
+  // esquinas salientes la pared se alarga el grosor para cerrar la esquina; en la entrante del recorte, no.
+  const rr=escenaRectRecorte(E),Q=escenaPoligono(E);
+  const suelo=rr?{k:'prism',pts:Q.map(q=>[q[0],W-q[1]]),rects:escenaSueloRects(E).map(r=>{const q=rz(r);return [q.x,q.z,q.x+q.w,q.z+q.d];}),y:-s,h:s,col:K.suelo,st:K.borde}:bx(0,-s,0,L,s,W,K.suelo);
+  const paredes=[],fijas=[],PA=escenaParedes(E);
+  PA.forEach(p=>{const n=[p.n[0],0,-p.n[1]],t0=p.convexo0?-e:0,t1=p.len+(p.convexo1?e:0);
+    const caja=(ta,tb,y0,y1,prof0,prof1,col)=>{if(tb-ta<=0.01||y1-y0<=0.01)return;const q=rz(escenaRectPared(p,ta,tb-ta,prof0,prof1));paredes.push({n,p:bx(q.x,y0,q.z,q.w,y1-y0,q.d,col||K.pared)});};
+    const hs=(E.huecos||[]).filter(q=>(q.t==='puerta'||q.t==='ventana')&&q.pared===p.id).slice().sort((a,b)=>a.d-b.d);
+    let t=t0;hs.forEach(q=>{const a=Math.max(t,q.d),b=q.d+q.w;if(b<=a)return;caja(t,a,-s,H,0,-e);
+      if(q.t==='puerta'){caja(a,b,q.h,H,0,-e);caja(a,b,0,q.h,0,-C.hojaGrosor,C.colHueco.hoja);} // hoja cerrada, enrasada por dentro
+      else{caja(a,b,-s,q.ant,0,-e);caja(a,b,q.ant+q.h,H,0,-e);caja(a,b,q.ant,q.ant+q.h,-(e-C.cristalGrosor)/2,-(e+C.cristalGrosor)/2,C.colHueco.cristal);} // cristal en medio del grosor
+      t=Math.max(t,b);});
+    caja(t,t1,-s,H,0,-e);});
+  (E.huecos||[]).forEach(q=>{ // pilares y vigas: siempre a la vista
+    if(q.t==='viga'){const g=rz(q.dir==='x'?[0,q.d,L,q.d+q.w]:[q.d,0,q.d+q.w,W]);fijas.push(bx(g.x,H-q.baj,g.z,g.w,q.baj,g.d,K.pared));return;}
+    if(q.t!=='pilar')return;const p=PA.find(w=>w.id===q.pared);if(!p)return;const g=rz(escenaRectPared(p,q.d,q.w,q.s));fijas.push(bx(g.x,0,g.z,g.w,H,g.d,K.pared));});
+  const marco=[bx(-e,-s,-e,L+2*e,H+s,W+2*e,K.pared)]; // encuadre: la habitación entera, con sus paredes
+  return {P,suelo,paredes,fijas,marco,sp:{anc:L,alt:H,fon:W,patas:false},macizos,huecos:(E.huecos||[]).length};
 }
-// Paredes que se ven con la cámara (th, ph): fuera las que quedan entre la cámara y la habitación.
+// Tramos de pared que se ven con la cámara (th, ph): fuera los que quedan entre la cámara y la habitación.
 function escenaParedesVistas(E,th,ph){
   const cf=Math.cos(ph),d=[-Math.sin(th)*cf,-Math.sin(ph),Math.cos(th)*cf];
   return E.paredes.filter(w=>w.n[0]*d[0]+w.n[1]*d[1]+w.n[2]*d[2]<=ESC_CTE.paredOculta);
@@ -3086,7 +3317,7 @@ function escenaPintar3D(vis){
   const dpr=Math.min(3,window.devicePixelRatio||1),Wd=Math.round(cssW*dpr),Hd=Math.round(cssW*R3D_H/R3D_W*dpr);
   if(X.cv.width!==Wd||X.cv.height!==Hd){X.cv.width=Wd;X.cv.height=Hd;}
   vis.ph=Math.max(ESC_CTE.phMin*Math.PI/180,vis.ph);vis.glUlt=null; // sin selección de piezas en la escena
-  const P=E.P.concat([E.suelo],escenaParedesVistas(E,vis.th,vis.ph).map(w=>w.p));
+  const P=E.P.concat([E.suelo],E.fijas||[],escenaParedesVistas(E,vis.th,vis.ph).map(w=>w.p));
   const cam=r3dCamara(E.sp,vis,R3D_W,R3D_H,E.marco),M=r3dMallaGL(P,cam,vis,false,R3D_GL.linea*R3D_W/cssW/2),gl=X.gl,F=R3D_GL.fondo;
   gl.viewport(0,0,Wd,Hd);gl.clearColor(F[0],F[1],F[2],1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   gl.useProgram(X.pr);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(true);gl.disable(gl.BLEND);
@@ -3095,7 +3326,8 @@ function escenaPintar3D(vis){
   r3dGLDibuja(X,M.li);r3dGLDibuja(X,M.tr);gl.depthMask(true);
 }
 function escenaCaption3D(E){
-  let t=`${ESCENA.items.length} de ${escenaUnidades()} muebles colocados · bajos y columnas sobre patas de ${S.patas||'10'} · altos con el canto de arriba a ${fmtCm(ESCENA.altoAltos)} cm`;
+  let t=`${ESCENA.items.length} de ${escenaUnidades()} muebles colocados · bajos y columnas sobre patas de ${S.patas||'10'} · altura de colgar ${fmtCm(ESCENA.altoAltos)} cm`;
+  if(E.huecos)t+=` · ${E.huecos} en las paredes (puertas, ventanas, pilares o vigas)`;
   if(E.macizos)t+=` · ${E.macizos} sin construcción 3D (rincones altos o de columna): caja maciza con sus medidas`;
   return esc(t);
 }
