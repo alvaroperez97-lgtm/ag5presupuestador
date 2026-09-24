@@ -1055,7 +1055,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-23.11';
+const APP_BUILD = '2026-09-24.1';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1157,7 +1157,13 @@ const RIN_ESC_CAJEO_HOLGURA    = 0.1;  // cm: holgura del cajeo de la balda alre
 // Lote U (23-09-2026) — medidas por defecto de las puertas (Álvaro). Columnas y semicolumnas: puertas una encima de otra;
 // desde 61 cm de ancho se hacen 4 (dos filas de 2Pta). Rincón escuadra: la puerta que abre primero mide 2 cm menos que
 // el frente de su brazo (regla del R7: frente = brazo − fondo).
-const COL_ANCHO_4_PUERTAS      = 61;   // cm: columnas/semicolumnas desde este ancho arrancan con 4 puertas
+// Lote W1 (24-09-2026, Álvaro): norma general del catálogo — desde 61 cm de ancho se predefine DOBLE puerta (una sola
+// puerta tan ancha tiene mucho peso de caída y da problemas). Columnas: 2 filas → 4 puertas; semicolumnas: 1 fila → 2.
+const ANCHO_DOBLE_PUERTA       = 61;   // cm: desde este ancho, puerta doble (2Pta) por defecto
+const COL_ANCHO_4_PUERTAS      = ANCHO_DOBLE_PUERTA; // Lote U: columnas desde este ancho arrancan con 4 puertas
+// Lote W1: columnas con puertas apiladas — P1 es la de ABAJO y mide 160 por defecto; P2 (arriba) el resto del alto.
+// Con gola se descuenta de la de abajo: 157 (A.205 → 157 + 45 = 202, el alto − 3).
+const COL_PUERTA_BAJA          = 160;  // cm: alto por defecto de la puerta de abajo de una columna
 const RIN_ESC_PUERTA_CORTA     = 2;    // cm: la puerta del escuadra que abre primero, más corta que su frente
 const PATAS_RIN_ESC            = 8;    // 6 esquinas de la L + 1 en el centro de cada frente interior
 const BALDA_DESC_ANCHO_TAR     = 3.2;  // la tarifa indexa por ancho de mueble = ancho de balda + 3,2 (costados de 16)
@@ -1448,7 +1454,9 @@ function buildARM(){
   [[60,60,67.21],[63,63,70.98],[65,65,73.57],[65,70,76.79]].forEach(([h,w,d])=>a('Rincón Colgante',`Rinc.Chaf A.70 ${h}x${w}`,70,w,'33',d));
   [[60,60,75.00],[63,63,78.97],[65,65,81.68],[65,70,85.05]].forEach(([h,w,d])=>a('Rincón Colgante',`Rinc.Chaf A.90 ${h}x${w}`,90,w,'33',d));
   [[70,80,75.95],[70,90,80.32],[70,100,84.66]].forEach(([h,w,d])=>a('Rincón Colgante',`Rinc.Recto Ciega A.70 ${h}x${w}`,70,w,'33',d));
-  [[70,80,83.66],[70,90,88.31],[70,100,93.04]].forEach(([h,w,d])=>a('Rincón Colgante',`Rinc.Recto Ciega A.90 ${h}x${w}`,90,w,'33',d));
+  // Lote W1 (24-09-2026): la tarifa 2021 pone «70 alto» también en la sección Alto 90 (errata); el nombre lleva 90.
+  // Precio y medidas sin cambios. Nombres antiguos → ARM_NOM_RENOMBRADO (cambios de tarifa guardados).
+  [[90,80,83.66],[90,90,88.31],[90,100,93.04]].forEach(([h,w,d])=>a('Rincón Colgante',`Rinc.Recto Ciega A.90 ${h}x${w}`,90,w,'33',d));
   const sfA=[30,35,40,45,50,60,70];
   [24.63,26.18,27.74,29.21,36.28,40.18,43.24].forEach((d,i)=>a('Sobre Frigo',`S.Frigo An.60 A.${sfA[i]}`,sfA[i],60,'45',d));
   [27.22,28.81,30.44,32.03,41.05,44.27,47.49].forEach((d,i)=>a('Sobre Frigo',`S.Frigo An.70 A.${sfA[i]}`,sfA[i],70,'45',d));
@@ -2157,19 +2165,22 @@ function r3dPiezas(sp,conFrentes,est){
   }
   if(conFrentes&&tipo!=='rinEsc'){
     let x=(rin&&rin.pw)?xLado(rin.pw):0; // Lote R6
-    // Lote U (23-09-2026) — columnas y semicolumnas: puertas una encima de otra, P1 arriba, apiladas desde el techo y cada
+    // Lote U (23-09-2026) — columnas y semicolumnas: puertas una encima de otra (Lote W1: P1 abajo), apiladas desde el techo y cada
     // una con su perfil de gola encima si lo lleva; una fila 2Pta son dos puertas lado a lado. Si las medidas no caben en
     // el alto, el dibujo las encoge en proporción (solo el dibujo: la columna aún no tiene construcción propia).
     // Lote U2: con gola, un solo perfil por columna, encima de la fila de abajo (perfil en C entre las dos puertas; con una
     // sola puerta queda arriba, como en los bajos). Las filas de encima no llevan gola.
     let yFila=yTop,esc=1,hAutoFila=0;
-    const nFil=sp.puertas.length,golaCol=sp.apiladas&&esGola&&sp.puertas.some(p=>p.tir),resFila=i=>(golaCol&&i===nFil-1)?C.golaAlto:0;
+    // Lote W1 (24-09-2026): P1 es la de ABAJO → se apila desde el techo recorriendo de la última a la primera, y la gola
+    // va sobre P1. Las claves de apertura (p0, p1…) siguen siendo las del índice de la puerta.
+    const golaCol=sp.apiladas&&esGola&&sp.puertas.some(p=>p.tir),resFila=i=>(golaCol&&i===0)?C.golaAlto:0;
+    const ordenP=sp.puertas.map((p,i)=>i);if(sp.apiladas)ordenP.reverse();
     if(sp.apiladas){
       const res=golaCol?C.golaAlto:0,hs=sp.puertas.reduce((s,p)=>s+(p.alto||0),0);
       const nVac=sp.puertas.filter(p=>!p.alto).length;hAutoFila=nVac?Math.max(1,(yTop-res-hs)/nVac):0;
       const tot=hs+hAutoFila*nVac;if(tot>0&&tot>yTop-res)esc=Math.max(0.1,(yTop-res)/tot);
     }
-    sp.puertas.forEach((p,i)=>{
+    ordenP.forEach(i=>{const p=sp.puertas[i];
       const n=p.mano==='2'?2:1,abrible=p.mano!=='FF'&&p.mano!=='AB';
       let h=p.alto||(yTop-((esGola&&p.tir)?C.golaAlto:0)),w=p.ancho||(W/sp.puertas.length)/n,y0=0; // Lote R4: con gola, alto auto = hueco − 3
       if(sp.apiladas){h=(p.alto||hAutoFila)*esc;w=p.ancho||W/n;y0=yFila-h-resFila(i);yFila=y0;x=0;} // Lote U · U2
@@ -3102,9 +3113,16 @@ function tarifaAplicarTodo(){
   Object.entries(TARIFA_MOD.tir||{}).forEach(([k,o])=>{const [m,an]=k.split('|');const d=TD[m];if(!d||!o)return;const i=d.an.indexOf(+an);if(i>=0)d.p[i]=+o.p;});
   Object.entries(TARIFA_MOD.ga||{}).forEach(([k,o])=>{const i=GA.an.indexOf(+k);if(i>=0&&o)GA.p[i]=+o.p;});
 }
+// Lote W1 (24-09-2026): armazones renombrados. Los cambios de tarifa guardados con el nombre viejo se pasan al nuevo.
+const ARM_NOM_RENOMBRADO={
+  'Rinc.Recto Ciega A.90 70x80':'Rinc.Recto Ciega A.90 90x80',
+  'Rinc.Recto Ciega A.90 70x90':'Rinc.Recto Ciega A.90 90x90',
+  'Rinc.Recto Ciega A.90 70x100':'Rinc.Recto Ciega A.90 90x100'};
 function tarifaCargar(){
   const d=lsLeer(LS_TARIFA,null);
   TARIFA_MOD=(d&&typeof d==='object')?{arm:d.arm||{},pd:d.pd||{},tir:d.tir||{},ga:d.ga||{}}:{arm:{},pd:{},tir:{},ga:{}};
+  Object.entries(ARM_NOM_RENOMBRADO).forEach(([v,n])=>{const o=TARIFA_MOD.arm[v];if(!o)return;delete TARIFA_MOD.arm[v];
+    if(!TARIFA_MOD.arm[n])TARIFA_MOD.arm[n]=Object.assign({},o,{etq:`armazón ${n}`});}); // Lote W1
   tarifaAplicarTodo();
 }
 function tarifaNumMod(){return ['arm','pd','tir','ga'].reduce((s,t)=>s+Object.keys(TARIFA_MOD[t]||{}).length,0);}
@@ -4561,14 +4579,14 @@ function selA(id,card){
     // Reset forma especial al elegir mueble nuevo
     MFORMA='ninguna';document.getElementById('mDFD').value='';document.getElementById('mDFI').value='';pintarFormaTgg('m','ninguna');
     const gi=document.getElementById('gInfo');gi.style.display=isGB?'block':'none';if(isGB)gi.textContent='🔧 Gola bajos: armazón se cobra como 75 (aunque sea de 80) · puerta 77 → tramo 90 sin recargo · la gola se suma sola en el presupuesto';
-    if(!isGB&&S.tb.t==='gola'&&puertasApiladas(SEL)){gi.style.display='block';gi.textContent='🔧 Gola: una sola por columna · las puertas suman el alto − 3 (hueco de apertura) · la gola se suma sola en el presupuesto';} // Lote U2
+    if(!isGB&&S.tb.t==='gola'&&puertasApiladas(SEL)){gi.style.display='block';gi.textContent='🔧 Gola: una sola por columna · las puertas suman el alto − 3 (hueco de apertura; P1 abajo a 157) · la gola se suma sola en el presupuesto';} // Lote U2
     MDEF={alto:altoPuertaDefecto(SEL,altoArm0),ancho:SEL.anc}; // Lote P
     // Lote Q: frentes de arranque según la subfamilia (gavetero → 1 gaveta; placa / placa horno → 2 gavetas).
     const gvIni=()=>({alto:'',ancho:MDEF.ancho,tir:'on',tipo:'GV',fondo:'F50',ss:'off'});
     if(MHOJA.arranque==='GV'){MPuertas=[];MFrentesCJ=[gvIni()];}
     else if(MHOJA.arranque==='GV2'){MPuertas=[];MFrentesCJ=[gvIni(),gvIni()];}
     else if(MHOJA.arranque==='HORNO'){MHORNO='60';MPuertas=[];MFrentesCJ=[frenteHornoIni(altoArm0)];} // Lote R3: placa horno → 1 cajón bajo el horno
-    else{MPuertas=puertasArranque(SEL,SEL.anc);MFrentesCJ=[];} // Lote U: columnas/semicolumnas, 2 puertas apiladas (4 desde 61)
+    else{MPuertas=puertasArranque(SEL,SEL.anc);MFrentesCJ=[];} // Lote U · W1: doble desde 61; columnas 2 filas (P1 abajo 160)
     MPUERTAS_ARR=!['GV','GV2','HORNO'].includes(MHOJA.arranque);repartirPuertas(); // Lote U: puertas rellenas con su medida
     if(MHOJA.arranque!=='HORNO')MHORNO='60';
     pintarHornoUI(); // Lote R3
@@ -4607,8 +4625,8 @@ function renderMP(){
     // FF (frente fijo) nunca lleva tirador: forzamos tir=off internamente para el cálculo y ocultamos el selector
     const esFF=mano==='FF';
     const btnMano=(v,lab)=>`<button class="tgb${mano===v?' on':''}" onclick="updMP(${i},'mano','${v}')" style="padding:4px 10px;font-size:11px">${lab}</button>`;
-    // Lote U — columnas/semicolumnas: puertas una encima de otra; se dice cuál es cada una (P1 arriba, como en el 3D).
-    const posAp=(SEL&&puertasApiladas(SEL)&&MPuertas.length>1)?(i===0?'arriba':(i===MPuertas.length-1?'abajo':'en medio')):'';
+    // Lote U — columnas/semicolumnas: puertas una encima de otra; se dice cuál es cada una. Lote W1: P1 ABAJO (como en el 3D).
+    const posAp=(SEL&&puertasApiladas(SEL)&&MPuertas.length>1)?(i===0?'abajo':(i===MPuertas.length-1?'arriba':'en medio')):'';
     d.innerHTML=(posAp?`<div style="font-size:10.5px;color:var(--dc);font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">P${n} · ${posAp}${mano==='2'?' (2 puertas)':''}</div>`:'')+
       `<div style="display:grid;grid-template-columns:75px 75px auto auto;gap:8px;align-items:end">`+
       `<div class="fg"><label>Alto P${n}</label><input type="number" id="mpA${i}" value="${p.alto||''}" placeholder="${SEL?SEL.alt:70}" oninput="updMP(${i},'alto',this.value)" onchange="finMP(${i},'alto')"></div>`+
@@ -4646,17 +4664,23 @@ function finMP(idx,campo){const p=MPuertas[idx];if(p&&String(p[campo]??'').trim(
 // formulario; no se guarda en la línea) y lo que queda se reparte entre las puertas sin tocar:
 //  · Muebles normales: una junto a otra. Ancho = ancho del mueble ÷ nº de puertas (2Pta cuenta 2); alto = alto de puerta
 //    por defecto (bajos con gola, −3). Bajo 80: 1 puerta 75×80; 2 puertas 75×40 + 75×40; P1 a mano en 45 → P2 35.
-//  · Columnas y semicolumnas: una encima de otra, P1 arriba. Alto = alto del mueble ÷ nº de filas; ancho entero, o ÷ 2 si
+//  · Columnas y semicolumnas: una encima de otra, P1 ABAJO (Lote W1). Columnas: P1 160 (157 con gola), P2 el resto;
+//    semicolumnas: 1 fila a todo lo alto. [Texto de Lote U, reparto ÷ nº de filas, ya superado:] Alto = alto del mueble ÷ nº de filas; ancho entero, o ÷ 2 si
 //    la fila es 2Pta. Arrancan con 2 puertas y desde 61 de ancho (COL_ANCHO_4_PUERTAS) con 4 (dos filas 2Pta):
 //    Columna A.205 An.60 → 102,5×60 + 102,5×60; An.80 → dos filas 2Pta de 102,5×40. Con gola de bajos (Lote U2) las
 //    puertas suman el alto − 3 (altoPuertaDefecto): 101 + 101.
 // Redondeo a décima; lo que sobra del redondeo va a la última puerta automática (100 en 3 → 33,3 + 33,3 + 33,4).
 let MPUERTAS_ARR=false; // true mientras las puertas sean las de arranque sin tocar (cambiar el ancho puede rehacerlas)
 function puertasApiladas(arm){return !!arm&&esColumnaFam(arm)&&!isRin(arm);}
+// Lote W1 (24-09-2026): desde ANCHO_DOBLE_PUERTA (61) se arranca con puerta doble (2Pta) en todo el catálogo, salvo
+// sobrefrigo abatible (sin bisagras), rincones y rincón chaflán (forma especial), que siguen con 1 puerta.
+// Columnas: 2 filas (P1 abajo, P2 arriba); semicolumnas: 1 sola fila a todo lo alto.
 function puertasArranque(arm,anc){
   const nueva=m=>({alto:'',ancho:'',tir:'on',mano:m});
-  if(puertasApiladas(arm)){const m=((+anc)||arm.anc)>=COL_ANCHO_4_PUERTAS?'2':'D';return [nueva(m),nueva(m)];}
-  return [nueva((MHOJA&&MHOJA.abatible)?'AB':'D')];
+  const doble=!!arm&&((+anc)||arm.anc)>=ANCHO_DOBLE_PUERTA;
+  if(puertasApiladas(arm)){const m=doble?'2':'D';return arm.fam==='Columnas'?[nueva(m),nueva(m)]:[nueva(m)];}
+  if(MHOJA&&MHOJA.abatible)return [nueva('AB')];
+  return [nueva(doble&&!isRin(arm)&&!(MHOJA&&MHOJA.forma)?'2':'D')];
 }
 // excepto = {i, c}: campo que se está tecleando (no se le escribe encima).
 function repartirPuertas(excepto){
@@ -4674,7 +4698,12 @@ function repartirPuertas(excepto){
     auto.forEach((i,k)=>{const w=peso(MPuertas[i]),v=k<auto.length-1?r1(resto/pesoAuto):r1((resto-usado)/w);usado+=v*w;poner(i,campo,v);});
   };
   if(puertasApiladas(SEL)){
-    repartir('alto','_mA',A,fila);
+    // Lote W1: columna con 2 filas o más → P1 (abajo) a COL_PUERTA_BAJA (con gola, − 3 → 157) si no está tecleada;
+    // las demás se reparten el resto. Si no cabe (columna rara), reparto a partes iguales como antes.
+    const baja=altoPuertaDefecto(SEL,COL_PUERTA_BAJA);
+    const fijaBaja=SEL.fam==='Columnas'&&MPuertas.length>1&&!MPuertas[0]._mA&&baja<A;
+    if(fijaBaja){poner(0,'alto',baja);MPuertas[0]._mA=true;}
+    try{repartir('alto','_mA',A,fila);}finally{if(fijaBaja)MPuertas[0]._mA=false;}
     MPuertas.forEach((p,i)=>{if(!p._mW)poner(i,'ancho',r1(W/hojas(p)));});
   } else {
     MPuertas.forEach((p,i)=>{if(!p._mA)poner(i,'alto',A);});
