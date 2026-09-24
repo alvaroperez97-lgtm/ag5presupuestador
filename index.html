@@ -482,13 +482,10 @@ tr:hover td{background:var(--c);}
           <!-- Lote U (23-09-2026): las medidas del armazón se cambian en la ventana «📐 Medidas especiales». Los campos siguen
                aquí, ocultos, porque guardan el valor que leen cp(), addM() y el 3D. Sin selector de forma especial: el chaflán
                lo pone el árbol y el cajeo viga/columna se marca en la ventana (×2 automático). -->
-          <div style="display:none"><input type="number" id="mAlt"><input type="number" id="mAnc"><input type="number" id="mFon"></div>
+          <div style="display:none"><input type="number" id="mAlt"><input type="number" id="mAnc"><input type="number" id="mFon"><input type="number" id="mDFI"><input type="number" id="mDFD"></div>
           <div id="mMedRes" class="medRes" onclick="abrirMedidasEsp()"></div>
-          <!-- Lote F: doble fondo informativo en chaflanes (sale solo cuando el árbol marca chaflán) -->
-          <div id="mDobleFondoBox" style="display:none;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px;background:rgba(196,151,58,.12);border:1px solid rgba(196,151,58,.35);border-radius:6px;padding:9px">
-            <div class="fg"><label>Fondo dcho (info)</label><input type="number" id="mDFD" min="1" placeholder="cm" oninput="cp()"></div>
-            <div class="fg"><label>Fondo izq (info)</label><input type="number" id="mDFI" min="1" placeholder="cm" oninput="cp()"></div>
-          </div>
+          <!-- Lote C1 (24-09-2026): el fondo izquierdo y el derecho del chaflán se teclean en «📐 Medidas especiales» (campos
+               ocultos mDFI / mDFD arriba) y ya no son informativos: dan la diagonal de la puerta, el 3D y el despiece. -->
           <!-- Lote R1b (18-09-2026): puertas y frentes DEL CLIENTE = este mueble se vende sin ellos (el estudio ya los tiene).
                Se tarifa como "Sin puerta": armazón y cajones herraje sí; frentes, tiradores y gola no. Las medidas de los
                frentes se siguen tecleando porque dimensionan los cajones (herraje y vista 3D). -->
@@ -904,6 +901,9 @@ tr:hover td{background:var(--c);}
       <div class="fg" id="meAltBox"><label>Alto (cm)</label><input type="number" id="meAlt" min="1" step="0.1" oninput="pintarAvisoMedEsp()" onkeydown="if(event.key==='Enter')aplicarMedidasEsp()"></div>
       <div class="fg" id="meAncBox"><label id="meAncLab">Ancho (cm)</label><input type="number" id="meAnc" min="1" step="0.1" oninput="pintarAvisoMedEsp()" onkeydown="if(event.key==='Enter')aplicarMedidasEsp()"></div>
       <div class="fg" id="meFonBox"><label>Fondo (cm)</label><input type="number" id="meFon" min="1" step="0.1" oninput="pintarAvisoMedEsp()" onkeydown="if(event.key==='Enter')aplicarMedidasEsp()"></div>
+      <!-- Lote C1: bajo chaflán → fondo izquierdo y derecho (mirando el mueble de frente) en vez de un solo fondo -->
+      <div class="fg" id="meFonIBox" style="display:none"><label>Fondo izquierdo (cm)</label><input type="number" id="meFonI" min="1" step="0.1" oninput="pintarAvisoMedEsp()" onkeydown="if(event.key==='Enter')aplicarMedidasEsp()"></div>
+      <div class="fg" id="meFonDBox" style="display:none"><label>Fondo derecho (cm)</label><input type="number" id="meFonD" min="1" step="0.1" oninput="pintarAvisoMedEsp()" onkeydown="if(event.key==='Enter')aplicarMedidasEsp()"></div>
     </div>
     <div class="fg" id="meFormaBox" style="margin-bottom:12px"><label>Cajeo (armazón ×2)</label>
       <div class="tgg" id="meFormaTgg" style="margin-top:4px;flex-wrap:wrap">
@@ -1113,7 +1113,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-24.4';
+const APP_BUILD = '2026-09-24.5';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1212,6 +1212,12 @@ const PATAS_RIN_RECTO          = 5;    // rincones rectos: 4 en las esquinas + 1
 // Lote R7 (23-09-2026) — bajo rincón escuadra y rincón fregadero (misma construcción, Álvaro).
 const RIN_ESC_REFUERZO         = 12;   // cm: refuerzo en L de la esquina trasera, 12 × 12 (un paletón de 12 y otro de 12 − t)
 const RIN_ESC_CAJEO_HOLGURA    = 0.1;  // cm: holgura del cajeo de la balda alrededor del refuerzo (12 → 12,1)
+// Lote C1 (24-09-2026) — bajo chaflán (Álvaro): los costados van delante a inglete siguiendo la diagonal y se cortan más
+// anchos para sacar la caída (F.58 → 59 en la lista de corte).
+const CHAF_INGLETE_SOBREMEDIDA = 1;    // cm
+// Base y techo del chaflán (Álvaro, 24-09-2026): se cortan con demasía para sacar la diagonal, 1 cm en cada medida
+// (60 × 58 → 61 × 59 en la lista de corte).
+const CHAF_DEMASIA_TAPA        = 1;    // cm
 // Lote U (23-09-2026) — medidas por defecto de las puertas (Álvaro). Columnas y semicolumnas: puertas una encima de otra;
 // desde 61 cm de ancho se hacen 4 (dos filas de 2Pta). Rincón escuadra: la puerta que abre primero mide 2 cm menos que
 // el frente de su brazo (regla del R7: frente = brazo − fondo).
@@ -1700,6 +1706,23 @@ const CONSTR=(()=>{
   // se acorta en ese extremo (eZ0 en el izquierdo, eX1 en el derecho). rects = la misma L en rectángulos (visor SVG).
   const escL=(c,y,h,col)=>({pts:[[0,c.eZ0],[c.F,c.eZ0],[c.F,c.H-c.F],[c.eX1,c.H-c.F],[c.eX1,c.H],[0,c.H]],
     rects:[[0,c.eZ0,c.F,c.H-c.F],[0,c.H-c.F,c.eX1,c.H]],y,h,col});
+  // Lote C1 — ayudas del bajo chaflán. chafX0 / chafX1: extremos de base y techo (se acortan si un costado va integrado).
+  const chafX0=c=>c.pz.cI==='p'?c.th('cI'):0,chafX1=c=>c.W-(c.pz.cD==='p'?c.th('cD'):0);
+  const chafTxt=c=>`fondo izq ${fmtCm(c.chI)} · dcho ${fmtCm(c.chD)} · diagonal ${fmtCm(r1(c.chL))}`;
+  const chafTapa=(c,y,h,col)=>{const a=chafX0(c),b=chafX1(c);return {pts:[[a,c.chZ(a)],[b,c.chZ(b)],[b,c.chM],[a,c.chM]],y,h,col};};
+  const chafCorteTapa=c=>{const a=chafX0(c),b=chafX1(c);return {largo:b-a+CHAF_DEMASIA_TAPA,ancho:c.chM-Math.min(c.chZ(a),c.chZ(b))+CHAF_DEMASIA_TAPA};}; // veta a lo ancho, como la base de los bajos; +1 cm de demasía en cada medida
+  const chafCost=(id,lado,der)=>({id,nombre:'Costado',
+    pos:c=>`por dentro, entre base y techo, lado ${lado} (fondo ${fmtCm(der?c.chD:c.chI)}); delante a inglete siguiendo la diagonal, cortado ${fmtCm(CHAF_INGLETE_SOBREMEDIDA)} más ancho para sacar la caída; canto en los dos largos (también el del inglete)`,
+    posPuerta:`costado visto integrado, lado ${lado}: del suelo arriba, base y techo se acortan en ese lado`,
+    estado:'confirmado',fecha:'24-09-2026',ud:1,grosor:'t', // Álvaro, 24-09-2026: canto en los dos largos aunque uno vaya a inglete
+    corte:c=>({largo:c.pz[id]==='p'?c.A:c.A-c.th('base')-c.th('techo'),ancho:(der?c.chD:c.chI)+CHAF_INGLETE_SOBREMEDIDA}),
+    cantos:{L:2,A:0},cantosPuerta:{L:2,A:2},
+    cajas:c=>{const i=c.pz[id]==='p',e=c.th(id),y=i?0:c.th('base'),x0=der?c.W-e:0,x1=x0+e;
+      return [{pts:[[x0,c.chZ(x0)],[x1,c.chZ(x1)],[x1,c.chM],[x0,c.chM]],y,h:(i?c.A:c.A-c.th('techo'))-y,col:'costado'}];}});
+  // Balda: de costado a costado, detrás hasta la cara de la trasera (zt) y delante paralela a la diagonal, retranqueada lo
+  // mismo que la del bajo puerta respecto al fondo mayor (fonBalda de chM: 58 → 51,5, es decir 0,7 detrás del frente).
+  const chafBalda=c=>{const x0=c.tL,x1=c.W-c.tR,zt=c.chM-c.C.traseraRemetida-c.tr,off=Math.max(0.5,zt-c.fonBalda),z0=c.chZ(x0)+off,z1=c.chZ(x1)+off;
+    return {x0,x1,zt,z0,z1,fI:zt-z0,fD:zt-z1};};
   // Casco del bajo puerta (18-09-2026). Lote R6: en una función para reutilizarlo tal cual en el bajo rincón recto.
   const cascoBajo=()=>[
       base('18-09-2026',{L:2,A:2}),...costados('18-09-2026'),
@@ -1823,6 +1846,34 @@ const CONSTR=(()=>{
         cajas:c=>[trasVista(c,0,c.yB+c.th('baldaFija'),c.Fb)]})],
       // Fondo de las cajas: hasta el paletón trasero (atrás del todo); las guías van en los costados, no en la base.
       huecos:c=>({zCaja:c.hornoAbajo?c.F-c.th('palTras'):c.Fb,zBalda:c.Fb,yHueco:c.hornoAbajo?c.A-c.t:c.yB})},
+    // Lote C1 (24-09-2026) — Bajo chaflán (Álvaro): planta en trapecio, trasera recta de W, costado izquierdo de fondo chI y
+    // derecho de chD (mirando el mueble de frente) y la puerta en la diagonal delantera. Base y techo POR FUERA, iguales,
+    // trapecio con canto en todo el perímetro (diagonal incluida): se corta el rectángulo W × fondo mayor y se saca la
+    // diagonal. Costados POR DENTRO (A − base − techo), delante a inglete siguiendo la diagonal: se cortan 1 cm más anchos
+    // para sacar la caída (CHAF_INGLETE_SOBREMEDIDA), canto en los dos largos. Base y techo con 1 cm de demasía en cada
+    // medida (CHAF_DEMASIA_TAPA). Trasera como en el bajo puerta (ranura, cara trasera a 5). Una balda
+    // centrada con la forma del mueble, canto en todo. 4 patas: dos atrás y dos delante siguiendo la diagonal.
+    // Ejes del 3D: la trasera en z = chM (fondo mayor); el frente de cada costado en z = chM − su fondo; chZ(x) = diagonal.
+    // Costado integrado (Lote R5): del suelo arriba y la base y el techo se acortan su grosor en ese lado.
+    chaflan:{lab:'Bajo chaflán',pendiente:false,piezas:[
+      {id:'base',nombre:'Base',pos:c=>`trapecio por debajo de los costados (${chafTxt(c)}); se corta el rectángulo con ${fmtCm(CHAF_DEMASIA_TAPA)} cm de demasía en cada medida y se saca la diagonal; canto en todo el perímetro, diagonal incluida`,
+        estado:'confirmado',fecha:'24-09-2026',ud:1,grosor:'t',corte:c=>chafCorteTapa(c),cantos:{L:2,A:2},
+        cajas:c=>[chafTapa(c,0,c.th('base'),'suelo')]},
+      {id:'techo',nombre:'Techo',pos:c=>`trapecio por encima de los costados, igual que la base (${chafTxt(c)}); con ${fmtCm(CHAF_DEMASIA_TAPA)} cm de demasía en cada medida; canto en todo el perímetro, diagonal incluida`,
+        estado:'confirmado',fecha:'24-09-2026',ud:1,grosor:'t',corte:c=>chafCorteTapa(c),cantos:{L:2,A:2},
+        cajas:c=>[chafTapa(c,c.A-c.th('techo'),c.th('techo'),'techo')]},
+      chafCost('cI','izquierdo',false),chafCost('cD','derecho',true),
+      trasera({pos:'como en el bajo puerta: en ranura (base, techo y costados), cara trasera a 5 del fondo',estado:'confirmado',fecha:'24-09-2026',
+        corte:c=>({largo:c.A-(c.th('base')+c.th('techo'))/2,ancho:c.trAncho}),
+        cajas:c=>[trasVista(c,c.th('base'),c.A-c.th('base')-c.th('techo'),c.chM-c.C.traseraRemetida-c.tr)]}),
+      // Balda: forma del mueble; delante, paralela a la diagonal y retranqueada como la del bajo puerta (fondo 51,5 en el
+      // lado de 58). Una sola, centrada en el hueco. Confirmado por Álvaro el 24-09-2026.
+      {id:'balda',nombre:'Balda',pos:c=>{const b=chafBalda(c);return `trapecio con la forma del mueble, entre costados; fondo izq ${fmtCm(b.fI)} · dcho ${fmtCm(b.fD)}; delante paralela a la diagonal; canto en todo el perímetro`;},
+        estado:'confirmado',fecha:'24-09-2026',ud:'nBaldas',grosor:'t',cuando:c=>c.nB>0,
+        corte:c=>{const b=chafBalda(c);return {largo:b.x1-b.x0,ancho:Math.max(b.fI,b.fD)};},cantos:{L:2,A:2},
+        cajas:c=>{const b=chafBalda(c),e=c.th('balda#0'),tb=c.th('base'),y=tb+(c.A-tb-c.th('techo'))/2-e/2;
+          return [{pts:[[b.x0,b.z0],[b.x1,b.z1],[b.x1,b.zt],[b.x0,b.zt]],y,h:e,col:'balda'}];}}],
+      huecos:c=>({zCaja:c.chM,zBalda:0,yHueco:c.A-c.th('techo')})},
     // Altos, columnas, semicolumnas, sobrefrigos, sobreencimeras: construcción pendiente de Álvaro. Casco genérico solo
     // para el dibujo (costados enteros, suelo y techo entre ellos, trasera enrasada atrás): TODO [supuesto], no se corta.
     // Sin `id`: sus piezas no se pueden eliminar ni pasar a material de puerta (Lote R5).
@@ -1856,13 +1907,17 @@ function constrCtx(sp){
   // de la trasera izquierda (las dos remetidas 5), nB = nº de baldas.
   const H=sp.tipo==='rinEsc'?(sp.escH||F):F,trE=sp.tr||grosorTrasera('')/10;
   const cW=rin&&rin.pw>0?Math.max(0,Math.min(r1(W-rin.pw-RIN_CIEGO_DESC),W-tL-tR)):0;
+  // Lote C1 — bajo chaflán: fondo izquierdo (chI) y derecho (chD), fondo mayor chM (trasera), frente de cada lado chZL /
+  // chZR, diagonal chZ(x) y su largo chL (= ancho de la puerta). En el resto de muebles chI = chD = F.
+  const chI=+sp.fonI||F,chD=+sp.fonD||F,chM=Math.max(chI,chD),chZL=chM-chI,chZR=chM-chD;
   return {A,W,F,Fb,t,tr:sp.tr||grosorTrasera('')/10,yB,hornoAbajo,hueco,fonBalda:fondoBaldaMueble(sp.fam,F,!!sp.rincon),C,
     pz,g,th,tL,tR,tb,Wi:W-tL-tR,bx0,bW:W-bx0-(pz.cD==='p'?g:0),trAncho:W-Math.max(tL,tR),tTop:Math.max(th('palDel'),th('palTras')),
     cW,cDer,cX:cDer?W-tR-cW:tL,xLo:(cW>0&&!cDer)?tL+cW:tL,xHi:(cW>0&&cDer)?W-tR-cW:W-tR,
     H,zb:H-C.traseraRemetida-trE,xi:C.traseraRemetida+trE,nB:sp.nBaldas||0, // Lote R7
     // Lote R8 — escuadra: grosor real de costados (eI / eD), base (eTb) y techo (eTt); con costado integrado la L de base y
     // techo empieza en z = eI (brazo izquierdo) o termina en x = W − eD (brazo derecho).
-    eI:th('cI'),eD:th('cD'),eTb:th('base'),eTt:th('techo'),eZ0:pz.cI==='p'?th('cI'):0,eX1:W-(pz.cD==='p'?th('cD'):0)};
+    eI:th('cI'),eD:th('cD'),eTb:th('base'),eTt:th('techo'),eZ0:pz.cI==='p'?th('cI'):0,eX1:W-(pz.cD==='p'?th('cD'):0),
+    chI,chD,chM,chZL,chZR,chZ:x=>chZL+(chZR-chZL)*x/(W||1),chL:Math.hypot(W,chZR-chZL)}; // Lote C1
 }
 function constrTabla(tipo){return CONSTR[tipo]||CONSTR.generico;}
 // Piezas de la tabla que van en este casco (filtra `cuando`).
@@ -2038,7 +2093,9 @@ const R3DM=r3dNuevoVisor('r3dModalCont');
 function r3dSpec(o){
   const esBajo=esBajoFam(o.arm),esFreg=esBajo&&esFregadero(o.arm)&&!isRin(o.arm); // Lote R2: bajo fregadero regular
   const sub=o.hoja?o.hoja.subId:''; // Lote R3: bajos placa por subfamilia (placap puertas · placa gavetas/cajones · placah horno)
-  const tipo=esFreg?'fregadero':esBajoRinEsc(o.arm)?'rinEsc':(esBajoRinRecto(o.arm)?'rinRec':(esBajo?(['placap','placa','placah'].includes(sub)?sub:'bajo'):'generico')); // Lote R6
+  // Lote C1: bajo chaflán = bajo regular con forma especial Chaflán (rincón chaflán de bajos del árbol)
+  const esChaf=esBajo&&!isRin(o.arm)&&(o.forma==='chaflan'||!!(o.hoja&&o.hoja.forma==='chaflan'));
+  const tipo=esChaf?'chaflan':esFreg?'fregadero':esBajoRinEsc(o.arm)?'rinEsc':(esBajoRinRecto(o.arm)?'rinRec':(esBajo?(['placap','placa','placah'].includes(sub)?sub:'bajo'):'generico')); // Lote R6
   const sp={nombre:o.arm.nom,lab:o.hoja?o.hoja.lab:'',fam:o.arm.fam,sub,tipo,pendiente:!esBajo,
     horno:o.horno==='45'?'45':'60',nBaldas:Math.max(0,+o.nBaldas||0), // Lote R3
     alt:+o.alt||o.arm.alt,anc:+o.anc||o.arm.anc,fon:+o.fon||(+o.arm.fon),gros:(+o.gros||16)/10,
@@ -2063,6 +2120,9 @@ function r3dSpec(o){
   if(sp.rincon)sp.frentes=[]; // Lote R7: los rincones no llevan cajones ni gavetas (Álvaro, 23-09-2026)
   if(tipo==='rinEsc'){sp.escH=brazoIzqEsc(o.arm);sp.fonVis=sp.escH;sp.primero=o.abrePrimero==='P2'?'P2':(o.abrePrimero==='P1'?'P1':'');} // Lote R7
   if(tipo==='rinRec')sp.rin=rinRectoGeo(sp.puertas,sp.frentes,o.regletaAncho); // Lote R6
+  // Lote C1 — bajo chaflán: fondos izquierdo y derecho (sin teclear, el del mueble); el fondo del spec es el mayor. Sin
+  // cajones ni gavetas en el dibujo (la puerta va en la diagonal).
+  if(tipo==='chaflan'){const f0=sp.fon,fo=o.fondos||{};sp.fonI=+fo.izq||f0;sp.fonD=+fo.dcho||f0;sp.fon=Math.max(sp.fonI,sp.fonD);sp.frentes=[];}
   sp.piezas=piezasFiltrar(sp); // solo las claves que existen en este casco
   return sp;
 }
@@ -2095,6 +2155,7 @@ function r3dSpecFormulario(){
     fon:document.getElementById('mFon').value,puertas:MPuertas,frentes:MFrentesCJ,cfg:isBajo(SEL)?S.tb:S.ta,tar:tarEfectiva(),modCaj:S.modCaj,gros:S.gros,sinFrentes:MFRCLI,
     horno:MHORNO,nBaldas:nBaldasMueble(metaBaldasFormulario()), // Lote R3
     push:esPushColHorno(), // Lote X1
+    forma:MFORMA,fondos:MFORMA==='chaflan'?fondosChaflanForm():null, // Lote C1
     piezas:MPIEZAS,cvt:(MODELOS[MMODELO]&&MODELOS[MMODELO].cvt)||TCVT[S.tar]||null,matPuerta:matPuertaTxt(S.tar,MODELOS[MMODELO]&&MODELOS[MMODELO].colorPuerta)}); // Lote R5
 }
 // Spec desde la meta de una línea ya presupuestada (botón 🧊 de Proyectos).
@@ -2106,6 +2167,7 @@ function r3dSpecLinea(l){
     cfg:isBajo(arm)?m.tb:m.ta,tar:m.tarifa,modCaj:m.modCaj||S.modCaj,gros:S.gros,sinFrentes:!!m.frentesCliente,
     horno:m.horno,nBaldas:nBaldasMueble(m), // Lote R3
     push:!!m.push, // Lote X1
+    forma:m.forma,fondos:m.dobleFondo, // Lote C1
     // Lote R5 — CVT y color de puerta del modelo de la línea (como la regleta)
     piezas:m.piezas,cvt:((MODELOS[m.modeloId]||MODELOS[0]||{}).cvt)||TCVT[m.tarifaModelo||m.tarifa]||null,
     matPuerta:matPuertaTxt(m.tarifaModelo||m.tarifa,(MODELOS[m.modeloId]||MODELOS[0]||{}).colorPuerta)});
@@ -2147,6 +2209,7 @@ function r3dPiezas(sp,conFrentes,est){
     // Lote R7 — rincón escuadra: 6 esquinas de la L + centro de cada frente interior [confirmado 23-09-2026]
     if(tipo==='rinEsc'){const H=cx.H;pts.length=0;
       pts.push([i,i],[F-i,i],[F-i,H-F+i],[W-i,H-F+i],[W-i,H-i],[i,H-i],[F-i,(H-F)/2],[(F+W)/2,H-F+i]);}
+    if(tipo==='chaflan'){pts[0]=[i,cx.chZ(i)+i];pts[1]=[W-i,cx.chZ(W-i)+i];} // Lote C1: las dos de delante siguen la diagonal
     if(tipo==='rinRec'&&sp.rin&&sp.rin.pw>0)pts.push([Math.max(i+C.pataDiam,Math.min(W-i-C.pataDiam,sp.rin.der?sp.rin.pw:W-sp.rin.pw)),i]);
     pts.forEach(([x,z])=>P.push({k:'cyl',x,y:-pa,z,r,h:pa,col:R3D_COL.pata,st:'#111'}));
   }
@@ -2247,7 +2310,28 @@ function r3dPiezas(sp,conFrentes,est){
       mapa(s,i===0?1:2);
     });
   }
-  if(conFrentes&&tipo!=='rinEsc'){
+  // Lote C1 (24-09-2026) — bajo chaflán: las puertas se dibujan como las de un bajo (frente en z = 0, una junto a otra a lo
+  // largo de x) y se llevan a la diagonal con r3dLlevar (giro + traslado a la esquina delantera izquierda). Se abren hasta
+  // quedar en línea con el costado de su lado, sea cual sea el ángulo (Álvaro): bisagras a la derecha → 90° − θ; a la
+  // izquierda → 90° + θ (θ = inclinación de la diagonal). La gola, si la lleva, sigue la diagonal.
+  if(conFrentes&&tipo==='chaflan'){
+    const L=cx.chL,cth=W/L,sth=(cx.chZR-cx.chZL)/L,s0=P.length,grd=180/Math.PI;
+    const topeD=Math.atan2(cth,sth)*grd,topeI=Math.atan2(cth,-sth)*grd;
+    let x=0;
+    sp.puertas.forEach((p,i)=>{
+      const n=p.mano==='2'?2:1,abrible=p.mano!=='FF'&&p.mano!=='AB';
+      const h=p.alto||(yTop-((esGola&&p.tir)?C.golaAlto:0)),w=p.ancho||(L/sp.puertas.length)/n;
+      for(let j=0;j<n;j++){
+        const key='p'+i+(n>1?'_'+j:''),dcha=n===2?j===1:p.mano!=='I';
+        const ang=abrible?abierto(key)*(dcha?topeD:topeI)*Math.PI/180:0;
+        const rot=ang>1e-4?{ang:dcha?ang:-ang,px:dcha?x+w-hg:x+hg,pz:-g}:null;
+        box(x+hg,hg,-g,w-2*hg,h-2*hg,g,R3D_COL.frente,null,abrible?{key,rot}:{rot});
+        herraje(x,w,h,p.tir,rot,0);x+=w;
+      }
+    });
+    for(let k=s0;k<P.length;k++)r3dLlevar(P[k],cth,sth,0,cx.chZL);
+  }
+  if(conFrentes&&tipo!=='rinEsc'&&tipo!=='chaflan'){
     let x=(rin&&rin.pw)?xLado(rin.pw):0; // Lote R6
     // Lote U (23-09-2026) — columnas y semicolumnas: puertas una encima de otra (Lote W1: P1 abajo), apiladas desde el techo y cada
     // una con su perfil de gola encima si lo lleva; una fila 2Pta son dos puertas lado a lado. Si las medidas no caben en
@@ -2289,7 +2373,7 @@ function r3dPiezas(sp,conFrentes,est){
   // Lote R3 — baldas: las mismas que salen en herrajes sueltos (o las manuales), de las medidas de Lote N. Una: centrada
   // en el hueco; varias: repartidas a alturas iguales (Álvaro, 22-09-2026). Pegadas a la trasera (o al paletón trasero),
   // y solo en el hueco que dejan libre los cajones. El placa horno no lleva balda suelta (la fija ya está en el casco).
-  if(sp.nBaldas>0&&!esPlacaH&&tipo!=='rinEsc'){ // Lote R7: la balda en L del rincón escuadra sale de la tabla
+  if(sp.nBaldas>0&&!esPlacaH&&tipo!=='rinEsc'&&tipo!=='chaflan'){ // Lote R7: la balda en L del rincón escuadra sale de la tabla (Lote C1: y la del chaflán)
     const fonB=cx.fonBalda,zLo=Math.max(0.5,zBaldaMin,zBalda-fonB),yLo=cx.tb,yHi=Math.min(yHueco,yFrenteMin-0.4); // Lote R6: no cruza el ciego
     if(yHi-yLo>=C.baldaMinHueco&&zBalda-zLo>5){
       const n=Math.min(sp.nBaldas,10);
@@ -2327,8 +2411,18 @@ function r3dPiezas(sp,conFrentes,est){
 // por (px, pz); la normal de cada cara gira igual. La caja envolvente (AABB) de una caja girada sale de sus vértices.
 function r3dVerts(p){
   const {x,y,z,w,h,d}=p;let V=[[x,y,z],[x+w,y,z],[x+w,y+h,z],[x,y+h,z],[x,y,z+d],[x+w,y,z+d],[x+w,y+h,z+d],[x,y+h,z+d]];
-  if(p.rot){const {ang,px,pz}=p.rot,c=Math.cos(ang),s=Math.sin(ang);V=V.map(v=>{const dx=v[0]-px,dz=v[2]-pz;return [px+dx*c-dz*s,v[1],pz+dx*s+dz*c];});}
+  if(p.rot){const {ang,px,pz}=p.rot,tx=p.rot.tx||0,tz=p.rot.tz||0,c=Math.cos(ang),s=Math.sin(ang);V=V.map(v=>{const dx=v[0]-px,dz=v[2]-pz;return [px+dx*c-dz*s+tx,v[1],pz+dx*s+dz*c+tz];});} // Lote C1: + traslado (tx, tz)
   return V;
+}
+// Lote C1 (24-09-2026) — lleva una caja dibujada en el plano de una puerta normal a un plano girado (puerta del chaflán):
+// giro θ (cos c, sen s) sobre el eje vertical y traslado (tx, tz). Se compone con el giro que ya traiga (puerta abierta)
+// para que quede UNA sola rot {ang, px, pz, tx, tz}: v' = p + R(ang)(v − p) + t. Con R(θ) sobre v1 = p + R(β)(v − p) + t0:
+// ang = β + θ y t = R(θ)(p + t0) + (tx, tz) − p. La normal de la cara del tirador (nrm) gira θ.
+function r3dLlevar(q,c,s,tx,tz){
+  if(q.k!=='box')return;
+  const r=q.rot||{ang:0,px:0,pz:0},px=r.px,pz=r.pz,ax=px+(r.tx||0),az=pz+(r.tz||0);
+  q.rot={ang:(r.ang||0)+Math.atan2(s,c),px,pz,tx:ax*c-az*s+tx-px,tz:ax*s+az*c+tz-pz};
+  if(q.nrm)q.nrm=[q.nrm[0]*c-q.nrm[2]*s,q.nrm[1],q.nrm[0]*s+q.nrm[2]*c];
 }
 function r3dNormal(p,n){if(!p.rot)return n;const c=Math.cos(p.rot.ang),s=Math.sin(p.rot.ang);return [n[0]*c-n[2]*s,n[1],n[0]*s+n[2]*c];}
 function r3dAABB(p){
@@ -2400,7 +2494,8 @@ function r3dSoloCajas(P){
   const out=[],nuevo=[];
   P.forEach((p,i)=>{nuevo[i]=out.length;
     if(p.k!=='prism'){out.push(p);return;}
-    p.rects.forEach(r=>out.push({k:'box',x:r[0],y:p.y,z:r[1],w:r[2]-r[0],h:p.h,d:r[3]-r[1],col:p.col,st:p.st,key:p.key}));});
+    const xs=p.pts.map(q=>q[0]),zs=p.pts.map(q=>q[1]); // Lote C1: prisma convexo sin rectángulos (chaflán) → su caja envolvente (solo respaldo)
+    (p.rects||[[Math.min(...xs),Math.min(...zs),Math.max(...xs),Math.max(...zs)]]).forEach(r=>out.push({k:'box',x:r[0],y:p.y,z:r[1],w:r[2]-r[0],h:p.h,d:r[3]-r[1],col:p.col,st:p.st,key:p.key}));});
   out.forEach(p=>{if(p.delante!=null)p.delante=nuevo[p.delante];});
   return out;
 }
@@ -2674,6 +2769,9 @@ function r3dCaption(sp){
   if(sp.tipo==='rinRec'){const cx=constrCtx(sp); // Lote R6
     t+=` · trasera ${trMm} mm a ${R3D_CTE.traseraRemetida} cm`+(cx.cW>0?` · ciego ${fmtCm(cx.cW)} cm a la ${cx.cDer?'derecha':'izquierda'} · regleta ${fmtCm(Math.min(sp.rin.rw,sp.anc-sp.rin.pw))} cm`:' · ⚠️ falta el ancho de la puerta para el ciego');}
   if(sp.tipo==='fregadero')t+=` · base ${fmtCm(r3dFondoBase(sp))} cm · sin trasera`;
+  if(sp.tipo==='chaflan'){const cx=constrCtx(sp),dg=r1(cx.chL),pw=sp.puertas.reduce((s,p)=>s+(+p.ancho||0)*(p.mano==='2'?2:1),0); // Lote C1
+    t+=` · fondo izq. ${fmtCm(cx.chI)} · dcho. ${fmtCm(cx.chD)} · puerta en diagonal ${fmtCm(dg)} · base y techo por fuera · trasera ${trMm} mm a ${R3D_CTE.traseraRemetida} cm`;
+    if(pw>0&&Math.abs(pw-dg)>0.15)t+=` · ⚠️ las puertas suman ${fmtCm(r1(pw))} y la diagonal mide ${fmtCm(dg)}`;}
   // Lote R3 — bajos placa
   if(sp.tipo==='placap')t+=` · base ${fmtCm(r3dFondoBase(sp))} cm · trasera ${trMm} mm clavada a ${fmtCm(r3dFondoBase(sp))}`;
   if(sp.tipo==='placa')t+=` · base ${fmtCm(r3dFondoBase(sp))} cm · sin trasera · paletón trasero enrasado atrás · travesaño delantero a ${R3D_CTE.placaTravY} del canto`;
@@ -3016,6 +3114,11 @@ function escenaHuella(l){
       poly:chaf?[[0,0],[W,0],[W,F],[F,H],[0,H]]:[[0,0],[W,0],[W,F],[F,F],[F,H],[0,H]],
       frente:chaf?[[W,F],[F,H]]:[[W,F],[F,F],[F,H]],lab:[F/2,F/2]};
   }
+  // Lote C1 — bajo chaflán: trapecio (trasera recta; v = fondo izquierdo en u = 0 y derecho en u = W). Caja = el fondo mayor.
+  if(nivel==='bajo'&&m.forma==='chaflan'&&!isRin(arm)){
+    const W=Math.max(1,+m.anc||+arm.anc||0),fI=Math.max(1,+(m.dobleFondo&&m.dobleFondo.izq)||F),fD=Math.max(1,+(m.dobleFondo&&m.dobleFondo.dcho)||F),Fm=Math.max(fI,fD);
+    return {nivel,alt,F:Fm,forma:'trap',bw:W,bd:Fm,rects:[[0,0,W,Fm]],poly:[[0,0],[W,0],[W,fD],[0,fI]],frente:[[0,fI],[W,fD]],lab:[W/2,Math.min(fI,fD)/2]};
+  }
   const W=Math.max(1,(isRin(arm)&&+m.anchoReal)||+m.anc||+arm.anc||0);
   return {nivel,alt,F,forma:'rect',bw:W,bd:F,rects:[[0,0,W,F]],poly:[[0,0],[W,0],[W,F],[0,F]],frente:[[0,F],[W,F]],lab:[W/2,F/2]};
 }
@@ -3066,7 +3169,7 @@ function escenaIman(i,x,y){
 function escenaSitioLibre(it,h){
   const E=ESCENA,dims=r=>r%2?[h.bd,h.bw]:[h.bw,h.bd],otros=E.items.map(escenaGeo).filter(q=>q&&escenaCompat(h.nivel,q.h.nivel)),obst=escenaObstaculos();
   const libre=(x,y,r)=>{const g=escenaGeo({lid:it.lid,u:it.u,x,y,r});return !!g&&g.x0>-0.1&&g.y0>-0.1&&g.x1<E.largo+0.1&&g.y1<E.ancho+0.1&&!otros.some(q=>escenaPisan(g.rects,q.rects))&&!escenaPisaObst(g,obst).length;};
-  if(h.forma!=='rect')for(const r of [0,1,2,3]){const [W,H]=dims(r),x=(r===1||r===2)?E.largo-W:0,y=r>=2?E.ancho-H:0;if(libre(x,y,r))return {x,y,r};}
+  if(h.forma==='L'||h.forma==='chaf')for(const r of [0,1,2,3]){ /* Lote C1: el trapecio del chaflán se coloca como un rectángulo */const [W,H]=dims(r),x=(r===1||r===2)?E.largo-W:0,y=r>=2?E.ancho-H:0;if(libre(x,y,r))return {x,y,r};}
   for(const r of [0,3,1,2]){
     const [W,H]=dims(r),lat=r%2===1,cand=[0].concat(otros.map(q=>lat?q.y1:q.x1),obst.map(o=>lat?o.rect[3]:o.rect[2])).sort((a,b)=>a-b); // Lote V2: también detrás de puertas, pilares y recorte
     for(const c of cand){const x=lat?(r===3?0:E.largo-W):c,y=lat?c:(r===0?0:E.ancho-H);if(libre(x,y,r))return {x,y,r};}
@@ -3214,6 +3317,7 @@ function escenaEncimeraPlanta(E){
   const pa=+S.patas||R3D_CTE.pataAlto,grupos={},sueltos=[];
   E.items.forEach(it=>{const l=LN.find(x=>x.id===it.lid),h=escenaHuella(l);if(!h||h.nivel!=='bajo')return;
     const T=escenaRotar(it,h),fon=Math.max(h.F,E.enc.fon),y=pa+h.alt,box=q=>{const a=T(q[0],q[1]),b=T(q[2],q[3]);return [Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[0],b[0]),Math.max(a[1],b[1])];};
+    if(h.forma==='trap'){const o=Math.max(0,E.enc.fon-h.F);sueltos.push({y,polis:[{pts:h.poly.map((q,k)=>T(q[0],k>1?q[1]+o:q[1])),rects:null}]});return;} // Lote C1: el trapecio del chaflán, con el vuelo de la encimera
     if(h.forma==='chaf'){sueltos.push({y,polis:[{pts:[[0,0],[h.bw,0],[h.bw,fon],[fon,h.bd],[0,h.bd]].map(q=>T(q[0],q[1])),rects:null}]});return;}
     const rects=h.forma==='rect'?[[0,0,h.bw,fon]]:[[0,0,h.bw,fon]].concat(h.bd>fon?[[0,fon,fon,h.bd]]:[]);
     (grupos[y]=grupos[y]||[]).push(...rects.map(box));});
@@ -3226,7 +3330,7 @@ function escenaExtras3D(E){
   const colE=E.enc&&C.colEnc[E.enc.col]||C.colEnc.blanco;
   escenaEncimeraPlanta(E).forEach(g=>g.polis.forEach(p=>out.push({k:'prism',pts:p.pts.map(q=>[q[0],W-q[1]]),rects:p.rects?p.rects.map(r=>[r[0],W-r[3],r[2],W-r[1]]):null,y:g.y,h:E.enc.gros,col:colE,st:'#7a7a74'})));
   if(E.zoc&&E.zoc.on){const pa=+S.patas||R3D_CTE.pataAlto,col=E.zoc.col==='puerta'?R3D_COL.frente:C.colZoc[E.zoc.col],g=C.zocGrosor,r=C.zocRetr-R3D_CTE.frenteGrosor; // r: retranqueo medido desde el frente del casco
-    E.items.forEach(it=>{const l=LN.find(x=>x.id===it.lid),h=escenaHuella(l);if(!h||h.nivel==='alto'||h.forma==='chaf')return;
+    E.items.forEach(it=>{const l=LN.find(x=>x.id===it.lid),h=escenaHuella(l);if(!h||h.nivel==='alto'||h.forma==='chaf'||h.forma==='trap')return; // Lote C1: zócalo del chaflán pendiente
       const T=escenaRotar(it,h),F=h.F,box=q=>{const a=T(q[0],q[1]),b=T(q[2],q[3]),x0=Math.min(a[0],b[0]),y0=Math.min(a[1],b[1]);return {k:'box',x:x0,y:0,z:W-Math.max(a[1],b[1]),w:Math.abs(b[0]-a[0]),h:pa,d:Math.abs(b[1]-a[1]),col,st:'#555'};};
       if(h.forma==='rect')out.push(box([0,F-r-g,h.bw,F-r]));
       else{out.push(box([F-r,F-r-g,h.bw,F-r]));out.push(box([F-r-g,F-r-g,F-r,h.bd]));}}); // L: el tramo largo arranca en la cara del corto (sin solaparse)
@@ -3251,7 +3355,7 @@ function escenaCotasSVG(P,G,fs){
   P.forEach(p=>{
     const enPared=(g,i,nivelOK)=>{ // tramos [t0, t1] de los rectángulos del mueble apoyados con la TRASERA en la pared p
       if(!g||!nivelOK(g.h.nivel))return [];const r=escenaGiro(E.items[i].r),out=[];
-      if(p.o!==tipoDe[r]&&!(g.h.forma!=='rect'&&p.o===tipoDe[(r+3)%4]))return out; // una L apoya sus dos brazos en dos paredes
+      if(p.o!==tipoDe[r]&&!((g.h.forma==='L'||g.h.forma==='chaf')&&p.o===tipoDe[(r+3)%4]))return out; // una L apoya sus dos brazos en dos paredes
       g.rects.forEach(q=>{const d=p.o==='a'?Math.abs(q[1]-p.p0[1]):p.o==='b'?Math.abs(q[3]-p.p0[1]):p.o==='d'?Math.abs(q[2]-p.p0[0]):Math.abs(q[0]-p.p0[0]);if(d>tol)return;
         const a=tOf(p,[q[0],q[1]]),b=tOf(p,[q[2],q[3]]),t0=Math.min(a,b),t1=Math.max(a,b);if(t1<-tol||t0>p.len+tol)return;out.push([t0,t1]);});
       return out;};
@@ -3383,7 +3487,7 @@ function escenaPlantaSVG(o){
   G.map((g,i)=>i).filter(i=>G[i]).sort((a,b)=>peso(a)-peso(b)).forEach(i=>{
     const g=G[i],it=E.items[i],m=num[it.lid],sel=escenaClave(it)===o.sel,alto=g.h.nivel==='alto',roj=mal.has(i);
     const fill=alto?K.alto:(g.h.nivel==='col'?K.col:K.bajo),st=sel?K.sel:(roj?K.mal:K.borde);
-    const q=g.h,fz=q.forma==='rect'?q.bd:q.F,lab=escenaRotar(it,q)(q.lab[0],alto?Math.min(q.lab[1],fs*0.8):Math.max(q.lab[1],fz-fs*0.8));
+    const q=g.h,fz=q.forma==='rect'?q.bd:(q.forma==='trap'?(q.poly[2][1]+q.poly[3][1])/2:q.F),lab=escenaRotar(it,q)(q.lab[0],alto?Math.min(q.lab[1],fs*0.8):Math.max(q.lab[1],fz-fs*0.8));
     s+=`<g data-i="${i}" style="cursor:grab"><polygon points="${pts(g.poly)}" fill="${fill}" stroke="${st}" stroke-width="${sel||roj?2.5:1.2}" vector-effect="non-scaling-stroke" stroke-linejoin="round"${alto?' stroke-dasharray="6 3"':''}/>`+
       `<polyline points="${pts(g.frente)}" fill="none" stroke="${K.frente}" stroke-width="3" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>`+
       `<text x="${r1(lab[0])}" y="${r1(lab[1])}" font-size="${fs}" text-anchor="middle" dominant-baseline="central" font-weight="700" fill="${K.texto}" stroke="#fff" stroke-width="${r1(fs*0.28)}" paint-order="stroke" style="pointer-events:none">${m?escenaEtiqueta(m,it.u):'?'}</text></g>`;
@@ -3442,7 +3546,8 @@ function escenaInstalarPlanta(){
 // [X, Z] y el mueble subido yB. Los giros son de 90°: las cajas siguen alineadas con los ejes y no se reflejan.
 function escenaPiezaEnSala(p,T,yB){
   const q={k:p.k,col:p.col,st:p.st,y:p.y+yB,h:p.h};
-  if(p.k==='box'){const a=T(p.x,p.z),b=T(p.x+p.w,p.z+p.d);q.x=Math.min(a[0],b[0]);q.z=Math.min(a[1],b[1]);q.w=Math.abs(b[0]-a[0]);q.d=Math.abs(b[1]-a[1]);}
+  if(p.k==='box'&&p.rot){const V=r3dVerts(p);q.k='prism';q.pts=[V[0],V[1],V[5],V[4]].map(v=>T(v[0],v[2]));q.rects=null;} // Lote C1: puerta girada (chaflán) → prisma de su huella
+  else if(p.k==='box'){const a=T(p.x,p.z),b=T(p.x+p.w,p.z+p.d);q.x=Math.min(a[0],b[0]);q.z=Math.min(a[1],b[1]);q.w=Math.abs(b[0]-a[0]);q.d=Math.abs(b[1]-a[1]);}
   else if(p.k==='cyl'){const a=T(p.x,p.z);q.x=a[0];q.z=a[1];q.r=p.r;q.seg=ESC_CTE.pataLados;q.sinAristas=true;}
   else if(p.k==='prism'){q.pts=p.pts.map(t=>T(t[0],t[1]));q.rects=p.rects?p.rects.map(r=>{const a=T(r[0],r[1]),b=T(r[2],r[3]);return [Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[0],b[0]),Math.max(a[1],b[1])];}):null;}
   return q;
@@ -4788,10 +4893,11 @@ function seguirMedidaArm(){
   if(!SEL){cp();return;}
   const alt=+document.getElementById('mAlt').value||0,anc=+document.getElementById('mAnc').value||0;
   if(alt)MDEF.alto=altoPuertaDefecto(SEL,alt);
-  if(anc&&anc!==MDEF.ancho){
-    MFrentesCJ.forEach(f=>{if(+f.ancho===MDEF.ancho)f.ancho=anc;});
+  const af=anc?anchoFrentesForm(anc):0; // Lote C1: en el chaflán, la diagonal (cambia también con los fondos)
+  if(af&&af!==MDEF.ancho){
+    MFrentesCJ.forEach(f=>{if(+f.ancho===MDEF.ancho)f.ancho=af;});
     if(MPUERTAS_ARR)MPuertas=puertasArranque(SEL,anc); // columna sin tocar que pasa de 60 a 61+: 4 puertas (o al revés)
-    MDEF.ancho=anc;
+    MDEF.ancho=af;
   }
   repartirPuertas();renderMP();renderMFCJ();
 }
@@ -4840,6 +4946,13 @@ function pintarFormaTgg(prefijo,valor){
 //  · 19 mm → +15 % encima de todo.
 // En rincones el alto y el fondo no se cambian: ancho real (solo rincón recto) y cajeo. Se aplica al pulsar «Aplicar».
 let MEFORMA='ninguna'; // cajeo elegido en la ventana
+// Lote C1 (24-09-2026) — bajo chaflán: en vez de un fondo, fondo izquierdo y derecho (mirando el mueble de frente); la puerta
+// va en la diagonal y su ancho sale solo: √(ancho² + (fondo izq − fondo dcho)²). An.60 con 58 / 35 → 64,3. El precio no
+// cambia: regular × 2 por la forma (el +30 % de un fondo no estándar nunca se suma: gana el ×2), +15 % con 19.
+function chaflanDiagonal(anc,fi,fd){return r1(Math.hypot(+anc||0,(+fi||0)-(+fd||0)));}
+function esChaflanForm(){return !!SEL&&!isRin(SEL)&&MFORMA==='chaflan';}
+function fondosChaflanForm(){const $=id=>document.getElementById(id),f0=+$('mFon').value||(SEL?+SEL.fon:0);return {izq:+$('mDFI').value||f0,dcho:+$('mDFD').value||f0};}
+function anchoFrentesForm(anc){if(!esChaflanForm())return anc;const f=fondosChaflanForm();return chaflanDiagonal(anc,f.izq,f.dcho);}
 function medEspTarifa0(){ // medidas de tarifa del mueble en curso (bajo con gola: se fabrica de 80)
   const isGB=S.tb.t==='gola'&&esBajoFam(SEL)&&!isRin(SEL);
   return {alt:isGB?ALTO_BAJO_GOLA:SEL.alt,anc:SEL.anc,fon:+SEL.fon};
@@ -4848,11 +4961,15 @@ function abrirMedidasEsp(){
   if(!SEL){flash('⚠️ Elige primero el mueble en la tarifa');return;}
   const $=id=>document.getElementById(id),rin=isRin(SEL),rr=rin&&esBajoOColRinRec(SEL),forma=rin?RFORMA:MFORMA;
   $('medEspTit').textContent=(MHOJA&&MHOJA.lab?MHOJA.lab+' · ':'')+SEL.nom;
-  $('meAltBox').style.display=rin?'none':'';$('meFonBox').style.display=rin?'none':'';
+  const chaf=!rin&&forma==='chaflan'; // Lote C1: fondo izquierdo y derecho
+  $('meAltBox').style.display=rin?'none':'';$('meFonBox').style.display=(rin||chaf)?'none':'';
+  $('meFonIBox').style.display=chaf?'':'none';$('meFonDBox').style.display=chaf?'':'none';
+  $('medEspCampos').style.gridTemplateColumns=chaf?'1fr 1fr':'1fr 1fr 1fr';
   $('meAncLab').textContent=rr?'Ancho real (cm)':'Ancho (cm)';
   $('medEspCampos').style.display=(!rin||rr)?'grid':'none';
   if(rin)$('meAnc').value=+$('rRRecAncho').value||SEL.anc;
-  else{const t=medEspTarifa0();$('meAlt').value=+$('mAlt').value||t.alt;$('meAnc').value=+$('mAnc').value||t.anc;$('meFon').value=+$('mFon').value||t.fon;}
+  else{const t=medEspTarifa0();$('meAlt').value=+$('mAlt').value||t.alt;$('meAnc').value=+$('mAnc').value||t.anc;$('meFon').value=+$('mFon').value||t.fon;
+    if(chaf){const f=fondosChaflanForm();$('meFonI').value=f.izq||t.fon;$('meFonD').value=f.dcho||t.fon;}} // Lote C1
   MEFORMA=(forma==='viga'||forma==='columna')?forma:'ninguna';
   $('meFormaBox').style.display=forma==='chaflan'?'none':''; // chaflán del árbol: ya lleva ×2
   pintarMeForma();pintarAvisoMedEsp();
@@ -4864,7 +4981,7 @@ function pintarMeForma(){document.querySelectorAll('#meFormaTgg .tgb').forEach(b
 function medEspVolverTarifa(){
   if(!SEL)return;const $=id=>document.getElementById(id);
   if(isRin(SEL))$('meAnc').value=SEL.anc;
-  else{const t=medEspTarifa0();$('meAlt').value=t.alt;$('meAnc').value=t.anc;$('meFon').value=t.fon;}
+  else{const t=medEspTarifa0();$('meAlt').value=t.alt;$('meAnc').value=t.anc;$('meFon').value=t.fon;$('meFonI').value=t.fon;$('meFonD').value=t.fon;} // Lote C1
   MEFORMA='ninguna';pintarMeForma();pintarAvisoMedEsp();
 }
 // Aviso en vivo de lo que aplicará la app (mismas funciones que cp() y rdsg()).
@@ -4876,13 +4993,15 @@ function pintarAvisoMedEsp(){
       if(a!==SEL.anc)t.push(`Ancho real ${fmtCm(a)} → se tarifa como ${aj.arm.nom}${aj.supera?' (supera la tarifa)':''}`);}
     t.push(forma!=='ninguna'?`${FORMA_LAB[forma]}: armazón ×2`:'Sin cajeo: sin recargo de forma');
   } else {
-    const t0=medEspTarifa0(),alt=r1(+$('meAlt').value||t0.alt),anc=r1(+$('meAnc').value||t0.anc),fon=r1(+$('meFon').value||t0.fon);
+    const t0=medEspTarifa0(),alt=r1(+$('meAlt').value||t0.alt),anc=r1(+$('meAnc').value||t0.anc),chaf=forma==='chaflan'; // Lote C1
+    const fI=r1(+$('meFonI').value||t0.fon),fD=r1(+$('meFonD').value||t0.fon),fon=chaf?Math.max(fI,fD):r1(+$('meFon').value||t0.fon);
     const aj=armazonAnchoSuperior(SEL,anc),o=calcOptsArm(refArmazon(aj.arm),alt,fon,forma);
     if(anc!==SEL.anc)t.push(`Ancho ${fmtCm(anc)} → se tarifa como ${aj.arm.nom}${aj.supera?' (supera la tarifa)':''}, sin recargo`);
     if(o.esEspecial)t.push(`${FORMA_LAB[forma]}: armazón ×2${(o.altoNoStd||o.fondoNoStd)?' (no se suma el +30 %)':''}`);
     else if(o.altoNoStd||o.fondoNoStd){const q=[o.altoNoStd&&'alto',o.fondoNoStd&&'fondo'].filter(Boolean).join(' y ');
       t.push(q.charAt(0).toUpperCase()+q.slice(1)+' no estándar: armazón +30 %');}
     if(!t.length)t.push('Medidas de tarifa: sin recargo');
+    if(chaf)t.push(`Fondo izq. ${fmtCm(fI)} · dcho. ${fmtCm(fD)} → puerta en diagonal de ${fmtCm(chaflanDiagonal(anc,fI,fD))} (se pone sola)`); // Lote C1
   }
   if(S.gros==='19')t.push('Tablero de 19: +15 % encima, como siempre');
   av.innerHTML=t.map(x=>'· '+x).join('<br>');
@@ -4896,7 +5015,9 @@ function aplicarMedidasEsp(){
     cerrarMedidasEsp();pintarFormaTgg('r',RFORMA);rdsg();return;
   }
   const t=medEspTarifa0();
-  $('mAlt').value=num('meAlt')||t.alt;$('mAnc').value=num('meAnc')||t.anc;$('mFon').value=num('meFon')||t.fon;
+  $('mAlt').value=num('meAlt')||t.alt;$('mAnc').value=num('meAnc')||t.anc;
+  if(MFORMA==='chaflan'){const fi=num('meFonI')||t.fon,fd=num('meFonD')||t.fon;$('mDFI').value=fi;$('mDFD').value=fd;$('mFon').value=Math.max(fi,fd);} // Lote C1: el fondo del mueble es el mayor
+  else $('mFon').value=num('meFon')||t.fon;
   if(MFORMA!=='chaflan')MFORMA=MEFORMA;
   cerrarMedidasEsp();pintarFormaTgg('m',MFORMA);seguirMedidaArm();
 }
@@ -4918,10 +5039,12 @@ function pintarResumenMedidas(){
   }
   if(!mr)return;
   const t=medEspTarifa0(),alt=+$('mAlt').value||t.alt,anc=+$('mAnc').value||t.anc,fon=+$('mFon').value||t.fon;
-  const esp=alt!==t.alt||anc!==t.anc||fon!==t.fon||MFORMA==='viga'||MFORMA==='columna';
+  const chaf=esChaflanForm(),fch=chaf?fondosChaflanForm():null; // Lote C1
+  const esp=alt!==t.alt||anc!==t.anc||fon!==t.fon||MFORMA==='viga'||MFORMA==='columna'||(chaf&&(fch.izq!==t.fon||fch.dcho!==t.fon));
   const forma=MFORMA!=='ninguna'?' · '+(FORMA_LAB[MFORMA]||'forma especial')+' ×2':'';
   mr.className='medRes'+(esp?' esp':'');
-  mr.innerHTML=`📐 ${esp?'Medida especial':'Medidas de tarifa'}: A ${fmtCm(alt)} × An ${fmtCm(anc)} × F ${fmtCm(fon)}${forma}${toca}`;
+  const txtF=chaf?`F izq ${fmtCm(fch.izq)} / dcho ${fmtCm(fch.dcho)} · puerta ${fmtCm(chaflanDiagonal(anc,fch.izq,fch.dcho))}`:`F ${fmtCm(fon)}`;
+  mr.innerHTML=`📐 ${esp?'Medida especial':'Medidas de tarifa'}: A ${fmtCm(alt)} × An ${fmtCm(anc)} × ${txtF}${forma}${toca}`;
 }
 function rCards(){document.querySelectorAll('.mc').forEach(c=>{const arm=ARM.find(a=>a.id===+c.dataset.id);if(!arm)return;const m=S.gros==='19'?(1+REC_19MM):1;const el=c.querySelector('.mcp span:last-child');if(el)el.textContent=fmt(arm.p*m);});if(SEL)cp();}
 function rM(){const m=S.gros==='19'?(1+REC_19MM):1;const h=hojaActual();document.getElementById('mGrid').innerHTML=armazonesHoja(h).map(arm=>`<div class="mc" data-id="${arm.id}" onclick="selA(${arm.id},this)"><div class="mcn">${arm.nom}</div><div class="mcp"><span>Precio</span><span>${fmt(arm.p*m)}</span></div><div style="font-size:10px;color:var(--g);margin-top:2px">F.${arm.fon}+p</div></div>`).join('');}
@@ -5355,7 +5478,7 @@ function addM(){
   const mFonV=+document.getElementById('mFon').value||(+ref.fon);
   const optsArm=calcOptsArm(ref,mAltV,mFonV,MFORMA);
   const spPz=r3dSpecFormulario(),pzEf=spPz?spPz.piezas:{};optsArm.materialPuerta=piezasHayPuerta(pzEf); // Lote R5
-  const dobleFondo=(MFORMA==='chaflan')?{dcho:+document.getElementById('mDFD').value||null,izq:+document.getElementById('mDFI').value||null}:null;
+  const dobleFondo=(MFORMA==='chaflan')?fondosChaflanForm():null; // Lote C1: {izq, dcho} siempre con valor (sin teclear, el fondo del mueble)
   const armP=gapG(armTarifar,optsArm,MARMMAN); // Lote M: precio manual de armazón si lo hay
   const cfg=isBajo(SEL)?S.tb:S.ta;
   let ptTot=0,tTot=0,pd=[],altoPuertaMax=0,manos=[];
@@ -5405,7 +5528,7 @@ function addM(){
   // Lote F: anotar forma especial (×2) y, si chaflán, el doble fondo informativo en la descripción.
   if(MFORMA!=='ninguna'){
     desc+=` · ${FORMA_LAB[MFORMA]} ×2`;
-    if(MFORMA==='chaflan'&&dobleFondo&&(dobleFondo.dcho||dobleFondo.izq))desc+=` (doble fondo D${dobleFondo.dcho||'-'}/I${dobleFondo.izq||'-'})`;
+    if(MFORMA==='chaflan'&&dobleFondo)desc+=` (fondo izq ${fmtCm(dobleFondo.izq)} / dcho ${fmtCm(dobleFondo.dcho)})`; // Lote C1
   } else if((optsArm.altoNoStd||optsArm.fondoNoStd)&&!optsArm.materialPuerta){ // Lote R5: con material de puerta no hay +30%
     desc+=` · +30% medida no estándar`;
   }
@@ -7034,6 +7157,7 @@ function iniciarEdicion(id){
     MARMMAN=(m.armPMan!=null)?+m.armPMan:null; // Lote M
     document.getElementById('mDFD').value=(m.dobleFondo&&m.dobleFondo.dcho)||'';
     document.getElementById('mDFI').value=(m.dobleFondo&&m.dobleFondo.izq)||'';
+    if(MFORMA==='chaflan')MDEF.ancho=anchoFrentesForm(+m.anc||SEL.anc); // Lote C1: las puertas del chaflán siguen a la diagonal
     MPuertas=m.mPuertas.map(p=>({...p}));
     marcarManualesPuertas();MPUERTAS_ARR=false; // Lote U: lo que no coincide con el reparto automático queda a mano
     MFrentesCJ=(m.mFrentesCJ||[]).map(f=>({...f}));
