@@ -149,6 +149,7 @@ tr:hover td{background:var(--c);}
      de precio (€/ud=4ª, Total=5ª), el bloque de totales y el resumen de gola (lleva importes). */
   body.sinval #tp th:nth-child(4),body.sinval #tp th:nth-child(5),body.sinval #tp td.pr,body.sinval #tp td.tr{display:none!important;}
   body.sinval .tbox,body.sinval #golaR{display:none!important;}
+  body.sinval .kincp{display:none!important;} /* Lote K (25-09-2026): importe de «incl. N cajones» */
   /* Lote K — en papel los controles se ven como texto plano: cantidad sin recuadro; descuento e IVA
      muestran el <span class="pv"> (que cTot mantiene al día) en vez del input/select. */
   #tp .qi{border:0;background:none;padding:0;}
@@ -1115,7 +1116,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-25.1';
+const APP_BUILD = '2026-09-25.2';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -5678,6 +5679,7 @@ function cp(){
     }
   });
   // Frentes Cajón/Gaveta: mismo cálculo que una puerta normal (T-1 a T-9), + 1 tirador si tir=on
+  const kCaj={n:0,cj:0,gv:0,tot:0}; // Lote K: cajones/gavetas (herraje) de este mueble, para el total que se ve
   MFrentesCJ.forEach((f,i)=>{
     const a=+f.alto||0,w=+f.ancho||0;
     if(a&&w){
@@ -5694,7 +5696,7 @@ function cp(){
       // Cajón herraje auto (informativo en el desglose). Lote H: salvasifón en gavetas de fregadero.
       const ssEf=f.tipo==='GV'&&f.ss==='on'&&admiteSalvasifon(SEL);
       const her=precioCajonHerraje(S.modCaj,f.tipo,f.fondo||'F50',w,ssEf);
-      if(her)lines.push(`  ↳ ${her.descripcion}: ${fmt(her.precio)}`);
+      if(her){lines.push(`  ↳ ${her.descripcion}: ${fmt(her.precio)}`);sumarCajon(kCaj,f.tipo==='GV',her.precio);}
       else if(w>120)lines.push(`  ⚠️ Cajón > 120 cm — no permitido`);
     }
   });
@@ -5711,10 +5713,13 @@ function cp(){
   if(S.recargoModelo>0&&ptTot>0)lines.push(`Recargo modelo +${S.recargoModelo}% aplicado a puertas/frentes${S.recargoCVT?' y costados/regletas':''}`);
   // La regleta YA NO suma al precio del mueble: se inserta como línea CVT independiente (asociada al mueble).
   const tot=armP+ptTot+tTot;
-  lines.push(`\nTotal/ud (sin cajones herraje): ${fmt(tot)} · ×${cnt}: ${fmt(tot*cnt)}`);
+  // Lote K (25-09-2026, Álvaro) — el total que se ve lleva los cajones/gavetas (herraje). La línea del
+  // mueble se guarda sin ellos (van como hijas en LN) y el presupuesto los suma al pintar su fila.
+  const totVis=+(tot+kCaj.tot).toFixed(2),inclK=textoInclCajones(kCaj,false);
+  lines.push(`\nTotal/ud: ${fmt(totVis)}${inclK?` (${inclK})`:''} · ×${cnt}: ${fmt(totVis*cnt)}`);
   if(MARMMAN!=null||MPuertas.some(p=>p.pMan!=null||p.tMan!=null)||MFrentesCJ.some(f=>f.pMan!=null||f.tMan!=null))lines.push(`✎ = precio manual solo de este mueble`);
   document.getElementById('pDes').innerHTML=lines.join('\n'); // Lote M: HTML (campos editables); el contenedor es white-space:pre-line
-  document.getElementById('pTot').textContent=`${fmt(tot*cnt)}`;
+  document.getElementById('pTot').textContent=`${fmt(totVis*cnt)}`;
   r3dActualizar(); // Lote R1: el dibujo sigue a cada cambio del modal
 }
 function addM(){
@@ -5874,7 +5879,7 @@ function addM(){
       const ssEf=f.tipo==='GV'&&f.ss==='on'&&admiteSalvasifon(SEL);
       const her=precioCajonHerraje(S.modCaj,f.tipo,f.fondo||'F50',w,ssEf);
       if(!her)return;
-      LN.push({id:++LID,sec:'Varios',tab:null,desc:her.descripcion,cnt,p:her.precio,nota:`(auto: ${SEL.nom})`,parentId:idMueble});
+      LN.push({id:++LID,sec:'Varios',tab:null,desc:her.descripcion,cnt,p:her.precio,nota:`(auto: ${SEL.nom})`,parentId:idMueble,subtipo:'cajon'}); // Lote K: subtipo para reconocerla
     });
     // Lote X1 (24-09-2026, Álvaro) — push to open auto: una línea hija por cada puerta de la columna/semicolumna horno/micro
     // con gola (×2 en 2Pta), al precio de «Sistema Push en Puertas» del catálogo de Varios.
@@ -6096,7 +6101,7 @@ function rdsg(){
     const elimPz=Object.keys(pzEf).filter(k=>pzEf[k]==='x').map(etqPieza);if(elimPz.length)lines.push(`Piezas eliminadas (no cambian el precio): ${elimPz.join(', ')}`);}
   if(S.recargoModelo>0&&pt>0)lines.push(`Recargo modelo +${S.recargoModelo}% aplicado a puertas/frentes${S.recargoCVT?' y costados/regletas':''}`);
   const tot=armP+pt+tt,cnt=+document.getElementById('rCnt')?.value||1;
-  lines.push(`\nTotal/ud (sin cajones herraje): ${fmt(tot)} · ×${cnt}: ${fmt(tot*cnt)}`);
+  lines.push(`\nTotal/ud: ${fmt(tot)} · ×${cnt}: ${fmt(tot*cnt)}`); // Lote K: mismo rótulo que el mueble normal (rincón sin cajones)
   if(RARMMAN!=null||RPuertas.some(p=>p.pMan!=null||p.tMan!=null)||RFrentesCJ.some(f=>f.pMan!=null||f.tMan!=null))lines.push(`✎ = precio manual solo de este mueble`);
   if(esRinEsc(SEL))lines.push(RPRIMERO?`Abre primero: ${RPRIMERO} (${RPRIMERO==='P1'?'brazo izq.':'brazo dcho.'})`:'⚠️ Falta: qué puerta abre primero'); // Lote R7
   document.getElementById('rinD').innerHTML=lines.join('\n'); // Lote M
@@ -6234,7 +6239,7 @@ function addRin(){
       const a=+f.alto||0,w=+f.ancho||0;if(!a||!w)return;
       const her=precioCajonHerraje(S.modCaj,f.tipo,f.fondo||'F50',w);
       if(!her)return;
-      LN.push({id:++LID,sec:'Varios',tab:null,desc:her.descripcion,cnt,p:her.precio,nota:`(auto: ${SEL.nom})`,parentId:idMueble});
+      LN.push({id:++LID,sec:'Varios',tab:null,desc:her.descripcion,cnt,p:her.precio,nota:`(auto: ${SEL.nom})`,parentId:idMueble,subtipo:'cajon'}); // Lote K
     });
     // Regleta CVT auto (asociada al mueble), tarificada por la CVT del modelo.
     insertarRegletaCVT(regleta,idMueble,cnt,armTar.nom,MMODELO);
@@ -6813,12 +6818,14 @@ function rP(){
   const body=document.getElementById('pBody');
   if(!LN.length){body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--g);font-style:italic">Sin líneas</td></tr>';cTot();buildWS();return;}
   const multi=MODELOS.length>1;
-  const secs=[...new Set(LN.map(l=>l.sec))];let rows='',n=1;
+  // Lote K (25-09-2026): las hijas de cajón no salen como fila; su importe va sumado en la fila del mueble.
+  const visibles=lineasPresupuesto();
+  const secs=[...new Set(visibles.map(l=>l.sec))];let rows='',n=1;
   secs.forEach(s=>{
     rows+=`<tr class="sh"><td colspan="6">${s}</td></tr>`;
     // Lote J — las hijas idénticas (herrajes/regletas auto de distintos muebles) se pintan
     // como una sola fila con unidades sumadas. LN queda intacto (cascada y edición siguen).
-    agruparHijasVisual(LN.filter(l=>l.sec===s)).forEach(l=>{
+    agruparHijasVisual(visibles.filter(l=>l.sec===s)).forEach(l=>{
       // Una línea es editable si es un mueble con meta enriquecida (mPuertas presente)
       const editable=l.meta&&l.meta.tipo==='mueble'&&Array.isArray(l.meta.mPuertas);
       // Lote I: las líneas manuales de Varios se editan con su propio widget
@@ -6833,7 +6840,10 @@ function rP(){
       const mid=(l.meta&&l.meta.modeloId!=null)?l.meta.modeloId:(l.modeloId!=null?l.modeloId:null);
       const bg=(multi&&mid!=null)?bgModelo(mid):'';
       const chip=(multi&&mid!=null)?`<span style="display:inline-block;background:${RESALTES[(MODELOS[mid]||{}).resalte||'none'].chip};color:#fff;font-size:9px;font-weight:900;padding:1px 6px;border-radius:8px;margin-right:5px">M${mid+1}</span>`:'';
-      rows+=`<tr style="${bg?`background:${bg};-webkit-print-color-adjust:exact;print-color-adjust:exact`:''}"><td>${n++}</td><td>${chip}<strong style="cursor:${l.tab?'pointer':'default'};${l.tab?'text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;':''}" ${l.tab?`onclick="goTab('${l.tab}')" title="Ir a pestaña"`:''} >${esc(l.desc)}</strong>${l.nota?`<br><span style="font-size:10.5px;color:var(--g)">${esc(l.nota)}</span>`:''}</td><td style="text-align:center"><input class="qi" type="number" value="${l.cnt}" min="1" ${esHija?'disabled':''} onchange="uL(${l.id},this.value)"></td><td class="pr">${fmt(l.p)}</td><td class="tr">${fmt(l.p*l.cnt)}</td><td class="np" style="text-align:center">${botones}</td></tr>`;
+      // Lote K — mueble: €/ud con sus cajones/gavetas y nota «incl. …» (importe oculto en la impresión sin valorar)
+      const pFila=precioFilaPresupuesto(l),kInc=(l.meta&&l.meta.tipo==='mueble'&&!l.parentId)?textoInclCajones(cajonesDeMueble(l.id),true):'';
+      const notaFila=(l.nota||kInc)?`<br><span style="font-size:10.5px;color:var(--g)">${esc(l.nota||'')}${(l.nota&&kInc)?' · ':''}${kInc}</span>`:'';
+      rows+=`<tr style="${bg?`background:${bg};-webkit-print-color-adjust:exact;print-color-adjust:exact`:''}"><td>${n++}</td><td>${chip}<strong style="cursor:${l.tab?'pointer':'default'};${l.tab?'text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;':''}" ${l.tab?`onclick="goTab('${l.tab}')" title="Ir a pestaña"`:''} >${esc(l.desc)}</strong>${notaFila}</td><td style="text-align:center"><input class="qi" type="number" value="${l.cnt}" min="1" ${esHija?'disabled':''} onchange="uL(${l.id},this.value)"></td><td class="pr">${fmt(pFila)}</td><td class="tr">${fmt(pFila*l.cnt)}</td><td class="np" style="text-align:center">${botones}</td></tr>`;
     });
   });
   body.innerHTML=rows;cTot();buildWS();escenaPintarImpresion(); // Lote V2b
@@ -7102,9 +7112,18 @@ function buildWS(){
     let stm=0;muebles.forEach(l=>{stm+=l.p*l.cnt;const dm=dimsHojaMueble(l);h+=`<tr class="wsr" style="${rowBg(l)}"><td>${l.cnt}</td><td>${tag(l)}${esc(l.desc)}${avisoPiezasHoja(l)}</td><td>${dm[0]}</td><td>${dm[1]}</td><td>${dm[2]}</td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;}); // Lote P: medidas reales
     h+=`<tr class="wstot"><td colspan="5"></td><td>Subtotal</td><td>${stm.toFixed(2)}</td></tr></table></div>`;
   }
+  // CAJONES Y GAVETAS (HERRAJE) — Lote K (25-09-2026, Álvaro): fuera de VARIOS, en su tabla. Uds = cajones
+  // en total (una hija por frente, cnt = uds del mueble) y de qué mueble salen (nota auto fusionada).
+  // El push to open y el resto de Varios se quedan en VARIOS. Solo presentación: LN queda intacto.
+  const cajones=agruparHijasVisual(LN.filter(esHijaCajon));
+  if(cajones.length){
+    h+=`<div><table class="wst"><tr class="wsh"><td colspan="5">CAJONES Y GAVETAS (HERRAJE)</td></tr><tr><th>Uds</th><th>Cajón / gaveta</th><th>Mueble</th><th>Puntos</th><th>Total</th></tr>`;
+    let stk=0;cajones.forEach(l=>{stk+=l.p*l.cnt;h+=`<tr class="wsr"><td>${l.cnt}</td><td>${esc(l.desc)}</td><td>${esc((l.nota||'').replace(/^\(auto: (.+)\)$/,'$1'))}</td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;});
+    h+=`<tr class="wstot"><td colspan="3"></td><td>Subtotal</td><td>${stk.toFixed(2)}</td></tr></table></div>`;
+  }
   // VARIOS (Lote N: las baldas sueltas van en su propia tabla, con medidas, cantos y soportes)
   const variosTodos=[...(secs['Varios']||[]),...(secs['Puertas adicionales']||[])];
-  const varios=agruparParaHoja(variosTodos.filter(l=>!(l.meta&&l.meta.tipo==='balda')),midOf);
+  const varios=agruparParaHoja(variosTodos.filter(l=>!(l.meta&&l.meta.tipo==='balda')&&!esHijaCajon(l)),midOf); // Lote K: cajones en su tabla
   if(varios.length){
     h+=`<div><table class="wst"><tr class="wsh"><td colspan="4">VARIOS</td></tr><tr><th>Uds</th><th>Descripción</th><th>Puntos</th><th>Total</th></tr>`;
     let stv=0;varios.forEach(l=>{stv+=l.p*l.cnt;h+=`<tr class="wsr"><td>${l.cnt}</td><td>${esc(l.desc)}</td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;});
@@ -7183,6 +7202,36 @@ function addGolaP(){
 //     parentId nunca se fusionan de verdad (romperíamos la cascada de borrado y la
 //     edición con snapshot); se agrupan solo al pintar, sumando unidades.
 function huellaLN(l){return JSON.stringify([l.sec,l.desc,+l.p,l.nota||'',l.modeloId??null,l.meta?JSON.stringify(l.meta):null]);}
+// Lote K (25-09-2026, Álvaro) — cajones y gavetas (herraje) dentro del importe del mueble.
+// Las líneas hijas de cajón (parentId, sec Varios) siguen en LN con su precio (el total del presupuesto
+// no cambia y la hoja de producción las lista aparte), pero en el presupuesto NO salen como fila: su
+// importe se suma en la fila del mueble («incl. 3 cajones 75,00 €»). Desde este lote nacen con
+// subtipo:'cajon'; las de proyectos guardados antes se reconocen por su descripción
+// («Cajón/Gaveta I.ATIRA/AV YOU …», la que fija precioCajonHerraje). El push to open sigue en Varios.
+const RE_HIJA_CAJON=/^(Cajón|Gaveta) (I\.ATIRA|AV YOU) /;
+function esHijaCajon(l){return !!(l&&l.parentId&&(l.subtipo==='cajon'||(l.sec==='Varios'&&RE_HIJA_CAJON.test(l.desc||''))));}
+// Acumulador {n, cj, gv, tot}: un frente = un cajón/gaveta; su precio es por unidad de mueble.
+function sumarCajon(k,esGaveta,precio){k.n++;if(esGaveta)k.gv++;else k.cj++;k.tot=+(k.tot+(+precio||0)).toFixed(2);return k;}
+// Cajones/gavetas por unidad de un mueble ya presupuestado (desde sus hijas en LN).
+function cajonesDeMueble(idMueble){
+  const k={n:0,cj:0,gv:0,tot:0};
+  LN.forEach(h=>{if(h.parentId===idMueble&&esHijaCajon(h))sumarCajon(k,/^Gaveta/.test(h.desc||''),h.p);});
+  return k;
+}
+// Texto «incl. 2 cajones + 1 gaveta 85,00 €» (por unidad de mueble). Con html=true el importe va en
+// <span class="kincp"> para que la impresión sin valorar lo oculte (solo lleva números: no hay que escapar).
+function textoInclCajones(k,html){
+  if(!k||!k.n)return '';
+  const partes=[];
+  if(k.cj)partes.push(`${k.cj} ${k.cj===1?'cajón':'cajones'}`);
+  if(k.gv)partes.push(`${k.gv} ${k.gv===1?'gaveta':'gavetas'}`);
+  const imp=fmt(k.tot);
+  return `incl. ${partes.join(' + ')} ${html?`<span class="kincp">${imp}</span>`:imp}`;
+}
+// Precio por unidad de una fila del presupuesto: mueble + sus cajones/gavetas; el resto, su precio.
+function precioFilaPresupuesto(l){return (l.meta&&l.meta.tipo==='mueble'&&!l.parentId)?+(l.p+cajonesDeMueble(l.id).tot).toFixed(2):l.p;}
+// Líneas que se ven en el presupuesto (pantalla, impresión y CSV): todas menos las hijas de cajón.
+function lineasPresupuesto(){return LN.filter(l=>!esHijaCajon(l));}
 function consolidarLN(nueva){
   if(nueva.parentId)return null; // las hijas van ligadas a su mueble: nunca se fusionan de verdad
   const clave=huellaLN(nueva);
@@ -7537,10 +7586,10 @@ function refrescarSelectoresGlobales(){
   pintarLadoTG('b');pintarLadoTG('a');
 }
 function cTot(){const sub=LN.reduce((s,l)=>s+l.p*l.cnt,0),desc=+document.getElementById('desc')?.value||0,base=sub*(1-desc/100),ivr=+document.getElementById('ivaR')?.value||21,iva=base*ivr/100;document.getElementById('stot').textContent=fmt(sub);document.getElementById('bimpon').textContent=fmt(base);document.getElementById('civa').textContent=fmt(iva);document.getElementById('gtot').textContent=fmt(base+iva);const dp=document.getElementById('descP');if(dp)dp.textContent=String(desc);const ip=document.getElementById('ivaP');if(ip)ip.textContent=ivr+' %';}
-function uBadge(){document.getElementById('badge').textContent=LN.length;}
+function uBadge(){document.getElementById('badge').textContent=lineasPresupuesto().length;} // Lote K: líneas que se ven
 
 // EXPORT/NEW
-function expCSV(){const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';let csv='Nº;Sección;Descripción;Nota;Cantidad;Precio/ud;Total\n';let n=1;LN.forEach(l=>{csv+=`${n++};${q(l.sec)};${q(l.desc)};${q(l.nota||'')};${l.cnt};${l.p.toFixed(2)};${(l.p*l.cnt).toFixed(2)}\n`;});const sub=LN.reduce((s,l)=>s+l.p*l.cnt,0),d=+document.getElementById('desc')?.value||0,base=sub*(1-d/100),ivr=+document.getElementById('ivaR')?.value||21;csv+=`\n;;Subtotal;;;${sub.toFixed(2)}\n;;Base;;;${base.toFixed(2)}\n;;IVA ${ivr}%;;;${(base*ivr/100).toFixed(2)}\n;;TOTAL;;;${(base*(1+ivr/100)).toFixed(2)}\n`;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));a.download=`${S.qn||'presupuesto'}.csv`;a.click();}
+function expCSV(){const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';let csv='Nº;Sección;Descripción;Nota;Cantidad;Precio/ud;Total\n';let n=1;lineasPresupuesto().forEach(l=>{const pF=precioFilaPresupuesto(l),kI=(l.meta&&l.meta.tipo==='mueble'&&!l.parentId)?textoInclCajones(cajonesDeMueble(l.id),false):'';csv+=`${n++};${q(l.sec)};${q(l.desc)};${q((l.nota||'')+(kI?(l.nota?' · ':'')+kI:''))};${l.cnt};${pF.toFixed(2)};${(pF*l.cnt).toFixed(2)}\n`;});const sub=LN.reduce((s,l)=>s+l.p*l.cnt,0),d=+document.getElementById('desc')?.value||0,base=sub*(1-d/100),ivr=+document.getElementById('ivaR')?.value||21;csv+=`\n;;Subtotal;;;${sub.toFixed(2)}\n;;Base;;;${base.toFixed(2)}\n;;IVA ${ivr}%;;;${(base*ivr/100).toFixed(2)}\n;;TOTAL;;;${(base*(1+ivr/100)).toFixed(2)}\n`;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));a.download=`${S.qn||'presupuesto'}.csv`;a.click();}
 // Lote O (17-09-2026) — NUEVO PROYECTO. Botón en cabecera (visible desde cualquier pestaña) y en ⑥ Proyectos.
 // Deja la app como recién abierta: cliente, modelos, líneas, gola acumulada, dto/IVA/validez, grosor,
 // cajón, y TODOS los formularios de las pestañas (mueble, puerta rápida, CVT, balda, gola manual, línea
