@@ -153,6 +153,8 @@ tr:hover td{background:var(--c);}
   /* Lote F (25-09-2026) — impresión de fábrica (.pfab en <body> solo durante la impresión): sin presupuesto ni escena */
   body.pfab #tp,body.pfab .esc-print{display:none!important;}
   body.pfab .ws-print{page-break-before:auto;}
+  /* Lote F-A (25-09-2026) — listas de corte: solo en la impresión de fábrica */
+  .lc-print{display:none!important;} body.pfab .lc-print{display:block!important;}
   /* Lote K — en papel los controles se ven como texto plano: cantidad sin recuadro; descuento e IVA
      muestran el <span class="pv"> (que cTot mantiene al día) en vez del input/select. */
   #tp .qi{border:0;background:none;padding:0;}
@@ -878,6 +880,7 @@ tr:hover td{background:var(--c);}
     <button class="btn bp" onclick="window.print()">🖨️ Imprimir valorado</button>
     <button class="btn bs" onclick="imprimirSinValorar()">🖨️ Sin valorar</button>
     <button class="btn bs" onclick="imprimirFabrica()" title="Hoja de producción, lista de muebles y herrajes, tiradores y listas de corte; sin el presupuesto">🏭 Impresión de fábrica</button>
+    <select class="di" id="lcModo" onchange="buildWS()" title="Listas de corte de la impresión de fábrica (Lote F-A)" style="width:auto;padding:6px 8px;font-family:'Lato',sans-serif;font-weight:700;color:var(--m);border-color:var(--cd)"><option value="ambos">Corte: armazones + puertas</option><option value="armazones">Corte: solo armazones</option><option value="puertas">Corte: solo puertas</option></select>
     <button class="btn bs" onclick="expCSV()">📥 CSV</button>
     <button class="btn" style="background:var(--mm);color:var(--c)" onclick="nuevoP()">🆕 Nuevo</button>
   </div>
@@ -1120,7 +1123,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-25.4';
+const APP_BUILD = '2026-09-25.5';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -2163,6 +2166,118 @@ function despieceTexto(grupos){
   const sub=(v,c)=>c===2?`=${v}=`:c===1?`_${v}_`:String(v);
   return grupos.map(G=>[`${G.material||'SIN MATERIAL'} ${G.grueso} mm — ${G.nPiezas} piezas · ${G.areaM2} m² · canto ${G.cantoM} m`,
     ...G.piezas.map(p=>`  ${p.cantidad} × ${sub(p.largo,p.cantosL)} × ${sub(p.ancho,p.cantosA)}  ${p.descripcion}${p.estado==='supuesto'?' [SUPUESTO]':''}`)].join('\n')).join('\n\n');
+}
+// ═════════════ LOTE F-A (25-09-2026, Álvaro) — LISTAS DE CORTE en la impresión de fábrica ═════════════
+// · Armazones: despieceProyecto() (solo bajos; el resto «construcción pendiente»), sin las piezas en material de puerta.
+// · Puertas y frentes de cajón / gaveta: corte = alto − 2 mm y ancho − 3 mm (70 × 60 → 698 × 597), SIEMPRE 4 cantos del
+//   color; grosor y tablero de la BBDD de corte (Roble Skin en puertas = 19). Largo a favor de veta = alto (veta vertical
+//   en todos los frentes, también cajones [supuesto]). Fuera: «Sin puerta» y frentes del cliente (aviso). Las piezas del
+//   casco en material de puerta (Lote R5) se suman al grupo de puertas con su tablero de corte.
+// · Se corta en AG5 T-1 (Blanco Mate, Blanco Brillo, Roble Guadalupe, Roble Skin) y T-9 (Halifax) → «LISTA DE CORTE».
+//   T-2 a T-8 y T-VA → el mismo listado con título «LISTA PEDIR PROVEEDOR».
+// · Comprobado en ag5corte (build 2026-09-25.1): la app de corte NO descuenta el canto (largo / ancho van tal cual al
+//   packing y al CUTLST00; cantosL / cantosA solo suman metros). 698 × 597 con 4 cantos es la medida final: no hay
+//   doble descuento. Cajeos, muescas y mecanizados no se descuentan (van en la posición), como en el casco.
+// · Solo salen en la Impresión de fábrica (.pfab, clase .lc-print); el valorado no las lleva. Selector en ⑥ (#lcModo):
+//   armazones / puertas / ambos, de sesión (no se guarda).
+const CORTE_PUERTA_ALTO=2, CORTE_PUERTA_ANCHO=3;   // mm que se descuentan del alto / ancho nominal de puertas y frentes
+const CANTOS_PUERTA={L:2,A:2};                     // todo frente lleva 4 cantos del color
+const GROSOR_PUERTA_CORTE=19;                      // mm: grosor del tablero de puerta [supuesto salvo Roble Skin, confirmado]
+const TARIFAS_CORTE_AG5=['T-1','T-9'];             // tarifas que corta AG5; el resto se pide al proveedor
+// Tablero de la BBDD de corte según el color de puerta del modelo (texto libre): [patrón, nombre exacto en corte, en semilla].
+// En la semilla de tableros de corte solo existe Roble Skin; los otros cuatro nombres son los de sus CANTOS en corte
+// («cantos sin tablero homónimo») [supuesto, pendiente de comprobar en la BBDD viva]. Sin color en T-9 → Halifax.
+const CAT_PUERTAS_CORTE=[
+  [/skin/i,'Roble Skin',true],[/guadalupe/i,'Roble Guadalupe',false],[/brillo/i,'Estratificado Blanco Brillo',false],
+  [/mate/i,'Estratificado Blanco Mate',false],[/halifax|syncron/i,'HPL Roble Halifax',false]];
+// → {material, gros, corte (AG5 lo corta), casado (tablero de corte reconocido), supuesto}
+function materialPuertaCorte(tar,color){
+  const t=String(tar||''),c=String(color||'').trim(),corte=TARIFAS_CORTE_AG5.includes(t);
+  if(!corte)return {material:matPuertaTxt(t,c),gros:GROSOR_PUERTA_CORTE,corte:false,casado:false,supuesto:false};
+  let cat=CAT_PUERTAS_CORTE.find(x=>c&&x[0].test(c));
+  if(!cat&&t==='T-9')cat=CAT_PUERTAS_CORTE.find(x=>x[1]==='HPL Roble Halifax');
+  if(cat)return {material:cat[1],gros:GROSOR_PUERTA_CORTE,corte:true,casado:true,supuesto:!cat[2]};
+  return {material:matPuertaTxt(t,c),gros:GROSOR_PUERTA_CORTE,corte:true,casado:false,supuesto:true};
+}
+function colorPuertaLinea(m){return ((MODELOS[m.modeloId]||MODELOS[0]||{}).colorPuerta)||'';}
+// Puertas y frentes de una línea de mueble → mismo modelo de pieza que despieceCasco (mm, cantosL / cantosA, material
+// por nombre exacto), más corte (true = lo corta AG5) y tar. Piezas iguales del mismo mueble en una sola línea.
+function despiecePuertasLinea(l){
+  const m=l&&l.meta;if(!m||m.tipo!=='mueble')return null;
+  const n=Math.max(1,+l.cnt||1),mueble=`${(m.subfam&&m.subfam.lab)||m.nom} ${fmtCm(m.anc)}×${fmtCm(m.alt)}×${fmtCm(m.fon)}`;
+  const out={mueble,piezas:[],avisos:[],mat:null};
+  if(m.frentesCliente){out.avisos.push('frentes del cliente: no se cortan');return out;}
+  const tar=m.tarifa||'Sin puerta';if(tar==='Sin puerta')return out;
+  const tarM=m.tarifaModelo||tar,color=colorPuertaLinea(m),mc=materialPuertaCorte(tarM,color);out.mat=mc;
+  const add=(nombre,alto,ancho,uds,pos)=>{
+    const p={cantidad:uds*n,descripcion:`${nombre} · ${mueble}`,largo:DESPIECE_MM(alto)-CORTE_PUERTA_ALTO,ancho:DESPIECE_MM(ancho)-CORTE_PUERTA_ANCHO,
+      grueso:mc.gros,material:mc.material,caras:0,cantosL:CANTOS_PUERTA.L,cantosA:CANTOS_PUERTA.A,pieza:nombre,pos,
+      estado:mc.supuesto?'supuesto':'confirmado',mueble,lineaId:l.id,enPuerta:true,corte:mc.corte,tar:tarM};
+    const igual=out.piezas.find(q=>q.pieza===p.pieza&&q.largo===p.largo&&q.ancho===p.ancho);
+    if(igual){igual.cantidad+=p.cantidad;igual.pos+=' / '+p.pos;}else out.piezas.push(p);
+  };
+  (m.mPuertas||[]).forEach((p,i)=>{const a=+p.alto||0,w=+p.ancho||0;if(!a||!w)return;
+    const mano=p.mano||'D';
+    add('Puerta',a,w,mano==='2'?2:1,`P${i+1}${mano==='2'?' (2 puertas)':mano==='FF'?' frente fijo':mano==='AB'?' abatible':' mano '+mano}`);});
+  (m.mFrentesCJ||[]).forEach((f,i)=>{if(esFrenteInt(f))return;const a=+f.alto||0,w=+f.ancho||0;if(!a||!w)return;
+    add(f.tipo==='GV'?'Frente gaveta':'Frente cajón',a,w,1,`F${i+1}${f.ss==='on'?' salvasifón':''}`);});
+  if(out.piezas.length)out.avisoMat=avisoMaterialPuerta(mc,color); // un aviso por tablero, lo agrupa listasCorteProyecto
+  return out;
+}
+function avisoMaterialPuerta(mc,color){
+  if(mc.corte&&!mc.casado)return `color de puerta «${color||'sin color'}» sin tablero en la BBDD de corte: sale como «${mc.material}»`;
+  if(mc.supuesto)return `tablero «${mc.material}» ${mc.gros} mm: nombre y grosor supuestos, confirmar en la BBDD de corte`;
+  return '';
+}
+// Listas del proyecto según el selector: armazones (casco sin piezas en material de puerta), puertas (frentes + piezas
+// del casco en material de puerta, T-1 / T-9) y proveedor (el resto de tarifas). Cada una agrupada por material + grosor.
+function listasCorteProyecto(modo){
+  modo=modo||'ambos';const arm=[],pta=[],prov=[],avisos=[],avMat=new Set();
+  LN.forEach(l=>{
+    const m=l.meta;if(!m||m.tipo!=='mueble')return;
+    if(modo!=='puertas'){
+      const d=despieceLinea(l);
+      if(!d)avisos.push(`${l.desc||m.nom}: construcción pendiente (rincón)`);
+      else{
+        d.avisos.forEach(a=>avisos.push(`${d.mueble}: ${a}`));
+        d.piezas.forEach(p=>{
+          if(!p.enPuerta){arm.push(p);return;}
+          if(modo==='armazones')return;
+          const mc=materialPuertaCorte(m.tarifaModelo||m.tarifa,colorPuertaLinea(m)),av=avisoMaterialPuerta(mc,colorPuertaLinea(m));if(av)avMat.add(av);
+          (mc.corte?pta:prov).push({...p,material:mc.casado?mc.material:p.material,corte:mc.corte,tar:m.tarifaModelo||m.tarifa,estado:(mc.supuesto&&p.estado!=='supuesto')?'supuesto':p.estado});
+        });
+      }
+    }
+    if(modo!=='armazones'){
+      const d=despiecePuertasLinea(l);if(!d)return;
+      d.avisos.forEach(a=>avisos.push(`${d.mueble}: ${a}`));if(d.avisoMat)avMat.add(d.avisoMat);
+      d.piezas.forEach(p=>(p.corte?pta:prov).push(p));
+    }
+  });
+  avMat.forEach(a=>avisos.push(a));
+  return {modo,armazones:despieceAgrupar(arm),puertas:despieceAgrupar(pta),proveedor:despieceAgrupar(prov),avisos};
+}
+function lcModoActual(){const s=document.getElementById('lcModo');return (s&&s.value)||'ambos';}
+// Hoja «LISTAS DE CORTE» (solo .pfab). Medidas finales en mm, subrayado 1 raya = 1 canto, 2 = 2 (como corte y las baldas).
+function buildListasCorteHTML(){
+  const modo=lcModoActual(),L=listasCorteProyecto(modo);
+  const hay=L.armazones.length||L.puertas.length||L.proveedor.length;
+  if(!hay&&!L.avisos.length)return '';
+  const num=v=>(+v||0).toLocaleString('es-ES'),u=(v,c)=>c===2?`<span class="bdc2">${v}</span>`:c===1?`<span class="bdc1">${v}</span>`:String(v);
+  const tablas=(grupos,tit)=>grupos.length?grupos.map(G=>`<table class="wst"><tr class="wsh"><td colspan="6">${tit} — ${esc(G.material||'SIN MATERIAL')} ${G.grueso} mm · ${G.nPiezas} piezas · ${num(G.areaM2)} m² · canto ${num(G.cantoM)} m</td></tr>`+
+    `<tr><th>Uds</th><th>Pieza</th><th>Mueble</th><th>Largo (mm)</th><th>Ancho (mm)</th><th>Posición</th></tr>`+
+    G.piezas.map(p=>`<tr class="wsr"><td style="font-weight:900;font-size:11px">${p.cantidad}</td><td>${esc(p.pieza)}${p.estado==='supuesto'?' <b style="color:#b00">[supuesto]</b>':''}</td><td>${esc(p.mueble)}</td>`+
+      `<td style="text-align:center;font-weight:700;font-size:10px">${u(p.largo,p.cantosL)}</td><td style="text-align:center;font-weight:700;font-size:10px">${u(p.ancho,p.cantosA)}</td><td style="text-align:left;font-weight:400;font-size:8px">${esc(p.pos||'')}</td></tr>`).join('')+'</table>').join('')
+    :'<div style="color:#888;font-style:italic;font-size:9px;margin-bottom:8px">— sin piezas —</div>';
+  const sec=(tit,grupos,rot)=>`<div style="font-size:11px;font-weight:700;color:#4A2C0E;margin:8px 0 4px;text-transform:uppercase">${tit}</div>${tablas(grupos,rot)}`;
+  let h=`<div class="lc-print" style="page-break-before:always;padding-top:8px">`+
+    `<div class="wshead"><div><img src="https://almacengrupocinco.es/wp-content/uploads/2016/05/cropped-logo.png" height="36" onerror="this.style.display='none'"><div style="font-size:8px;color:#666;margin-top:3px">Cañada Aguilera 63 · 47155 Santovenia · 983 268 328</div></div>`+
+    `<div style="text-align:right"><div style="font-size:14px;font-weight:700;color:#4A2C0E">LISTAS DE CORTE</div><div style="font-size:9px;color:#666">${rotuloDoc()} · ${S.fecha||'—'}</div></div></div>`+
+    `<div style="font-size:9px;color:#666;font-style:italic;margin-bottom:8px">Medidas finales en mm (la canteadora ya quita lo que pone). Subrayado: 1 raya = 1 canto, 2 rayas = 2 cantos. Puertas y frentes: alto − 2 y ancho − 3, 4 cantos. Cajeos y mecanizados no descontados: en Posición. Armazones: solo bajos; el resto, construcción pendiente.</div>`;
+  if(modo!=='puertas')h+=sec('Armazones',L.armazones,'LISTA DE CORTE');
+  if(modo!=='armazones'){h+=sec('Puertas y frentes (T-1 · T-9, se cortan en AG5)',L.puertas,'LISTA DE CORTE');h+=sec('Puertas y frentes (resto de tarifas, se piden)',L.proveedor,'LISTA PEDIR PROVEEDOR');}
+  if(L.avisos.length)h+=`<div style="font-size:9px;color:#b00;margin-top:6px"><b>Avisos:</b><ul style="margin:2px 0 0 14px;padding:0">${L.avisos.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>`;
+  return h+'</div>';
 }
 const R3D_COL={costado:'#d9c39a',suelo:'#e2cea6',trav:'#d9c39a',techo:'#ecd9b2',trasera:'#e9dfc9',
   frente:'#f3e3c0',pata:'#262626',cajIATIRA:'#c4c8ce',cajAVYOU:'#474a4f',cajFondo:'#f1ede6',
@@ -7255,6 +7370,8 @@ function buildWS(){
   h+=buildHerrajesSueltosHTML();
   // HOJA LISTA DE TIRADORES (Lote H, informativa)
   h+=buildTiradoresHTML();
+  // HOJA LISTAS DE CORTE (Lote F-A; solo en la impresión de fábrica, .lc-print)
+  h+=buildListasCorteHTML();
   document.getElementById('wsContent').innerHTML=h;
 }
 // Lote N — tabla de baldas sueltas en la hoja de producción. Las medidas llevan los cantos subrayados con la
