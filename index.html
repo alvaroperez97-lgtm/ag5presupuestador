@@ -150,6 +150,9 @@ tr:hover td{background:var(--c);}
   body.sinval #tp th:nth-child(4),body.sinval #tp th:nth-child(5),body.sinval #tp td.pr,body.sinval #tp td.tr{display:none!important;}
   body.sinval .tbox,body.sinval #golaR{display:none!important;}
   body.sinval .kincp{display:none!important;} /* Lote K (25-09-2026): importe de «incl. N cajones» */
+  /* Lote F (25-09-2026) — impresión de fábrica (.pfab en <body> solo durante la impresión): sin presupuesto ni escena */
+  body.pfab #tp,body.pfab .esc-print{display:none!important;}
+  body.pfab .ws-print{page-break-before:auto;}
   /* Lote K — en papel los controles se ven como texto plano: cantidad sin recuadro; descuento e IVA
      muestran el <span class="pv"> (que cTot mantiene al día) en vez del input/select. */
   #tp .qi{border:0;background:none;padding:0;}
@@ -874,6 +877,7 @@ tr:hover td{background:var(--c);}
     <button class="btn bp" onclick="imprimirCliente()">🖨️ Presupuesto cliente</button>
     <button class="btn bp" onclick="window.print()">🖨️ Imprimir valorado</button>
     <button class="btn bs" onclick="imprimirSinValorar()">🖨️ Sin valorar</button>
+    <button class="btn bs" onclick="imprimirFabrica()" title="Hoja de producción, lista de muebles y herrajes, tiradores y listas de corte; sin el presupuesto">🏭 Impresión de fábrica</button>
     <button class="btn bs" onclick="expCSV()">📥 CSV</button>
     <button class="btn" style="background:var(--mm);color:var(--c)" onclick="nuevoP()">🆕 Nuevo</button>
   </div>
@@ -1116,7 +1120,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-25.2';
+const APP_BUILD = '2026-09-25.4';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1212,6 +1216,12 @@ const BALDA_DESC_RINCON        = 0.7;  // cm: las baldas de un mueble rincón so
 const RIN_CIEGO_DESC           = 11.6; // cm: ciego = ancho exterior − puertas − 116 mm (cálculo fijo, con 16 y con 19)
 const RIN_REGLETA_ANCHO        = 20;   // cm: regleta vista (material de puerta) por defecto; se cambia si piden regleta completa
 const PATAS_RIN_RECTO          = 5;    // rincones rectos: 4 en las esquinas + 1 en la línea de bisagras (antes 6)
+// Lote F (25-09-2026, Álvaro) — hoja de fábrica: herrajes sueltos y bisagras especiales
+const PINZAS_ZOC_POR_M         = 2;    // pinzas de zócalo por metro lineal (8 cada 4 m); SIEMPRE, se venda o no el zócalo
+const CHAPAS_POR_COLGADOR      = 1;    // chapa de pared por cada colgador (sueltas)
+const BISAGRAS_ESP={rinRec:'bisagras rectas',esc:'bisagras 180º',chaf:'bisagra ángulo especial',push:'bisagras sin freno',gavInt:'bisagras 180º'}; // las normales no salen
+const GAVINT_ALTO_NOM          = 30;   // cm: alto nominal de un cajón/gaveta INTERIOR (no tiene frente; solo para que la fila cuente)
+const GAVINT_ARRANQUE          = 3;    // gavetas interiores con las que arranca la columna gavetas interiores
 // Lote R7 (23-09-2026) — bajo rincón escuadra y rincón fregadero (misma construcción, Álvaro).
 const RIN_ESC_REFUERZO         = 12;   // cm: refuerzo en L de la esquina trasera, 12 × 12 (un paletón de 12 y otro de 12 − t)
 const RIN_ESC_CAJEO_HOLGURA    = 0.1;  // cm: holgura del cajeo de la balda alrededor del refuerzo (12 → 12,1)
@@ -2197,7 +2207,7 @@ function r3dSpec(o){
     colHorno:esColHornoMicro(o.arm,o.hoja)&&o.arm.fam==='Columnas',
     // Lote R3: en el dibujo los cajones van siempre arriba y las gavetas abajo (regla confirmada 18-09-2026), en el orden
     // de entrada dentro de cada tipo. La numeración F1, F2… del desglose no cambia: solo reordena el dibujo.
-    frentes:(o.frentes||[]).map(f=>({alto:+f.alto||0,ancho:+f.ancho||0,tipo:f.tipo||'CJ',fondo:f.fondo||'F50',tir:f.tir!=='off',ss:(f.tipo||'CJ')==='GV'&&f.ss==='on'}))
+    frentes:(o.frentes||[]).filter(f=>!esFrenteInt(f)).map(f=>({alto:+f.alto||0,ancho:+f.ancho||0,tipo:f.tipo||'CJ',fondo:f.fondo||'F50',tir:f.tir!=='off',ss:(f.tipo||'CJ')==='GV'&&f.ss==='on'})) // Lote F: los interiores no son frentes
       .sort((a,b)=>(a.tipo==='GV'?1:0)-(b.tipo==='GV'?1:0)),
     tg:{t:(o.cfg&&o.cfg.t)||'sin',s:(o.cfg&&o.cfg.s)||'',c:(o.cfg&&o.cfg.c)||''},
     admiteTir:admiteTirador(o.tar||'Sin puerta'),modCaj:o.modCaj||'IATIRA',patas:esBajo,sinFrentes:!!o.sinFrentes,
@@ -4995,6 +5005,7 @@ const ARBOL_MUEBLES=(()=>{
       {id:'escobero',lab:'Columna escobero',filtro:colReg,ops:[
         {id:'sinbaldas',lab:'Columna escobero sin baldas'},{id:'medias',lab:'Columna escobero medias baldas'},{id:'interior',lab:'Columna escobero armazón interior'}]},
       {id:'horno',lab:'Columna horno/micro',filtro:colReg,arranque:'COLHORNO'}, // Lote X1: 2 gavetas + horno + micro + puerta
+      {id:'gavint',lab:'Columna gavetas interiores',filtro:colReg,arranque:'COLGAVINT'}, // Lote F (25-09-2026): despensero + cajones/gavetas interiores (herraje al ancho del mueble, sin frente); bisagras 180º
       {id:'rincon',lab:'Columna rincón',filtro:colNom('Col.Rinc.'),ops:[
         {id:'recto',lab:'Columna rincón recto',filtro:colNom('Col.Rinc.Recto')},
         {id:'escuadra',lab:'Columna rincón escuadra',filtro:colNom('Col.Rinc.Esc')},
@@ -5345,6 +5356,12 @@ function esPushColHorno(){return esColHornoMicro(SEL,MHOJA)&&S.tb.t==='gola'&&ad
 function precioPushPuerta(){const it=VR.find(v=>v.n===PUSH_PUERTA_NOM);return it?+it.p:0;}
 // Gaveta de arranque de la columna horno/micro (alto fijo: la puerta de arriba se calcula con lo que queda).
 function gavetaColHornoIni(){return {alto:S.tb.t==='gola'?COL_HORNO_GAVETA_GOLA:COL_HORNO_GAVETA,ancho:MDEF.ancho,tir:'on',tipo:'GV',fondo:'F50',ss:'off'};}
+// Lote F (25-09-2026, Álvaro) — columna gavetas interiores: cada fila de frente lleva int:'on' = cajón/gaveta INTERIOR:
+// sin frente ni tirador (no se cobran), herraje al ancho del mueble (M-<ancho>), no se dibuja en el 3D. Alto nominal.
+function esColGavInt(hoja){return !!hoja&&hoja.subId==='gavint';}
+function esFrenteInt(f){return !!f&&f.int==='on';}
+function gavetaIntIni(tipo){return {alto:GAVINT_ALTO_NOM,ancho:MDEF.ancho,tir:'off',tipo:tipo||'GV',fondo:'F50',ss:'off',int:'on'};}
+function sincAnchoFrentesInt(anc){MFrentesCJ.forEach(f=>{if(esFrenteInt(f)){f.ancho=anc;f.alto=GAVINT_ALTO_NOM;f.tir='off';}});}
 function pintarHornoUI(){
   const box=document.getElementById('hornoBox');if(!box)return;
   const ver=esHojaHorno()&&SEL&&!isRin(SEL);box.style.display=ver?'flex':'none';
@@ -5445,6 +5462,7 @@ function selA(id,card){
     else if(MHOJA.arranque==='GV2'){MPuertas=[];MFrentesCJ=[gvIni(),gvIni()];}
     else if(MHOJA.arranque==='HORNO'){MHORNO='60';MPuertas=[];MFrentesCJ=[frenteHornoIni(altoArm0)];} // Lote R3: placa horno → 1 cajón bajo el horno
     else if(MHOJA.arranque==='COLHORNO'){MPuertas=puertasArranque(SEL,SEL.anc);MFrentesCJ=[gavetaColHornoIni(),gavetaColHornoIni()];} // Lote X1: columna horno/micro → 2 gavetas abajo + puerta arriba
+    else if(MHOJA.arranque==='COLGAVINT'){MPuertas=puertasArranque(SEL,SEL.anc);MFrentesCJ=Array.from({length:GAVINT_ARRANQUE},()=>gavetaIntIni('GV'));gi.style.display='block';gi.textContent=`🔧 Columna gavetas interiores: puertas como el despensero · cada cajón/gaveta interior se cobra solo el herraje al ancho del mueble (sin frente ni tirador) · bisagras 180º`;} // Lote F (25-09-2026)
     else{MPuertas=puertasArranque(SEL,SEL.anc);MFrentesCJ=[];} // Lote U · W1: doble desde 61; columnas 2 filas (P1 abajo 160)
     MPUERTAS_ARR=!['GV','GV2','HORNO'].includes(MHOJA.arranque);repartirPuertas(); // Lote U: puertas rellenas con su medida
     if(MHOJA.arranque!=='HORNO')MHORNO='60';
@@ -5611,6 +5629,11 @@ function renderMFCJ(){
     }
     const d=document.createElement('div');
     d.style.cssText='background:rgba(255,255,255,.07);border-radius:6px;padding:9px;margin-bottom:8px';
+    if(esFrenteInt(f)){ // Lote F (25-09-2026): cajón/gaveta interior → solo tipo y fondo; ancho = el del mueble; sin frente ni tirador
+      const anc=+document.getElementById('mAnc')?.value||f.ancho||'';
+      d.innerHTML=`<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap"><span style="font-size:10.5px;color:var(--cd);font-weight:700;text-transform:uppercase;letter-spacing:.4px">Interior ${n}:</span>${btnTipo('CJ','Cajón')}${btnTipo('GV','Gaveta')}<span style="font-size:10.5px;color:var(--cd);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-left:10px">Fondo:</span>${btnFondo('F50','F.50')}${btnFondo('F40','F.40')}<span style="font-size:10.5px;color:var(--g);font-style:italic;margin-left:6px">sin frente · herraje M-${anc}</span><button class="btn bd2" onclick="delMFCJ(${i})" style="margin-left:auto">✕</button></div>`;
+      c.appendChild(d);return;
+    }
     d.innerHTML=`<div style="display:grid;grid-template-columns:75px 75px auto auto;gap:8px;align-items:end">`+
       `<div class="fg"><label>Alto F${n}</label><input type="number" value="${f.alto||''}" placeholder="15" oninput="updMFCJ(${i},'alto',this.value)"></div>`+
       `<div class="fg"><label>Ancho F${n}</label><input type="number" value="${f.ancho||''}" placeholder="60" oninput="updMFCJ(${i},'ancho',this.value)"></div>`+
@@ -5622,7 +5645,8 @@ function renderMFCJ(){
   });
   cp();
 }
-function addMFCJ(){MFrentesCJ.push({alto:'',ancho:MDEF.ancho||(SEL?SEL.anc:''),tir:'on',tipo:'CJ',fondo:'F50',ss:'off'});renderMFCJ();} // Lote P: ancho vigente
+function addMFCJ(){if(esColGavInt(MHOJA)){MFrentesCJ.push(gavetaIntIni('GV'));renderMFCJ();return;} // Lote F: en la columna gavetas interiores todas las filas son interiores
+  MFrentesCJ.push({alto:'',ancho:MDEF.ancho||(SEL?SEL.anc:''),tir:'on',tipo:'CJ',fondo:'F50',ss:'off'});renderMFCJ();} // Lote P: ancho vigente
 // Lote H — al cambiar tipo a CJ se resetea el salvasifón (solo aplica a gavetas)
 function updMFCJ(idx,field,val){if(MFrentesCJ[idx]){MFrentesCJ[idx][field]=val;if(field==='tipo'&&val!=='GV')MFrentesCJ[idx].ss='off';if(field==='tir'||field==='tipo'||field==='fondo'||field==='ss')renderMFCJ();else cp();}}
 function delMFCJ(idx){MFrentesCJ.splice(idx,1);renderMFCJ();}
@@ -5680,9 +5704,16 @@ function cp(){
   });
   // Frentes Cajón/Gaveta: mismo cálculo que una puerta normal (T-1 a T-9), + 1 tirador si tir=on
   const kCaj={n:0,cj:0,gv:0,tot:0}; // Lote K: cajones/gavetas (herraje) de este mueble, para el total que se ve
+  sincAnchoFrentesInt(mAncV); // Lote F: los interiores siguen al ancho del mueble
   MFrentesCJ.forEach((f,i)=>{
     const a=+f.alto||0,w=+f.ancho||0;
     if(a&&w){
+      if(esFrenteInt(f)){ // Lote F (25-09-2026): interior = solo el herraje al ancho del mueble; sin frente ni tirador
+        const her=precioCajonHerraje(S.modCaj,f.tipo,f.fondo||'F50',w,false);
+        lines.push(`F${i+1} ${f.tipo==='GV'?'gaveta':'cajón'} interior (ancho ${w}): sin frente ni tirador`+(her?`  ↳ ${her.descripcion}: ${fmt(her.precio)}`:'  ⚠️ sin herraje para este ancho'));
+        if(her)sumarCajon(kCaj,f.tipo==='GV',her.precio);
+        return;
+      }
       const pp=precioPuertaItem(a,w,f);const notaF=GPP_NOTA,baseF=GPP_BASE;ptTot+=pp;
       let tp=0;
       const llevaTirF=f.tir!=='off'&&admiteTirador(tarEf); // Lote L · R1b
@@ -5731,6 +5762,7 @@ function addM(){
     if(v===''||v===null){flash('⚠️ Indica número de baldas');document.getElementById('aBaldas').focus();return;}
   }
   // Validación frentes cajón/gaveta: ancho ≤ 120 cm, mapeo a medida estándar disponible
+  sincAnchoFrentesInt(+document.getElementById('mAnc').value||SEL.anc); // Lote F: interiores al ancho del mueble
   for(let i=0;i<MFrentesCJ.length;i++){
     const f=MFrentesCJ[i];const a=+f.alto||0,w=+f.ancho||0;
     if(!a||!w)continue;
@@ -5758,7 +5790,7 @@ function addM(){
   const pushCol=esPushColHorno(); // Lote X1: columna/semicolumna horno/micro con gola → puerta de arriba sin gola, push to open
   // Snapshot completo de puertas y frentes para permitir edición posterior (Lote M: incluye precios manuales)
   const snapPuertas=MPuertas.map(p=>({alto:+p.alto||0,ancho:+p.ancho||0,tir:p.tir||'on',mano:p.mano||'D',...(p.pMan!=null?{pMan:+p.pMan}:{}),...(p.tMan!=null?{tMan:+p.tMan}:{})}));
-  const snapFrentes=MFrentesCJ.map(f=>({alto:+f.alto||0,ancho:+f.ancho||0,tir:f.tir||'on',tipo:f.tipo||'CJ',fondo:f.fondo||'F50',ss:(f.tipo==='GV'&&f.ss==='on')?'on':'off',...(f.pMan!=null?{pMan:+f.pMan}:{}),...(f.tMan!=null?{tMan:+f.tMan}:{})}));
+  const snapFrentes=MFrentesCJ.map(f=>({alto:+f.alto||0,ancho:+f.ancho||0,tir:f.tir||'on',tipo:f.tipo||'CJ',fondo:f.fondo||'F50',ss:(f.tipo==='GV'&&f.ss==='on')?'on':'off',...(f.pMan!=null?{pMan:+f.pMan}:{}),...(f.tMan!=null?{tMan:+f.tMan}:{}),...(esFrenteInt(f)?{int:'on'}:{})})); // Lote F: int (interior)
   MPuertas.forEach((p,i)=>{
     const a=+p.alto||0,w=+p.ancho||0;
     if(a&&w){
@@ -5780,6 +5812,7 @@ function addM(){
   MFrentesCJ.forEach((f,i)=>{
     const a=+f.alto||0,w=+f.ancho||0;
     if(a&&w){
+      if(esFrenteInt(f)){pd.push(`F${i+1}:${f.tipo} interior`);return;} // Lote F: sin frente ni tirador; el herraje va como hija
       ptTot+=precioPuertaItem(a,w,f);
       frentesParaIndic.push({tipo:f.tipo,ancho:w});
       pd.push(`F${i+1}:${a}×${w} ${f.tipo}`);
@@ -5879,7 +5912,7 @@ function addM(){
       const ssEf=f.tipo==='GV'&&f.ss==='on'&&admiteSalvasifon(SEL);
       const her=precioCajonHerraje(S.modCaj,f.tipo,f.fondo||'F50',w,ssEf);
       if(!her)return;
-      LN.push({id:++LID,sec:'Varios',tab:null,desc:her.descripcion,cnt,p:her.precio,nota:`(auto: ${SEL.nom})`,parentId:idMueble,subtipo:'cajon'}); // Lote K: subtipo para reconocerla
+      LN.push({id:++LID,sec:'Varios',tab:null,desc:her.descripcion+(esFrenteInt(f)?' (interior)':''),cnt,p:her.precio,nota:`(auto: ${SEL.nom})`,parentId:idMueble,subtipo:'cajon'}); // Lote K: subtipo para reconocerla · Lote F: interior
     });
     // Lote X1 (24-09-2026, Álvaro) — push to open auto: una línea hija por cada puerta de la columna/semicolumna horno/micro
     // con gola (×2 en 2Pta), al precio de «Sistema Push en Puertas» del catálogo de Varios.
@@ -6939,28 +6972,56 @@ function metaBaldasFormulario(){
     baldasMan:necesitaBaldasManual(SEL,S.tar)?(+document.getElementById('aBaldas').value||0):0,
     mPuertas:pts,altoPuertaMax:pts.reduce((a,p)=>Math.max(a,+p.alto),0)};
 }
+// Lote F (25-09-2026) — reglas por mueble sacadas de calcularHerrajesSueltos tal cual (las comparte la lista de muebles).
+function patasDeMueble(m){
+  if(!(m.esBajo||m.esCol))return 0;
+  if(m.anc===15||m.anc===20)return 2;
+  if(m.esRinEsc)return 8;
+  if(m.esRinRec)return PATAS_RIN_RECTO; // Lote R6: 4 esquinas + 1 en la línea de bisagras
+  if(m.anc>=100)return 6;
+  return 4;
+}
+function colgadoresDeMueble(m){
+  if(m.fam==='Rincón Colgante')return 3;
+  if(m.fam==='Sobre Frigo')return 0;
+  return m.esColg?2:0;
+}
+// Frente en cm que lleva zócalo (bajos, columnas y semicolumnas): escuadra los dos anchos, rincón recto su ancho real,
+// chaflán su ancho (aproximación por debajo, vale para pinzas). Altos y sobrefrigos: 0.
+function frenteZocaloMueble(m){
+  if(!(m.esBajo||m.esCol))return 0;
+  if(m.esRinEsc){const mm=(m.nom||'').match(/(\d+)x(\d+)$/);if(mm)return (+mm[1])+(+mm[2]);}
+  return +m.anchoReal||+m.anc||0;
+}
+// Push to open por unidad de mueble: 1 por puerta (2 en 2Pta) en los muebles con push (columna horno/micro con gola, Lote X1).
+function pushDeMueble(m){
+  if(!m.push)return 0;
+  return (m.mPuertas||[]).reduce((s,p)=>s+(((+p.alto)&&(+p.ancho)&&p.mano!=='FF')?(p.mano==='2'?2:1):0),0);
+}
+function esChaflanMeta(m){return m.forma==='chaflan'||/Rinc\.Chaf/.test(m.nom||'');}
+// Bisagras especiales (Álvaro, 25-09-2026): rincón recto → rectas; escuadra (y fregadero rincón) → 180º; chaflán →
+// ángulo especial; mueble con push → sin freno. Las normales no salen. Solo si el mueble lleva puerta.
+function bisagrasEspeciales(m){
+  if(!m||m.tipo!=='mueble'||!(m.mPuertas||[]).some(p=>(+p.alto)&&(+p.ancho)))return [];
+  const out=[];
+  if(m.esRinRec)out.push(BISAGRAS_ESP.rinRec);
+  if(m.esRinEsc)out.push(BISAGRAS_ESP.esc);
+  if(esChaflanMeta(m))out.push(BISAGRAS_ESP.chaf);
+  if(m.push)out.push(BISAGRAS_ESP.push);
+  if((m.subfam&&m.subfam.sub==='gavint')||(m.mFrentesCJ||[]).some(esFrenteInt))out.push(BISAGRAS_ESP.gavInt); // Lote F: gavetas interiores
+  return out;
+}
 function calcularHerrajesSueltos(){
   let patas=0,colgadores=0,baldas=0,soportes=0,pinzasMad=0,pinzasZoc=0,salvasifon=0,mbaldas=0,abatibles=0; // Lote Q: abatibles
   let sopTrad=0,sopAnti=0; // Lote N — soportes de baldas sueltas, por tipo (tradicional / antivuelco)
+  let frenteZocCm=0,push=0; // Lote F: pinzas de zócalo siempre (por el frente de bajos/columnas) y push to open colocados
   const detalle=[];
   LN.forEach(l=>{
     if(!l.meta)return;
     const m=l.meta,c=l.cnt||1;
     if(m.tipo==='mueble'){
-      // PATAS
-      let p=0;
-      if(m.esBajo||m.esCol){
-        if(m.anc===15||m.anc===20)p=2;
-        else if(m.esRinEsc)p=8;
-        else if(m.esRinRec)p=PATAS_RIN_RECTO; // Lote R6: 4 esquinas + 1 en la línea de bisagras
-        else if(m.anc>=100)p=6;
-        else p=4;
-      }
-      // COLGADORES
-      let cg=0;
-      if(m.fam==='Rincón Colgante')cg=3;
-      else if(m.fam==='Sobre Frigo')cg=0;
-      else if(m.esColg)cg=2;
+      const p=patasDeMueble(m),cg=colgadoresDeMueble(m); // Lote F: mismas reglas, en funciones
+      frenteZocCm+=frenteZocaloMueble(m)*c;push+=pushDeMueble(m)*c;
       // BALDAS — Lote R3: la regla vive en nBaldasMueble (la comparte la vista 3D)
       const b0=nBaldasMueble(m),b=b0-baldasEliminadas(m.piezas,b0); // Lote R5: las baldas eliminadas en el 3D no van
       // SOPORTES
@@ -6976,9 +7037,9 @@ function calcularHerrajesSueltos(){
       const indic=composIndicadorMueble(m.manos,m.frentesIndic);
       if(p||cg||b||mb||ssN||abN)detalle.push({nom:m.nom,indic,cnt:c,patas:p,colgadores:cg,baldas:b,mbaldas:mb,soportes:b*sopUd+mb*SOPORTES_MEDIA_BALDA});
     } else if(m.tipo==='zocalo_cvt'){
-      pinzasMad+=Math.ceil((m.longCm*c)/100*2);
+      pinzasMad+=Math.ceil((m.longCm*c)/100*PINZAS_ZOC_POR_M);
     } else if(m.tipo==='zocalo_varios'){
-      pinzasZoc+=Math.ceil((m.longCm*c)/100*2);
+      pinzasZoc+=Math.ceil((m.longCm*c)/100*PINZAS_ZOC_POR_M);
     } else if(m.tipo==='balda'){
       // Lote N — balda suelta: 4 soportes por unidad del tipo elegido (informativo); "sin soportes" no cuenta.
       const n=(m.sop==='tradicional'||m.sop==='antivuelco')?SOPORTES_BALDA_SUELTA:0;
@@ -6986,41 +7047,75 @@ function calcularHerrajesSueltos(){
       if(n)detalle.push({nom:`Balda suelta ${textoMedidasBalda(m)} · ${BALDA_SOPORTES[m.sop]}`,indic:'',cnt:c,patas:0,colgadores:0,baldas:0,mbaldas:0,soportes:n});
     }
   });
-  return {patas,colgadores,baldas,mbaldas,soportes,sopTrad,sopAnti,pinzasMad,pinzasZoc,salvasifon,abatibles,detalle};
+  // Lote F (25-09-2026, Álvaro): pinzas de zócalo SIEMPRE, por el frente de los bajos/columnas; si además se vende
+  // zócalo del catálogo, nunca menos que las que salen de esas tiras. Chapas de colgador: una por colgador.
+  pinzasZoc=Math.max(pinzasZoc,Math.ceil(frenteZocCm/100*PINZAS_ZOC_POR_M));
+  const chapas=colgadores*CHAPAS_POR_COLGADOR;
+  return {patas,colgadores,chapas,baldas,mbaldas,soportes,sopTrad,sopAnti,pinzasMad,pinzasZoc,salvasifon,abatibles,push,detalle};
 }
 // Hoja imprimible de herrajes sueltos. Página informativa para fábrica, no suma al presupuesto.
+// Lote F-B / F-C (25-09-2026, Álvaro) — hoja «LISTA DE MUEBLES Y HERRAJES» (sustituye a «Herrajes sueltos»):
+//  · Lista de muebles: tipo y qué lleva (cajones/gavetas, push, baldas, patas, colgadores) con las BISAGRAS
+//    ESPECIALES en negrita junto a la descripción (las normales no salen).
+//  · Herrajes en dos apartados: COLOCADOS EN MUEBLE (cajones/gavetas, push to open, colgadores, salvasifón,
+//    abatibles) y SUELTOS (patas, soportes de balda, pinzas de zócalo siempre, chapas de colgador).
+// Informativa: no suma al presupuesto. Solo presentación: LN queda intacto.
+function textoCajonesLista(k,modCaj){
+  if(!k||!k.n)return '';
+  const partes=[];if(k.cj)partes.push(`${k.cj} ${k.cj===1?'cajón':'cajones'}`);if(k.gv)partes.push(`${k.gv} ${k.gv===1?'gaveta':'gavetas'}`);
+  return `${partes.join(' + ')} ${modCaj==='AVYOU'?'AV YOU':'I.ATIRA'}${k.int?(k.int===k.n?' interiores':` (${k.int} interiores)`):''}`; // Lote F
+}
+function buildListaMueblesHTML(){
+  const midOf=l=>(l.meta&&l.meta.modeloId!=null)?l.meta.modeloId:(l.modeloId!=null?l.modeloId:null);
+  const muebles=agruparParaHoja(LN.filter(l=>l.meta&&l.meta.tipo==='mueble'&&!l.parentId),midOf);
+  if(!muebles.length)return '';
+  const tag=l=>{const mid=midOf(l);if(mid==null||MODELOS.length<=1)return '';return `<b>M${mid+1}</b> · `;};
+  let totB=0,totMB=0;
+  const filas=muebles.map(l=>{
+    const m=l.meta,c=l.cnt||1,bis=bisagrasEspeciales(m);
+    const b0=nBaldasMueble(m),b=b0-baldasEliminadas(m.piezas,b0),mb=m.esCol?(m.mediasBaldas||0):0; // Lote R5: baldas eliminadas en el 3D no van
+    totB+=b*c;totMB+=mb*c;
+    const caj=textoCajonesLista(cajonesDeMueble(l.id),m.modCaj||S.modCaj),pu=pushDeMueble(m),pt=patasDeMueble(m),cg=colgadoresDeMueble(m);
+    const extras=[];
+    if(m.frentesCliente)extras.push('frentes del cliente');
+    const ssN=(m.mFrentesCJ||[]).filter(f=>f.tipo==='GV'&&f.ss==='on'&&(+f.alto)&&(+f.ancho)).length;if(ssN)extras.push(`${ssN} salvasifón`);
+    if(m.abatible)extras.push('herraje abatible');
+    return `<tr class="wsr"><td>${c}</td><td>${tag(l)}${esc(l.desc)}${bis.length?` — <strong style="text-transform:uppercase">${bis.join(' · ')}</strong>`:''}${extras.length?`<br><span style="color:#666">${esc(extras.join(' · '))}</span>`:''}</td>`+
+      `<td>${caj}${pu?`${caj?' · ':''}${pu} push to open`:''}</td><td style="text-align:center">${b||''}${mb?` +${mb}½`:''}</td><td style="text-align:center">${pt||''}</td><td style="text-align:center">${cg||''}</td></tr>`;
+  }).join('');
+  return `<table class="wst"><tr class="wsh"><td colspan="6">LISTA DE MUEBLES</td></tr><tr><th>Uds</th><th>Mueble · bisagras especiales</th><th>Cajones / gavetas · push</th><th>Baldas</th><th>Patas</th><th>Colg.</th></tr>${filas}`+
+    `<tr class="wstot"><td colspan="3">Total baldas${totMB?' (½ = medias baldas)':''}</td><td style="text-align:center">${totB}${totMB?` +${totMB}½`:''}</td><td colspan="2"></td></tr></table>`;
+}
 function buildHerrajesSueltosHTML(){
   const h=calcularHerrajesSueltos();
-  if(!h.patas&&!h.colgadores&&!h.baldas&&!h.mbaldas&&!h.soportes&&!h.sopTrad&&!h.sopAnti&&!h.pinzasMad&&!h.pinzasZoc&&!h.salvasifon&&!h.abatibles)return '';
-  const filas=[
-    h.patas?['Patas',h.patas]:null,
+  const cajones=agruparHijasVisual(LN.filter(esHijaCajon)); // Lote K: una hija por frente, cnt = uds del mueble
+  const colocados=[
+    ...cajones.map(l=>[l.desc,l.cnt]),
+    h.push?['Push to open (1 por puerta)',h.push]:null,
     h.colgadores?['Colgadores',h.colgadores]:null,
-    h.baldas?['Baldas',h.baldas]:null,
-    h.mbaldas?['Medias baldas',h.mbaldas]:null,
+    h.salvasifon?['Accesorio salvasifón',h.salvasifon]:null,
+    h.abatibles?['Herraje abatible sobrefrigo (medida s/ tabla)',h.abatibles]:null // Lote Q
+  ].filter(Boolean);
+  const sueltos=[
+    h.patas?['Patas',h.patas]:null,
     h.soportes?['Soportes de balda',h.soportes]:null,
     h.sopTrad?['Soportes balda suelta (tradicional)',h.sopTrad]:null, // Lote N
     h.sopAnti?['Soportes balda suelta (antivuelco)',h.sopAnti]:null,  // Lote N
-    h.salvasifon?['Accesorio salvasifón',h.salvasifon]:null,
-    h.abatibles?['Herraje abatible sobrefrigo (medida s/ tabla)',h.abatibles]:null, // Lote Q
+    h.pinzasZoc?['Pinzas de zócalo',h.pinzasZoc]:null,
     h.pinzasMad?['Pinzas zócalo de madera',h.pinzasMad]:null,
-    h.pinzasZoc?['Pinzas zócalo',h.pinzasZoc]:null
+    h.chapas?['Chapas de colgador',h.chapas]:null
   ].filter(Boolean);
-  let html=`<div style="page-break-before:always;padding-top:8px">`+
+  const lista=buildListaMueblesHTML();
+  if(!lista&&!colocados.length&&!sueltos.length)return '';
+  const tabla=(tit,filas)=>`<table class="wst"><tr class="wsh"><td colspan="2">${tit}</td></tr><tr><th>Herraje</th><th style="text-align:right">Uds</th></tr>`+
+    (filas.length?filas.map(([k,v])=>`<tr class="wsr"><td style="text-align:left;font-weight:400">${esc(k)}</td><td style="text-align:right;font-weight:900;font-size:11px">${v}</td></tr>`).join(''):'<tr class="wsr"><td colspan="2" style="color:#888;font-style:italic">— ninguno —</td></tr>')+'</table>';
+  return `<div style="page-break-before:always;padding-top:8px">`+
     `<div class="wshead"><div><img src="https://almacengrupocinco.es/wp-content/uploads/2016/05/cropped-logo.png" height="36" onerror="this.style.display='none'"><div style="font-size:8px;color:#666;margin-top:3px">Cañada Aguilera 63 · 47155 Santovenia · 983 268 328</div></div>`+
-    `<div style="text-align:right"><div style="font-size:14px;font-weight:700;color:#4A2C0E">HERRAJES SUELTOS</div><div style="font-size:9px;color:#666">${rotuloDoc()} · ${S.fecha||'—'}</div></div></div>`+
-    `<div style="font-size:10px;color:#666;font-style:italic;margin-bottom:8px">Cálculo automático para fábrica. No suma al presupuesto.</div>`+
-    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">`+
-    `<table class="wst"><tr class="wsh"><td colspan="2">RESUMEN HERRAJES</td></tr><tr><th>Herraje</th><th style="text-align:right">Uds</th></tr>`+
-    filas.map(([k,v])=>`<tr class="wsr"><td>${k}</td><td style="text-align:right;font-weight:900;font-size:11px">${v}</td></tr>`).join('')+
-    `</table>`;
-  // Tabla detalle por mueble
-  if(h.detalle.length){
-    html+=`<table class="wst"><tr class="wsh"><td colspan="7">DESGLOSE POR MUEBLE</td></tr><tr><th>Uds</th><th>Mueble</th><th>Patas</th><th>Colgadores</th><th>Baldas</th><th>M.Baldas</th><th>Soportes</th></tr>`+
-      h.detalle.map(d=>`<tr class="wsr"><td>${d.cnt}</td><td>${d.nom}${d.indic?` — <strong>${d.indic}</strong>`:''}</td><td style="text-align:center">${d.patas||''}</td><td style="text-align:center">${d.colgadores||''}</td><td style="text-align:center">${d.baldas||''}</td><td style="text-align:center">${d.mbaldas||''}</td><td style="text-align:center">${d.soportes||''}</td></tr>`).join('')+
-      `</table>`;
-  }
-  html+='</div></div>';
-  return html;
+    `<div style="text-align:right"><div style="font-size:14px;font-weight:700;color:#4A2C0E">LISTA DE MUEBLES Y HERRAJES</div><div style="font-size:9px;color:#666">${rotuloDoc()} · ${S.fecha||'—'}</div></div></div>`+
+    `<div style="font-size:10px;color:#666;font-style:italic;margin-bottom:8px">Cálculo automático para fábrica. No suma al presupuesto. En negrita, las bisagras especiales; las normales no salen.</div>`+
+    lista+
+    `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px">${tabla('HERRAJES COLOCADOS EN MUEBLE',colocados)}${tabla('HERRAJES SUELTOS',sueltos)}</div>`+
+    `</div>`;
 }
 // ═════════════════════════ LOTE H — LISTA DE TIRADORES ═════════════════════════
 // Recuento informativo de tiradores del proyecto por modelo, color y medida estándar de
@@ -7156,7 +7251,7 @@ function buildWS(){
   h+='</div>';
   // TOTALS BOX
   h+=`<div style="margin-top:12px;display:flex;justify-content:flex-end"><table class="wst" style="width:250px"><tr class="wsh"><td colspan="2">RESUMEN</td></tr><tr><td><b>Base €</b></td><td style="text-align:right;font-weight:900">${base.toFixed(2)} €</td></tr><tr><td><b>Tipo(${ivr}%)</b></td><td style="text-align:right">${(base*ivr/100).toFixed(2)} €</td></tr><tr class="wstot"><td><b>PVP €</b></td><td style="text-align:right;font-size:12px">${(base*(1+ivr/100)).toFixed(2)} €</td></tr></table></div>`;
-  // HOJA HERRAJES SUELTOS (tercera página, informativa)
+  // HOJA LISTA DE MUEBLES Y HERRAJES (Lote F-B/F-C; antes «Herrajes sueltos»), informativa
   h+=buildHerrajesSueltosHTML();
   // HOJA LISTA DE TIRADORES (Lote H, informativa)
   h+=buildTiradoresHTML();
@@ -7215,7 +7310,7 @@ function sumarCajon(k,esGaveta,precio){k.n++;if(esGaveta)k.gv++;else k.cj++;k.to
 // Cajones/gavetas por unidad de un mueble ya presupuestado (desde sus hijas en LN).
 function cajonesDeMueble(idMueble){
   const k={n:0,cj:0,gv:0,tot:0};
-  LN.forEach(h=>{if(h.parentId===idMueble&&esHijaCajon(h))sumarCajon(k,/^Gaveta/.test(h.desc||''),h.p);});
+  LN.forEach(h=>{if(h.parentId===idMueble&&esHijaCajon(h)){sumarCajon(k,/^Gaveta/.test(h.desc||''),h.p);if(/\(interior\)$/.test(h.desc||''))k.int=(k.int||0)+1;}}); // Lote F: interiores
   return k;
 }
 // Texto «incl. 2 cajones + 1 gaveta 85,00 €» (por unidad de mueble). Con html=true el importe va en
@@ -7663,6 +7758,9 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 function imprimirSinValorar(){imprimirConClase('sinval');}
 // Lote K — impresión "Presupuesto cliente": solo cabecera, cliente, líneas y totales (ver CSS .pcli).
 function imprimirCliente(){imprimirConClase('pcli');}
+// Lote F (25-09-2026) — «Impresión de fábrica»: solo las hojas de fábrica (producción, lista de muebles y
+// herrajes, tiradores y, cuando estén, listas de corte). Sin presupuesto ni escena (ver CSS .pfab).
+function imprimirFabrica(){if(!LN.length){flash('⚠️ No hay líneas que imprimir');return;}imprimirConClase('pfab');}
 // Lote K — mecánica común: la clase va en <body> solo mientras dura la impresión.
 function imprimirConClase(cls){
   document.body.classList.add(cls);
