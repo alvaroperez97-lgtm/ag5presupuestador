@@ -211,7 +211,7 @@ tr:hover td{background:var(--c);}
 .escHueco b{font-weight:900;white-space:nowrap;} .escHueco.sel{outline:2px solid #3b6ea5;outline-offset:1px;}
 .escHuecoForm{border:1.5px solid var(--cd);border-radius:8px;padding:8px 9px;margin-top:6px;background:var(--c);}
 .escHuecoForm label{font-size:9.5px;letter-spacing:.3px;} .escHuecoForm input,.escHuecoForm select{font-size:12px;padding:5px 7px;}
-#escV3d{max-width:min(100%,calc((100vh - 240px) * 1.2));}
+#escV3d{max-width:min(100%,calc((100vh - 240px) * 1.2));position:relative;}
 /* Lote V2b (24-09-2026) — fotos del 3D y hoja «Escena» en la impresión */
 .escFotos{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;} .escFoto{width:150px;max-width:46%;} .escFoto img{width:100%;display:block;border:1px solid var(--cd);border-radius:6px;background:#fff;}
 .escFoto div{display:flex;gap:4px;justify-content:space-between;align-items:center;font-size:10.5px;color:var(--mm);margin-top:3px;} .escFoto a,.escFoto button{font-size:11px;padding:3px 7px;}
@@ -966,7 +966,7 @@ tr:hover td{background:var(--c);}
         </div>
         <span id="escRes" class="escRes" onclick="escenaFormulario(true)" title="Cambiar las medidas de la habitación"></span>
         <!-- Lote V2b: cotas e impresión -->
-        <button class="btn r3dBtn2" id="escBtnCotas" onclick="escenaToggleCotas()" style="font-size:11px;padding:6px 10px" title="Cotas de muebles y huecos en cada pared">📏 Cotas</button>
+        <button class="btn r3dBtn2" id="escBtnCotas" onclick="escenaToggleCotas()" style="font-size:11px;padding:6px 10px" title="Cotas: en la planta, muebles y huecos de cada pared; en el 3D, el ancho de cada mueble y el fondo especial en rojo">📏 Cotas</button>
         <button class="btn r3dBtn2" onclick="imprimirEscena()" style="font-size:11px;padding:6px 10px" title="Hoja con la planta acotada, la lista de muebles y las fotos">🖨️ Imprimir escena</button>
       </div>
       <div id="escVPlanta">
@@ -1115,7 +1115,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-24.9';
+const APP_BUILD = '2026-09-25.1';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1615,7 +1615,9 @@ const R3D_CTE={
   traseraRemetida:5,   // cm desde atrás hasta la CARA TRASERA de la trasera (bajo puerta); confirmado 22-09-2026. Grosor: grosorTrasera()
   frenteGrosor:1.9,    // cm: puertas y frentes
   frenteHolgura:0.15,  // cm que se quita a cada borde de puerta/frente para que se vean las juntas
-  pataAlto:10, pataDiam:5, pataInset:5,   // patas de plástico negro: alto por defecto (el proyecto elige 10/15, S.patas); Ø y retranqueo [supuesto]
+  pataAlto:10, pataDiam:3.5, pataInset:6.5, // patas de plástico negro: alto por defecto (el proyecto elige 10/15, S.patas)
+  // Lote Z (25-09-2026, Álvaro) — pataInset: eje de la pata a 6,5 del frente / trasera y de cada costado (mecanizado real).
+  // pataDiam 3,5 [supuesto, tubo de la pata]: como mucho 3,8 para no tocar el zócalo lateral de la escena (cara interior a 4,6).
   golaAlto:REBAJE_PUERTA_GOLA, // perfil gola: ocupa los 3 cm que se rebajan a la puerta
   // Lote R4 (23-09-2026) — la gola es un HUECO, no un listón: se dibuja dentro del grosor del frente (entre la cara de la
   // puerta y el casco) con fondo en sombra, ala superior enrasada con la cara de los frentes y, en golas intermedias
@@ -3118,6 +3120,8 @@ const ESC_CTE={
   encGros:3.8, encGrosores:[3.8,3], encFon:63, encFonMin:40, encFonMax:100, // cm: encimera AG5 de 38 mm (o 30), fondo 63 desde la pared (Álvaro, 24-09-2026)
   colEnc:{blanco:'#f6f6f2',negro:'#2f2f31'},encNom:{blanco:'blanca',negro:'negra'}, // encimera blanca o negra, para que resalte de los muebles
   zocGrosor:1.6, zocRetr:3,                                      // cm: zócalo de 16 mm, retranqueado 3 cm respecto a la cara de la puerta
+  zocRetrLat:3, zocJunta:1,                                      // Lote Z (25-09-2026): zócalo lateral de cierre a 3 cm de la cara del costado; hueco ≤ 1 cm entre muebles o contra la pared = cerrado
+  colCotaEsp:'#c62828', cota3dPx:11,                             // Lote CT (25-09-2026): fondo especial en rojo; letra de las cotas del 3D en px de pantalla
   colZoc:{blanco:'#f4f4f0',negro:'#2b2b2b',aluminio:'#b8bcc2'},  // 'puerta' = color de los frentes (R3D_COL.frente)
   cotaFila:1.7, cotaTextoMin:2.3,                                // filas de cotas: alto de fila en letras; una cota se escribe si mide más de tantas letras
   colCota:'#5a4a30',
@@ -3452,7 +3456,8 @@ function escenaPintarSelectores(){const E=ESCENA;if(!E)return;const a=document.g
 function escenaSetEnc(v){if(!ESCENA)return;ESCENA.enc=escenaSanearEnc(Object.assign({},ESCENA.enc,v==='off'?{on:false}:{on:true,col:v}));escenaRefrescar3D();}
 function escenaSetZoc(v){if(!ESCENA)return;ESCENA.zoc=escenaSanearZoc(Object.assign({},ESCENA.zoc,v==='off'?{on:false}:{on:true,col:v}));escenaRefrescar3D();}
 function escenaRefrescar3D(){if(ESC_UI.vista!=='3d'||!R3DE.esc)return;R3DE.esc=escenaPiezas3D();const cap=document.getElementById('escV3dCap');if(cap)cap.innerHTML=escenaCaption3D(R3DE.esc);r3dPintar(R3DE);}
-function escenaToggleCotas(){ESC_UI.cotas=!ESC_UI.cotas;document.getElementById('escBtnCotas')?.classList.toggle('on',ESC_UI.cotas);escenaPintarPlanta();}
+function escenaToggleCotas(){ESC_UI.cotas=!ESC_UI.cotas;document.getElementById('escBtnCotas')?.classList.toggle('on',ESC_UI.cotas);escenaPintarPlanta();
+  if(ESC_UI.vista==='3d')r3dPintar(R3DE);} // Lote CT: también en el 3D
 // Unión de rectángulos [x0, y0, x1, y1] → un polígono por trozo continuo: {pts: contorno (sentido horario con y hacia abajo),
 // rects: descomposición en rectángulos}. Rejilla con todas las x e y; celdas cubiertas; contorno = aristas no compartidas.
 function escenaUnionRects(R){
@@ -3493,18 +3498,72 @@ function escenaEncimeraPlanta(E){
     (grupos[y]=grupos[y]||[]).push(...rects.map(box));});
   return Object.keys(grupos).map(y=>({y:+y,polis:escenaUnionRects(grupos[y])})).concat(sueltos);
 }
-// Piezas 3D de la encimera (prismas sobre los bajos) y de los zócalos (una caja por tramo de frente de cada bajo o columna,
-// retranqueada respecto a la cara de la puerta y de la altura de las patas).
+// Piezas 3D de la encimera (prismas sobre los bajos) y de los zócalos (de la altura de las patas; tramos y laterales en
+// escenaZocalos, Lote Z): cajas si van con los ejes, prismas si van en diagonal (chaflanes).
 function escenaExtras3D(E){
   E=E||ESCENA;const C=ESC_CTE,W=E.ancho,out=[];
   const colE=E.enc&&C.colEnc[E.enc.col]||C.colEnc.blanco;
   escenaEncimeraPlanta(E).forEach(g=>g.polis.forEach(p=>out.push({k:'prism',pts:p.pts.map(q=>[q[0],W-q[1]]),rects:p.rects?p.rects.map(r=>[r[0],W-r[3],r[2],W-r[1]]):null,y:g.y,h:E.enc.gros,col:colE,st:'#7a7a74'})));
-  if(E.zoc&&E.zoc.on){const pa=+S.patas||R3D_CTE.pataAlto,col=E.zoc.col==='puerta'?R3D_COL.frente:C.colZoc[E.zoc.col],g=C.zocGrosor,r=C.zocRetr-R3D_CTE.frenteGrosor; // r: retranqueo medido desde el frente del casco
-    E.items.forEach(it=>{const l=LN.find(x=>x.id===it.lid),h=escenaHuella(l);if(!h||h.nivel==='alto'||h.forma==='chaf'||h.forma==='trap')return; // Lote C1: zócalo del chaflán pendiente
-      const T=escenaRotar(it,h),F=h.F,box=q=>{const a=T(q[0],q[1]),b=T(q[2],q[3]),x0=Math.min(a[0],b[0]),y0=Math.min(a[1],b[1]);return {k:'box',x:x0,y:0,z:W-Math.max(a[1],b[1]),w:Math.abs(b[0]-a[0]),h:pa,d:Math.abs(b[1]-a[1]),col,st:'#555'};};
-      if(h.forma==='rect')out.push(box([0,F-r-g,h.bw,F-r]));
-      else{out.push(box([F-r,F-r-g,h.bw,F-r]));out.push(box([F-r-g,F-r-g,F-r,h.bd]));}}); // L: el tramo largo arranca en la cara del corto (sin solaparse)
+  if(E.zoc&&E.zoc.on){const pa=+S.patas||R3D_CTE.pataAlto,col=E.zoc.col==='puerta'?R3D_COL.frente:C.colZoc[E.zoc.col];
+    escenaZocalos(E).forEach(z=>out.push(z.pts?{k:'prism',pts:z.pts.map(q=>[q[0],W-q[1]]),rects:null,y:0,h:pa,col,st:'#555'}
+      :{k:'box',x:z.x0,y:0,z:W-z.y1,w:z.x1-z.x0,h:pa,d:z.y1-z.y0,col,st:'#555'}));
   }
+  return out;
+}
+// Lote Z (25-09-2026, Álvaro) — zócalo en TODOS los bajos, columnas y semicolumnas (también el bajo chaflán y el rincón
+// chaflán, paralelo a la diagonal) y CERRADO. Tramo delantero a zocRetr de la cara de la puerta. En cada punta del frente
+// (el costado del final del mueble), mirando a zocJunta por fuera del costado:
+//   · pared, o mueble del suelo con igual o más fondo → el delantero llega al costado (sin lateral);
+//   · nada → zócalo lateral a zocRetrLat de la cara del costado, desde el delantero hasta la trasera del mueble (la pared);
+//   · mueble de menos fondo (escalón) → el lateral cierra el escalón desde el zócalo del vecino y un trozo corto, bajo
+//     este mueble, une el zócalo del vecino con la cara exterior del lateral;
+//   · un pilar al lado que no llega al delantero → el lateral va del pilar al delantero.
+// Con lateral, el delantero se corta en la cara exterior del lateral. Solo dibujo. Devuelve piezas en coordenadas de la
+// planta: {x0,y0,x1,y1} si es un rectángulo con los ejes, {pts} si va en diagonal.
+function escenaZocalos(E){
+  E=E||ESCENA;const C=ESC_CTE,g=C.zocGrosor,r=C.zocRetr-R3D_CTE.frenteGrosor,a=C.zocRetrLat,j=C.zocJunta,out=[]; // r: retranqueo desde el frente del casco
+  const G=E.items.map(it=>{const q=escenaGeo(it);return q&&q.h.nivel!=='alto'?Object.assign(q,{it}):null;});
+  const fijos=escenaObstaculos(E).filter(o=>o.t==='recorte'||o.t==='pilar').map(o=>o.rect);
+  const dentro=(p,Q)=>{let c=false;for(let k=0,m=Q.length-1;k<Q.length;m=k++){const A=Q[k],B=Q[m];
+    if((A[1]>p[1])!==(B[1]>p[1])&&p[0]<(B[0]-A[0])*(p[1]-A[1])/(B[1]-A[1])+A[0])c=!c;}return c;};
+  // Qué hay en el punto p de la planta: 'pared' (fuera de la habitación, recorte o pilar), el índice de otro mueble del suelo, o null
+  const que=(p,i)=>{if(p[0]<0||p[1]<0||p[0]>E.largo||p[1]>E.ancho||fijos.some(q=>p[0]>q[0]&&p[0]<q[2]&&p[1]>q[1]&&p[1]<q[3]))return 'pared';
+    for(let k=0;k<G.length;k++)if(k!==i&&G[k]&&dentro(p,G[k].poly))return k;
+    return null;};
+  const P=(ax,s,t)=>ax==='u'?[s,t]:[t,s]; // punto local: s = valor en el eje del costado, t = distancia desde la trasera a lo largo del costado
+  const corta=(Q,d,ax,val)=>{const x=ax==='u'?0:1,t=(val-Q[x])/d[x];return [Q[0]+t*d[0],Q[1]+t*d[1]];};
+  const pieza=(T,pts)=>{const q=pts.map(p=>T(p[0],p[1])),xs=q.map(p=>p[0]),ys=q.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys),e=1e-6;
+    if(x1-x0<e||y1-y0<e)return;
+    if(q.every(p=>(Math.abs(p[0]-x0)<e||Math.abs(p[0]-x1)<e)&&(Math.abs(p[1]-y0)<e||Math.abs(p[1]-y1)<e)))out.push({x0,y0,x1,y1});else out.push({pts:q});};
+  G.forEach((q,i)=>{if(!q)return;const h=q.h,T=escenaRotar(q.it,h),F=h.F,Wm=h.bw,H=h.bd;
+    // Tramos del frente A → B con su normal n hacia dentro del casco. En cada punta, el costado que la cierra
+    // {ax: eje constante en el costado, c: su valor, o: +1/−1 hacia fuera, L: largo del costado desde la trasera} o, en la
+    // esquina interior del L, el corte fijo {ax, val} (el tramo largo arranca en la cara del corto, sin solaparse).
+    let tr;
+    if(h.forma==='rect')tr=[{A:[0,F],B:[Wm,F],n:[0,-1],eA:{ax:'u',c:0,o:-1,L:F},eB:{ax:'u',c:Wm,o:1,L:F}}];
+    else if(h.forma==='trap'){const fI=h.poly[3][1],fD=h.poly[2][1],k=Math.hypot(Wm,fD-fI);
+      tr=[{A:[0,fI],B:[Wm,fD],n:[(fD-fI)/k,-Wm/k],eA:{ax:'u',c:0,o:-1,L:fI},eB:{ax:'u',c:Wm,o:1,L:fD}}];}
+    else if(h.forma==='chaf'){const k=Math.hypot(Wm-F,H-F);
+      tr=[{A:[Wm,F],B:[F,H],n:[-(H-F)/k,-(Wm-F)/k],eA:{ax:'u',c:Wm,o:1,L:F},eB:{ax:'v',c:H,o:1,L:F}}];}
+    else tr=[{A:[Wm,F],B:[F,F],n:[0,-1],eA:{ax:'u',c:Wm,o:1,L:F},eB:{ax:'u',val:F-r}},
+      {A:[F,F],B:[F,H],n:[-1,0],eA:{ax:'v',val:F-r-g},eB:{ax:'v',c:H,o:1,L:F}}];
+    tr.forEach(s=>{const d=[s.B[0]-s.A[0],s.B[1]-s.A[1]],Qo=[s.A[0]+r*s.n[0],s.A[1]+r*s.n[1]],Qi=[s.A[0]+(r+g)*s.n[0],s.A[1]+(r+g)*s.n[1]];
+      const punta=e=>{
+        if(e.val!=null)return e.val;
+        const fuera=t=>T(...P(e.ax,e.c+e.o*j,t)),sm=e.L-r-g/2,x=e.ax==='u'?1:0;
+        if(que(fuera(sm),i)!=null)return e.c; // cerrado: pared o vecino con fondo
+        let tn=0,src=null;
+        for(let t=sm-0.5;t>=0;t-=0.5){const w=que(fuera(t),i);if(w!=null){let lo=t,hi=Math.min(t+0.5,sm);
+          for(let k=0;k<14;k++){const m=(lo+hi)/2;if(que(fuera(m),i)!=null)lo=m;else hi=m;}
+          tn=Math.round((lo+hi)/2*10)/10;src=w;break;}}
+        const s1=e.c-e.o*a,s2=e.c-e.o*(a+g),t1=corta(Qi,d,e.ax,s1)[x],t2=corta(Qi,d,e.ax,s2)[x];
+        const t0=src==null?0:(src==='pared'?tn:Math.max(0,tn-r-g));
+        if(Math.min(t1,t2)>t0+0.1)pieza(T,[P(e.ax,s1,t0),P(e.ax,s1,t1),P(e.ax,s2,t2),P(e.ax,s2,t0)]);
+        if(src!=null&&src!=='pared'&&tn-r>0)pieza(T,[P(e.ax,s1,Math.max(0,tn-r-g)),P(e.ax,e.c,Math.max(0,tn-r-g)),P(e.ax,e.c,tn-r),P(e.ax,s1,tn-r)]); // unión con el zócalo del vecino
+        return s1;};
+      const vA=punta(s.eA),vB=punta(s.eB);
+      pieza(T,[corta(Qo,d,s.eA.ax,vA),corta(Qo,d,s.eB.ax,vB),corta(Qi,d,s.eB.ax,vB),corta(Qi,d,s.eA.ax,vA)]);});
+  });
   return out;
 }
 // Cotas de la planta: en cada pared, una cadena con los bajos y columnas pegados a ella y sus huecos (fila 1), otra con
@@ -3547,6 +3606,7 @@ function escenaFoto(){
   r3dPintar(R3DE);
   const cv=X.cv,k=Math.min(1,C.fotoAnchoMax/cv.width),t=document.createElement('canvas');t.width=Math.max(1,Math.round(cv.width*k));t.height=Math.max(1,Math.round(cv.height*k));
   const g=t.getContext('2d');g.drawImage(cv,0,0,t.width,t.height);
+  if(ESC_UI.cotas&&R3DE.cotasUlt)escenaCotasEnFoto(g,t.width/R3D_W,R3DE.cotasUlt); // Lote CT: la foto sale como se ve, con cotas si están puestas
   let img='';try{img=t.toDataURL('image/jpeg',C.fotoCalidad);}catch(_){img='';}
   if(!/^data:image\/jpeg;base64,./.test(img)){flash('⚠️ No se ha podido hacer la foto en este navegador');return;}
   E.fotos.push({ts:Date.now(),img,w:t.width,h:t.height});escenaPintarFotos();flash(`📷 Foto ${E.fotos.length} guardada con la escena`);
@@ -3792,6 +3852,44 @@ function escenaPintar3D(vis){
   gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,2);r3dGLDibuja(X,M.op);gl.disable(gl.POLYGON_OFFSET_FILL);
   gl.enable(gl.BLEND);gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
   r3dGLDibuja(X,M.li);r3dGLDibuja(X,M.tr);gl.depthMask(true);
+  escenaPintarCotas3D(vis,cam,cssW); // Lote CT
+}
+// Lote CT (25-09-2026, Álvaro) — cotas en el 3D de la escena (📏): cada mueble lleva debajo su ancho (bajos y columnas
+// delante, a media altura del zócalo; altos justo bajo su canto de abajo) y, si su fondo no es el del armazón, el fondo en
+// rojo. Bajo chaflán: siempre sus dos fondos (izquierdo / derecho) en rojo. Rincón escuadra: «90×80» (brazo izq. × dcho.)
+// en la esquina interior; rincón chaflán: lo mismo en el centro de la diagonal. Devuelve [{p: punto 3D, abajo: el texto va bajo el punto, t: [[texto, rojo]]}].
+function escenaCotas3DLista(E){
+  E=E||ESCENA;const out=[],pa=+S.patas||R3D_CTE.pataAlto,Wr=E.ancho;
+  E.items.forEach(it=>{const l=LN.find(x=>x.id===it.lid),h=escenaHuella(l);if(!h)return;
+    const m=l.meta,arm=ARM.find(x=>x.id===(m.armIdSeleccionado||m.armId)),T=escenaRotar(it,h),alto=h.nivel==='alto';
+    const y=alto?E.altoAltos-h.alt:pa/2,P3=(u,v)=>{const q=T(u,v);return [q[0],y,Wr-q[1]];},lab=(u,v,t)=>out.push({p:P3(u,v),abajo:alto,t});
+    const fStd=arm?+arm.fon||0:0,fEsp=h.forma!=='trap'&&fStd&&Math.abs(h.F-fStd)>0.05?[['F.'+fmtCm(h.F),true]]:[];
+    if(h.forma==='rect')lab(h.bw/2,h.F,[[fmtCm(h.bw),false]].concat(fEsp));
+    else if(h.forma==='trap'){const fI=h.poly[3][1],fD=h.poly[2][1];lab(h.bw/2,(fI+fD)/2,[[fmtCm(h.bw),false],['F.'+fmtCm(fI)+'/'+fmtCm(fD),true]]);}
+    else if(h.forma==='chaf')lab((h.bw+h.F)/2,(h.F+h.bd)/2,[[fmtCm(h.bd)+'×'+fmtCm(h.bw),false]].concat(fEsp));
+    else lab(h.F,h.F,[[fmtCm(h.bd)+'×'+fmtCm(h.bw),false]].concat(fEsp)); // L: en la esquina interior, brazo izq. × dcho. (como el nombre del armazón)
+  });
+  return out;
+}
+// Capa SVG encima del lienzo WebGL con las cotas (se quita al apagar 📏). Guarda lo pintado en vis.cotasUlt para la foto.
+function escenaPintarCotas3D(vis,cam,cssW){
+  const cont=document.getElementById(vis.cont),cv=vis.glx&&vis.glx.cv;let d=document.getElementById('escV3dCotas');
+  if(!ESC_UI.cotas||!cont||!cv||!ESCENA){if(d)d.remove();vis.cotasUlt=null;return;}
+  const C=ESC_CTE,fs=C.cota3dPx*R3D_W/cssW,L=escenaCotas3DLista().map(c=>{const q=cam.proy(c.p);return {x:q[0],y:q[1]+(c.abajo?fs*0.9:0),t:c.t};});
+  vis.cotasUlt={L,fs};
+  if(!d){d=document.createElement('div');d.id='escV3dCotas';cont.appendChild(d);}
+  d.style.cssText=`position:absolute;left:${cv.offsetLeft}px;top:${cv.offsetTop}px;width:${cssW}px;height:${cv.clientHeight||cssW*R3D_H/R3D_W}px;pointer-events:none`;
+  const txt=c=>`<text x="${r1(c.x)}" y="${r1(c.y)}" font-size="${r1(fs)}" font-weight="700" font-family="Lato,sans-serif" text-anchor="middle" dominant-baseline="central" stroke="#fff" stroke-width="${r1(fs*0.28)}" stroke-linejoin="round" paint-order="stroke">`+
+    c.t.map(([s,rojo],k)=>(k?`<tspan fill="${C.colCota}">\u00a0·\u00a0</tspan>`:'')+`<tspan fill="${rojo?C.colCotaEsp:C.colCota}">${esc(s)}</tspan>`).join('')+'</text>';
+  d.innerHTML=`<svg viewBox="0 0 ${R3D_W} ${R3D_H}" width="100%" height="100%" style="display:block;overflow:visible">${L.map(txt).join('')}</svg>`;
+}
+// Las mismas cotas escritas en la foto (lienzo 2D): k = px de la foto por unidad del viewBox. Primero el contorno blanco
+// de todas, luego el texto, para que no se tapen entre ellas.
+function escenaCotasEnFoto(g,k,U){
+  const C=ESC_CTE,f=U.fs*k;g.font=`700 ${f}px Lato, sans-serif`;g.textBaseline='middle';g.textAlign='left';g.lineJoin='round';g.lineWidth=f*0.28;g.strokeStyle='#fff';
+  const pos=U.L.map(c=>{const pz=[];c.t.forEach(([s,rojo],i)=>{if(i)pz.push(['\u00a0·\u00a0',C.colCota]);pz.push([s,rojo?C.colCotaEsp:C.colCota]);});
+    let x=c.x*k-pz.reduce((a,p)=>a+g.measureText(p[0]).width,0)/2;return pz.map(p=>{const q={s:p[0],col:p[1],x,y:c.y*k};x+=g.measureText(p[0]).width;return q;});}).flat();
+  pos.forEach(q=>g.strokeText(q.s,q.x,q.y));pos.forEach(q=>{g.fillStyle=q.col;g.fillText(q.s,q.x,q.y);});
 }
 function escenaCaption3D(E){
   let t=`${ESCENA.items.length} de ${escenaUnidades()} muebles colocados · bajos y columnas sobre patas de ${S.patas||'10'} · altura de colgar ${fmtCm(ESCENA.altoAltos)} cm`;
