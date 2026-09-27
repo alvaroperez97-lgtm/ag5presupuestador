@@ -142,6 +142,10 @@ tr:hover td{background:var(--c);}
   header,nav,.tc:not(#tp),.ab,.np{display:none!important;}
   #tp{display:block!important;padding:0;}
   .ws-print{display:block!important;page-break-before:always;}
+  /* Lote B3 (27-09-2026, Álvaro): número de hoja en todas las impresiones, abajo a la derecha. Chrome numera por trabajo de
+     impresión (no deja reiniciar la cuenta a mitad): cada botón que imprime un solo documento empieza en 1; «Imprimir
+     valorado» y «fábrica», que sacan varios documentos de una vez, numeran seguido. */
+  @page{margin:10mm 10mm 12mm 10mm;@bottom-right{content:"Hoja " counter(page) " de " counter(pages);font-family:sans-serif;font-size:8pt;color:#777;}} /* márgenes fijos (los «predeterminados» de Chrome, ~1 cm) para que el pie tenga sitio */
   .ph{display:flex!important;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:2px solid #4A2C0E;margin-bottom:16px;}
   body{background:#fff;font-size:10.5px;}
   .tbox{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
@@ -476,6 +480,8 @@ tr:hover td{background:var(--c);}
           <div class="fg"><label>Desc.</label><input id="qD" placeholder="Puerta adicional..."></div>
           <button class="btn bp" onclick="addQP()" style="margin-bottom:1px">+</button>
         </div>
+        <!-- Lote B2 (27-09-2026): con o sin bisagras (sin = −2 × 5,37 €) -->
+        <div class="tgg" id="qBisTgg" style="margin-top:8px"><button class="tgb on" data-b="1" onclick="setQBis(true)" style="padding:5px 11px;font-size:11px">Con bisagras</button><button class="tgb" data-b="0" onclick="setQBis(false)" style="padding:5px 11px;font-size:11px">Sin bisagras</button></div>
         <div id="qpP" style="font-size:12px;color:var(--mm);margin-top:5px;font-weight:700;"></div>
       </div>
     </div>
@@ -553,7 +559,7 @@ tr:hover td{background:var(--c);}
           <div style="font-size:11px;color:var(--dc);margin-bottom:10px;font-style:italic">Rincón: configura puertas y regleta</div>
           <!-- Lote U (23-09-2026): el ancho real del rincón recto y el cajeo viga/columna se ponen en «📐 Medidas especiales».
                El ancho real sigue guardado en este campo oculto (vacío = estándar), que leen rdsg(), addRin() y el 3D. -->
-          <div style="display:none"><input type="number" id="rRRecAncho"></div>
+          <div style="display:none"><input type="number" id="rRRecAncho"><input type="number" id="rRAlt"><input type="number" id="rRFon"><input type="number" id="rRLadoI"></div><!-- Lote B1: alto, fondo y lado izq. del rincón (vacío = tarifa) -->
           <div id="rMedRes" class="medRes" onclick="abrirMedidasEsp()"></div>
           <div id="rinP"></div>
           <button class="btn bs" onclick="addRP()" style="font-size:11px;padding:5px 12px;margin-bottom:10px">+ Añadir puerta</button>
@@ -909,6 +915,7 @@ tr:hover td{background:var(--c);}
     <div id="medEspTit" style="font-size:12px;color:var(--mm);font-weight:700;margin-bottom:10px"></div>
     <div id="medEspCampos" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:12px">
       <div class="fg" id="meAltBox"><label>Alto (cm)</label><input type="number" id="meAlt" min="1" step="0.1" oninput="pintarAvisoMedEsp()" onkeydown="if(event.key==='Enter')aplicarMedidasEsp()"></div>
+      <div class="fg" id="meLadoIBox" style="display:none"><label>Lado izq. (cm)</label><input type="number" id="meLadoI" min="1" step="0.1" oninput="pintarAvisoMedEsp()" onkeydown="if(event.key==='Enter')aplicarMedidasEsp()"></div><!-- Lote B1 -->
       <div class="fg" id="meAncBox"><label id="meAncLab">Ancho (cm)</label><input type="number" id="meAnc" min="1" step="0.1" oninput="pintarAvisoMedEsp()" onkeydown="if(event.key==='Enter')aplicarMedidasEsp()"></div>
       <div class="fg" id="meFonBox"><label>Fondo (cm)</label><input type="number" id="meFon" min="1" step="0.1" oninput="pintarAvisoMedEsp()" onkeydown="if(event.key==='Enter')aplicarMedidasEsp()"></div>
       <!-- Lote C1: bajo chaflán → fondo izquierdo y derecho (mirando el mueble de frente) en vez de un solo fondo -->
@@ -1123,7 +1130,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-27.2';
+const APP_BUILD = '2026-09-27.3';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1173,6 +1180,16 @@ function matPuertaTxt(tar,color){return `Puerta ${tar||''}${color?' '+color:''}`
 // Suplementos fijos
 const SUP_UNERO_REBAJ    = 22.50; // +22,50 ptos/puerta uñero rebajado DM22 (sólo puertas lacadas)
 const GOLA_HALF_STRIP    = 41.15; // Gola media tira (también usado en GT2)
+// Lote B2 (27-09-2026, Álvaro) — puertas adicionales: el precio de la puerta lleva las bisagras; «sin bisagras» descuenta
+// las dos (siempre 2, aunque la puerta sea alta): T-1 70×60 a 40 € → 40 − 2 × 5,37 = 29,26 €.
+const BISAGRA_PUERTA     = 5.37;  // €/ud bisagra en puerta
+const BISAGRAS_PUERTA_AD = 2;     // bisagras que se descuentan a una puerta adicional «sin bisagras»
+// Lote B2 — caja del electrodoméstico de una puerta adicional en la escena (solo dibujo, no toca precios): ancho = el de
+// la puerta, fondo 58, alto = el de la puerta (+3 del hueco con gola de bajos), a la altura de los bajos. Más alta que
+// ELECTRO_ALTO_COL va como columna (frigorífico integrado).
+const ELECTRO_FONDO      = 58;
+const ELECTRO_ALTO_COL   = 100;
+const ELECTRO_COL        = '#c9ccd1'; // gris inox
 // Lote T (22-09-2026) — Gaveta salvasifón (solo bajos fregadero), I.ATIRA y AV YOU:
 //   gaveta correspondiente (modelo, fondo y medida) + SUP_SALVASIFON, sea cual sea la medida.
 //   Sustituye a la regla del Lote H (≤ 90 → 65,17 cerrado; > 90 → gaveta + 14,31; AV YOU bloqueado).
@@ -2332,7 +2349,7 @@ function r3dSpec(o){
     apiladas:puertasApiladas(o.arm), // Lote U: columnas y semicolumnas, puertas una encima de otra
     rincon:isRin(o.arm),nPatas:tipo==='rinRec'?PATAS_RIN_RECTO:(tipo==='rinEsc'?PATAS_RIN_ESC:4)}; // Lote R6 · R7
   if(sp.rincon)sp.frentes=[]; // Lote R7: los rincones no llevan cajones ni gavetas (Álvaro, 23-09-2026)
-  if(tipo==='rinEsc'){sp.escH=brazoIzqEsc(o.arm);sp.fonVis=sp.escH;sp.primero=o.abrePrimero==='P2'?'P2':(o.abrePrimero==='P1'?'P1':'');} // Lote R7
+  if(tipo==='rinEsc'){sp.escH=+o.ladoIzq||brazoIzqEsc(o.arm);/* Lote B1 */sp.fonVis=sp.escH;sp.primero=o.abrePrimero==='P2'?'P2':(o.abrePrimero==='P1'?'P1':'');} // Lote R7
   if(tipo==='rinRec')sp.rin=rinRectoGeo(sp.puertas,sp.frentes,o.regletaAncho); // Lote R6
   // Lote C1 — bajo chaflán: fondos izquierdo y derecho (sin teclear, el del mueble); el fondo del spec es el mayor. Sin
   // cajones ni gavetas en el dibujo (la puerta va en la diagonal).
@@ -2360,7 +2377,8 @@ function r3dSpecFormulario(){
     // Lote R6 — bajo rincón recto: formulario de rincón (puertas, ancho real, regleta). Lote R8: los rincones con
     // construcción también admiten piezas eliminadas o en material de puerta (MPIEZAS), como los bajos regulares.
     if(!rinTiene3D(SEL))return null; // Lote R7: + rincón escuadra / fregadero
-    return r3dSpec({arm:SEL,hoja:MHOJA,alt:SEL.alt,anc:(esBajoRinRecto(SEL)&&+document.getElementById('rRRecAncho')?.value)||SEL.anc,fon:SEL.fon,
+    const mdF=medidasRin(); // Lote B1
+    return r3dSpec({arm:SEL,hoja:MHOJA,alt:mdF.alt,anc:mdF.anc,fon:mdF.fon,ladoIzq:mdF.ladoI,
       puertas:RPuertas,frentes:[],cfg:S.tb,tar:S.tar,modCaj:S.modCaj,gros:S.gros,sinFrentes:false,abrePrimero:RPRIMERO,
       piezas:MPIEZAS,cvt:(MODELOS[MMODELO]&&MODELOS[MMODELO].cvt)||TCVT[S.tar]||null,matPuerta:matPuertaTxt(S.tar,MODELOS[MMODELO]&&MODELOS[MMODELO].colorPuerta), // Lote R8
       nBaldas:nBaldasMueble({fam:SEL.fam,nom:SEL.nom,esBajo:true,baldaFreg:esFregadero(SEL)&&!!document.getElementById('chkRBaldaFreg')?.checked}),
@@ -2378,7 +2396,7 @@ function r3dSpecLinea(l){
   const m=l&&l.meta;if(!m||m.tipo!=='mueble')return null;
   const arm=ARM.find(a=>a.id===(m.armIdSeleccionado||m.armId));if(!arm||(isRin(arm)&&!rinTiene3D(arm)))return null; // Lote R6 · R7
   const hoja=hojaDesdeSnap(m.subfam)||hojaDesdeArm(arm);
-  return r3dSpec({arm,hoja,alt:m.alt,anc:(isRin(arm)&&m.anchoReal)||m.anc,fon:m.fon,regletaAncho:m.regleta&&m.regleta.ancho,abrePrimero:m.abrePrimero,/* Lote R6: ancho real · R7 */puertas:m.mPuertas||[],frentes:m.mFrentesCJ||[],
+  return r3dSpec({arm,hoja,alt:m.alt,anc:(isRin(arm)&&m.anchoReal)||m.anc,fon:m.fon,ladoIzq:m.ladoIzq,/* Lote B1 */regletaAncho:m.regleta&&m.regleta.ancho,abrePrimero:m.abrePrimero,/* Lote R6: ancho real · R7 */puertas:m.mPuertas||[],frentes:m.mFrentesCJ||[],
     cfg:isBajo(arm)?m.tb:m.ta,tar:m.tarifa,modCaj:m.modCaj||S.modCaj,gros:S.gros,sinFrentes:!!m.frentesCliente,
     horno:m.horno,nBaldas:nBaldasMueble(m), // Lote R3
     push:!!m.push, // Lote X1
@@ -3429,7 +3447,19 @@ function escenaForma(f){ESC_UI.forma=f==='L'?'L':'rect';const L=ESC_UI.forma==='
 function escenaClave(it){return it.lid+':'+it.u;}
 function escenaGiro(r){return ((+r|0)%4+4)%4;}
 // Muebles del presupuesto (líneas padre con meta de mueble) en el orden de las líneas, numerados M1, M2…
-function escenaMuebles(){return LN.filter(l=>!l.parentId&&l.meta&&l.meta.tipo==='mueble').map((l,i)=>({l,n:i+1}));}
+function escenaMuebles(){escenaMigrarPuertasAd();return LN.filter(l=>!l.parentId&&l.meta&&(l.meta.tipo==='mueble'||l.meta.tipo==='puertaAd')).map((l,i)=>({l,n:i+1}));} // Lote B2: + puertas adicionales
+// Lote B2 — puertas adicionales guardadas antes del lote (sin meta): se leen el alto y el ancho de la descripción
+// («Lavavajillas (77×60)» o «Puerta T-1 77×60»). Si no se entienden, no salen en la escena.
+function escenaMigrarPuertasAd(){
+  LN.forEach(l=>{if(l.meta||l.parentId||l.sec!=='Puertas adicionales')return;
+    const d=String(l.desc||''),mm=d.match(/(\d+(?:[.,]\d+)?)\s*×\s*(\d+(?:[.,]\d+)?)/);if(!mm)return;
+    const a=+mm[1].replace(',','.'),w=+mm[2].replace(',','.');if(!(a>0&&w>0))return;
+    l.meta={tipo:'puertaAd',alto:a,ancho:w,bisagras:!/sin bisagras/.test(d),nombre:d.split(/ \(| · /)[0].trim()||'Puerta'};});
+}
+function esPuertaAd(l){return !!(l&&l.meta&&l.meta.tipo==='puertaAd');}
+// Caja del electrodoméstico (cm): la tecleada en la escena o, por defecto, la de la puerta (ver ELECTRO_*).
+function electroCaja(m){const c=m.caja||{},golaB=S.tb&&S.tb.t==='gola';
+  return {w:+c.w||+m.ancho||60,h:+c.h||((+m.alto||72)+(golaB?REBAJE_PUERTA_GOLA:0)),d:+c.d||ELECTRO_FONDO};}
 function escenaUnidades(){return escenaMuebles().reduce((s,o)=>s+Math.max(1,+o.l.cnt||1),0);}
 function escenaEtiqueta(o,u){return 'M'+o.n+(Math.max(1,+o.l.cnt||1)>1?'·'+(u+1):'');}
 // Nombre corto: la descripción de la línea hasta la tarifa o la primera nota («Bajo 2 puertas A.75 An.60»).
@@ -3440,12 +3470,15 @@ function escenaNombre(l){return String(l&&l.desc||'').split(/ \+ | · | \[/)[0].
 // al frente en bajos y columnas y a la pared en altos, para que un alto encima de un bajo no tape su etiqueta);
 // nivel 'bajo' | 'col' | 'alto'.
 function escenaHuella(l){
-  const m=l&&l.meta;if(!m||m.tipo!=='mueble'||l.parentId)return null;
+  const m=l&&l.meta;if(!m||l.parentId)return null;
+  if(m.tipo==='puertaAd'){const c=electroCaja(m); // Lote B2: caja rectangular; más alta que ELECTRO_ALTO_COL, como columna
+    return {nivel:c.h>ELECTRO_ALTO_COL?'col':'bajo',alt:c.h,F:c.d,forma:'rect',bw:c.w,bd:c.d,rects:[[0,0,c.w,c.d]],poly:[[0,0],[c.w,0],[c.w,c.d],[0,c.d]],frente:[[0,c.d],[c.w,c.d]],lab:[c.w/2,c.d/2],electro:true};}
+  if(m.tipo!=='mueble')return null;
   const arm=ARM.find(a=>a.id===(m.armIdSeleccionado||m.armId))||{nom:m.nom||'',fam:m.fam||'',alt:+m.alt||0,anc:+m.anc||0,fon:+m.fon||0};
   const nivel=esBajoFam(arm)?'bajo':(esColumnaFam(arm)?'col':'alto');
   const alt=Math.max(1,+m.alt||+arm.alt||0),F=Math.max(1,+m.fon||+arm.fon||0),chaf=/Rinc\.Chaf/.test(arm.nom||'');
   if(esRinEsc(arm)||chaf){ // L con la esquina de las dos paredes en (0, 0): brazo dcho. por la pared de atrás, izq. por la de la izquierda
-    const W=Math.max(F,+arm.anc||+m.anc||0),H=Math.max(F,brazoIzqEsc(arm));
+    const W=Math.max(F,+m.anchoReal||+arm.anc||+m.anc||0),H=Math.max(F,+m.ladoIzq||brazoIzqEsc(arm)); // Lote B1: lados a medida
     return {nivel,alt,F,forma:chaf?'chaf':'L',bw:W,bd:H,rects:[[0,0,W,F],[0,F,F,H]],
       poly:chaf?[[0,0],[W,0],[W,F],[F,H],[0,H]]:[[0,0],[W,0],[W,F],[F,F],[F,H],[0,H]],
       frente:chaf?[[W,F],[F,H]]:[[W,F],[F,F],[F,H]],lab:[F/2,F/2]};
@@ -3522,7 +3555,7 @@ function escenaPurgar(){
   if(!ESCENA)return;
   const vistos=new Set();
   ESCENA.items=ESCENA.items.filter(it=>{const l=LN.find(x=>x.id===it.lid),k=escenaClave(it);
-    const ok=!!l&&!l.parentId&&!!l.meta&&l.meta.tipo==='mueble'&&it.u>=0&&it.u<Math.max(1,+l.cnt||1)&&!vistos.has(k);
+    const ok=!!l&&!l.parentId&&!!l.meta&&(l.meta.tipo==='mueble'||l.meta.tipo==='puertaAd')&&it.u>=0&&it.u<Math.max(1,+l.cnt||1)&&!vistos.has(k);
     if(ok)vistos.add(k);return ok;});
   if(ESC_UI.sel&&!ESCENA.items.some(it=>escenaClave(it)===ESC_UI.sel))ESC_UI.sel=null;
 }
@@ -3820,7 +3853,10 @@ function escenaPintarSel(){
   const i=escenaIndiceSel();
   if(i<0){el.innerHTML='<span class="escAyuda">Toca un mueble de la lista para ponerlo en la habitación y arrástralo: se pega a las paredes y a los muebles vecinos. La raya dorada es el frente.</span>';return;}
   const it=ESCENA.items[i],g=escenaGeo(it),o=escenaMuebles().find(x=>x.l.id===it.lid);
+  const l=g&&g.l,ca=esPuertaAd(l)?electroCaja(l.meta):null; // Lote B2: medidas de la caja del electrodoméstico
+  const inpC=(k,lab,v)=>`<label style="font-size:11px;display:inline-flex;align-items:center;gap:3px">${lab}<input type="number" min="1" step="0.1" value="${fmtCm(v).replace(',','.')}" onchange="escenaCajaElectro(${l.id},'${k}',this.value)" style="width:58px;padding:4px 5px;font-size:12px"></label>`;
   el.innerHTML=`<span style="flex:1;min-width:160px"><b>${o?escenaEtiqueta(o,it.u):''}</b> ${esc(g?escenaNombre(g.l):'')}${g?` · ${fmtCm(g.W)}×${fmtCm(g.H)} cm en planta`:''}</span>`+
+    (ca?`<span style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="font-size:11px;font-weight:700">Caja electrodoméstico:</span>${inpC('w','An',ca.w)}${inpC('h','Al',ca.h)}${inpC('d','F',ca.d)}</span>`:'')+
     `<button class="btn bs" onclick="escenaGirar()" style="font-size:11.5px;padding:6px 11px">⟳ Girar 90°</button>`+
     `<button class="btn bs" onclick="escenaQuitar()" style="font-size:11.5px;padding:6px 11px">↩ Quitar</button>`;
 }
@@ -3843,6 +3879,13 @@ function escenaGirar(){
   const i=escenaIndiceSel();if(i<0)return;const it=ESCENA.items[i],g=escenaGeo(it);if(!g)return;
   const cx=it.x+g.W/2,cy=it.y+g.H/2;it.r=(escenaGiro(it.r)+1)%4; // gira sobre el centro de su caja
   const p=escenaIman(i,cx-g.H/2,cy-g.W/2);it.x=p.x;it.y=p.y;escenaPintarTodo();
+}
+// Lote B2 — cambia una medida de la caja del electrodoméstico (se guarda en la línea: vale para todas sus unidades). No toca
+// el precio. Vacío o 0 = vuelve a la medida por defecto.
+function escenaCajaElectro(lid,k,v){
+  const l=LN.find(x=>x.id===lid);if(!esPuertaAd(l))return;const n=r1(+String(v).replace(',','.')||0);
+  l.meta.caja=Object.assign({},l.meta.caja||{});if(n>0)l.meta.caja[k]=n;else delete l.meta.caja[k];
+  escenaPintarTodo();escenaRefrescar3D();
 }
 function escenaQuitar(){const i=escenaIndiceSel();if(i<0)return;ESCENA.items.splice(i,1);ESC_UI.sel=null;escenaPintarTodo();}
 // Planta a escala: suelo con rejilla, paredes (Lote V2: contorno en L; puertas, ventanas, pilares y vigas), y los muebles
@@ -3944,6 +3987,15 @@ function escenaPiezaEnSala(p,T,yB){
   else if(p.k==='prism'){q.pts=p.pts.map(t=>T(t[0],t[1]));q.rects=p.rects?p.rects.map(r=>{const a=T(r[0],r[1]),b=T(r[2],r[3]);return [Math.min(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[0],b[0]),Math.max(a[1],b[1])];}):null;}
   return q;
 }
+// Lote B2 — electrodoméstico de una puerta adicional: caja gris (inox) y la puerta de la línea delante, apoyada abajo y
+// centrada a lo ancho (como una puerta de bajo). z = 0 es el frente: la puerta va de −grosor a 0, como en los muebles.
+// La caja baja hasta el suelo (y = −pa: el electrodoméstico apoya en el suelo, no en patas); la puerta, a la altura de
+// las de los bajos.
+function escenaElectroPiezas(h,m,pa){
+  const g=R3D_CTE.frenteGrosor,st=R3D_COL.stroke,pw=Math.min(h.bw,+m.ancho||h.bw),ph=Math.min(h.alt,+m.alto||h.alt),s=Math.max(0,+pa||0);
+  return [{k:'box',x:0,y:-s,z:0,w:h.bw,h:h.alt+s,d:h.bd,col:ELECTRO_COL,st},
+    {k:'box',x:(h.bw-pw)/2,y:0,z:-g,w:pw,h:ph,d:g,col:R3D_COL.frente,st}];
+}
 // Caja maciza de un mueble sin construcción 3D (rincones altos y de columna): su huella a todo su alto.
 function escenaMacizo(h){
   const z=v=>h.bd-v,col=R3D_COL.costado,st=R3D_COL.stroke;
@@ -3963,8 +4015,9 @@ function escenaPiezas3D(){
   E.items.forEach((it,ii)=>{
     const l=LN.find(x=>x.id===it.lid),h=escenaHuella(l);if(!h)return;
     const yB=h.nivel==='alto'?E.altoAltos-h.alt:pa,rot=escenaRotar(it,h),T=(x,z)=>{const q=rot(x,h.bd-z);return [q[0],E.ancho-q[1]];};
-    const sp=r3dSpecLinea(l);let loc;
-    if(sp){loc=r3dPiezas(sp,true,{}).filter(p=>p.col!==R3D_COL.eliminada);if(!sp.patas&&h.nivel!=='alto')loc=loc.concat(escenaPatas(h,pa));}
+    const sp=esPuertaAd(l)?null:r3dSpecLinea(l);let loc;
+    if(esPuertaAd(l))loc=escenaElectroPiezas(h,l.meta,pa); // Lote B2
+    else if(sp){loc=r3dPiezas(sp,true,{}).filter(p=>p.col!==R3D_COL.eliminada);if(!sp.patas&&h.nivel!=='alto')loc=loc.concat(escenaPatas(h,pa));}
     else{macizos++;loc=[escenaMacizo(h)].concat(h.nivel!=='alto'?escenaPatas(h,pa):[]);}
     loc.forEach(p=>{const q=escenaPiezaEnSala(p,T,yB);if(p.grp&&q.k==='box')q.grp=ii+'|'+p.grp;P.push(q);}); /* Lote A3: juntas del casco fuera también en la escena (grupo por mueble) */
   });
@@ -5388,17 +5441,36 @@ function medEspTarifa0(){ // medidas de tarifa del mueble en curso (bajo con gol
   const isGB=S.tb.t==='gola'&&esBajoFam(SEL)&&!isRin(SEL);
   return {alt:isGB?ALTO_BAJO_GOLA:SEL.alt,anc:SEL.anc,fon:+SEL.fon};
 }
+// Lote B1 (27-09-2026, Álvaro) — «📐 Medidas especiales» deja cambiar alto, ancho y fondo en TODOS los muebles, también en
+// los rincones (antes solo el ancho real del rincón recto). Rincón en L (escuadra, rincón fregadero y chaflán de altos):
+// alto, lado izq., lado dcho. y fondo de brazo (90 × 90 × F.58). Precio: alto, fondo o lados que no son los de la tarjeta →
+// +30 % como cualquier medida no estándar (excluyente con el ×2). El ancho real del rincón recto de bajos y columnas sigue
+// yendo al armazón de ancho superior, sin +30 %. Vacío = medida de tarifa.
+function rinEsL(arm){return !!arm&&(esRinEsc(arm)||/Rinc\.Chaf/.test(arm.nom||''));}
+function medidasRin(v){ // v = {alt, anc, fon, ladoI} tecleados (0 = tarifa); sin v, los del formulario del rincón
+  const A=SEL,$=id=>+(document.getElementById(id)?.value)||0;
+  v=v||{alt:$('rRAlt'),anc:$('rRRecAncho'),fon:$('rRFon'),ladoI:$('rRLadoI')};
+  const L=rinEsL(A),li0=L?brazoIzqEsc(A):0,alt=r1(+v.alt||A.alt),fon=r1(+v.fon||(+A.fon)),anc=r1(+v.anc||A.anc),ladoI=L?r1(+v.ladoI||li0):0;
+  const recto=esBajoOColRinRec(A); /* su ancho real va al armazón superior, sin +30 % */
+  return {L,alt,fon,anc,ladoI,altoNoStd:alt!==A.alt,fondoNoStd:fon!==(+A.fon),ladoNoStd:L?(anc!==A.anc||ladoI!==li0):(!recto&&anc!==A.anc)};
+}
+function descMedidasRin(md){
+  if(!md.altoNoStd&&!md.fondoNoStd&&!md.ladoNoStd)return '';
+  return ` · a medida A.${fmtCm(md.alt)} ${md.L?fmtCm(md.ladoI)+'x'+fmtCm(md.anc):'An.'+fmtCm(md.anc)} F.${fmtCm(md.fon)}`;
+}
 function abrirMedidasEsp(){
   if(!SEL){flash('⚠️ Elige primero el mueble en la tarifa');return;}
   const $=id=>document.getElementById(id),rin=isRin(SEL),rr=rin&&esBajoOColRinRec(SEL),forma=rin?RFORMA:MFORMA;
   $('medEspTit').textContent=(MHOJA&&MHOJA.lab?MHOJA.lab+' · ':'')+SEL.nom;
   const chaf=!rin&&forma==='chaflan'; // Lote C1: fondo izquierdo y derecho
-  $('meAltBox').style.display=rin?'none':'';$('meFonBox').style.display=(rin||chaf)?'none':'';
+  const rinL=rin&&rinEsL(SEL); // Lote B1
+  $('meAltBox').style.display='';$('meFonBox').style.display=chaf?'none':'';$('meLadoIBox').style.display=rinL?'':'none';
   $('meFonIBox').style.display=chaf?'':'none';$('meFonDBox').style.display=chaf?'':'none';
-  $('medEspCampos').style.gridTemplateColumns=chaf?'1fr 1fr':'1fr 1fr 1fr';
-  $('meAncLab').textContent=rr?'Ancho real (cm)':'Ancho (cm)';
-  $('medEspCampos').style.display=(!rin||rr)?'grid':'none';
-  if(rin)$('meAnc').value=+$('rRRecAncho').value||SEL.anc;
+  $('medEspCampos').style.gridTemplateColumns=(chaf||rinL)?'1fr 1fr':'1fr 1fr 1fr';
+  $('meAncLab').textContent=rinL?'Lado dcho. (cm)':(rr?'Ancho real (cm)':'Ancho (cm)');
+  $('medEspCampos').style.display='grid';
+  if(rin){$('meAnc').value=+$('rRRecAncho').value||SEL.anc;$('meAlt').value=+$('rRAlt').value||SEL.alt;$('meFon').value=+$('rRFon').value||SEL.fon;
+    if(rinL)$('meLadoI').value=+$('rRLadoI').value||brazoIzqEsc(SEL);}
   else{const t=medEspTarifa0();$('meAlt').value=+$('mAlt').value||t.alt;$('meAnc').value=+$('mAnc').value||t.anc;$('meFon').value=+$('mFon').value||t.fon;
     if(chaf){const f=fondosChaflanForm();$('meFonI').value=f.izq||t.fon;$('meFonD').value=f.dcho||t.fon;}} // Lote C1
   MEFORMA=(forma==='viga'||forma==='columna')?forma:'ninguna';
@@ -5411,7 +5483,7 @@ function setMeForma(v){MEFORMA=v;pintarMeForma();pintarAvisoMedEsp();}
 function pintarMeForma(){document.querySelectorAll('#meFormaTgg .tgb').forEach(b=>b.classList.toggle('on',b.dataset.forma===MEFORMA));}
 function medEspVolverTarifa(){
   if(!SEL)return;const $=id=>document.getElementById(id);
-  if(isRin(SEL))$('meAnc').value=SEL.anc;
+  if(isRin(SEL)){$('meAnc').value=SEL.anc;$('meAlt').value=SEL.alt;$('meFon').value=SEL.fon;$('meLadoI').value=rinEsL(SEL)?brazoIzqEsc(SEL):'';} // Lote B1
   else{const t=medEspTarifa0();$('meAlt').value=t.alt;$('meAnc').value=t.anc;$('meFon').value=t.fon;$('meFonI').value=t.fon;$('meFonD').value=t.fon;} // Lote C1
   MEFORMA='ninguna';pintarMeForma();pintarAvisoMedEsp();
 }
@@ -5422,7 +5494,11 @@ function pintarAvisoMedEsp(){
   if(isRin(SEL)){
     if(esBajoOColRinRec(SEL)){const a=r1(+$('meAnc').value||SEL.anc),aj=armazonRRectoTarifa(SEL,a);
       if(a!==SEL.anc)t.push(`Ancho real ${fmtCm(a)} → se tarifa como ${aj.arm.nom}${aj.supera?' (supera la tarifa)':''}`);}
-    t.push(forma!=='ninguna'?`${FORMA_LAB[forma]}: armazón ×2`:'Sin cajeo: sin recargo de forma');
+    const md=medidasRin({alt:+$('meAlt').value,anc:+$('meAnc').value,fon:+$('meFon').value,ladoI:+$('meLadoI').value}); // Lote B1
+    const q=[md.altoNoStd&&'alto',md.fondoNoStd&&'fondo',md.ladoNoStd&&(md.L?'lados':'ancho')].filter(Boolean);
+    if(forma!=='ninguna')t.push(`${FORMA_LAB[forma]}: armazón ×2${q.length?' (no se suma el +30 %)':''}`);
+    else if(q.length)t.push(q.join(', ').replace(/^./,c=>c.toUpperCase())+' no estándar: armazón +30 %');
+    else t.push('Sin cajeo: sin recargo de forma');
   } else {
     const t0=medEspTarifa0(),alt=r1(+$('meAlt').value||t0.alt),anc=r1(+$('meAnc').value||t0.anc),chaf=forma==='chaflan'; // Lote C1
     const fI=r1(+$('meFonI').value||t0.fon),fD=r1(+$('meFonD').value||t0.fon),fon=chaf?Math.max(fI,fD):r1(+$('meFon').value||t0.fon);
@@ -5441,7 +5517,9 @@ function aplicarMedidasEsp(){
   if(!SEL){cerrarMedidasEsp();return;}
   const $=id=>document.getElementById(id),num=id=>{const x=+$(id).value;return x>0?r1(x):0;};
   if(isRin(SEL)){
-    if(esBajoOColRinRec(SEL)){const a=num('meAnc');$('rRRecAncho').value=(a&&a!==SEL.anc)?a:'';} // vacío = estándar
+    {const a=num('meAnc');$('rRRecAncho').value=(a&&a!==SEL.anc)?a:'';} // vacío = estándar · Lote B1: todos los rincones
+    {const a=num('meAlt');$('rRAlt').value=(a&&a!==SEL.alt)?a:'';const f=num('meFon');$('rRFon').value=(f&&f!==+SEL.fon)?f:'';
+     const li=num('meLadoI');$('rRLadoI').value=(rinEsL(SEL)&&li&&li!==brazoIzqEsc(SEL))?li:'';} // Lote B1
     if(RFORMA!=='chaflan')RFORMA=MEFORMA;
     cerrarMedidasEsp();pintarFormaTgg('r',RFORMA);rdsg();return;
   }
@@ -5461,11 +5539,14 @@ function pintarResumenMedidas(){
   const toca='<span style="font-weight:400;opacity:.8"> — toca para cambiar</span>';
   if(isRin(SEL)){
     if(!rr)return;
-    const esRR=esBajoOColRinRec(SEL),ar=+$('rRRecAncho').value||0,p=[];
+    const esRR=esBajoOColRinRec(SEL),ar=+$('rRRecAncho').value||0,p=[],md=medidasRin(); // Lote B1
     if(esRR&&ar>0&&ar!==SEL.anc)p.push('ancho real '+fmtCm(ar));
+    if(md.altoNoStd)p.push('alto '+fmtCm(md.alt));
+    if(md.ladoNoStd)p.push(md.L?`lados ${fmtCm(md.ladoI)}×${fmtCm(md.anc)}`:'ancho '+fmtCm(md.anc));
+    if(md.fondoNoStd)p.push('fondo '+fmtCm(md.fon));
     if(RFORMA!=='ninguna')p.push((FORMA_LAB[RFORMA]||'forma especial')+' ×2');
     rr.className='medRes'+(p.length?' esp':'');
-    rr.innerHTML=p.length?`📐 Medida especial: ${p.join(' · ')}${toca}`:`📐 Medidas de tarifa<span style="font-weight:400;opacity:.8"> — toca para ${esRR?'poner el ancho real o un cajeo':'marcar un cajeo'}</span>`;
+    rr.innerHTML=p.length?`📐 Medida especial: ${p.join(' · ')}${toca}`:`📐 Medidas de tarifa<span style="font-weight:400;opacity:.8"> — toca para cambiar alto, ancho, fondo o marcar un cajeo</span>`;
     return;
   }
   if(!mr)return;
@@ -6181,11 +6262,18 @@ function addM(){
 }
 
 // QUICK PUERTA
-function cqp(){const a=+document.getElementById('qA').value||0,w=+document.getElementById('qW').value||0;if(!a||!w){document.getElementById('qpP').textContent='';return;}const p=gpp(S.tar,a,w);document.getElementById('qpP').textContent=p>0?`${S.tar}: ${fmt(p)}/ud${GPP_NOTA}${S.recargoModelo>0?' (recargo modelo +'+S.recargoModelo+'%)':''}`:'Sin precio para esta medida';}
-function addQP(){const a=+document.getElementById('qA').value||0,w=+document.getElementById('qW').value||0,cnt=+document.getElementById('qC').value||1;if(!a||!w)return;const p=gpp(S.tar,a,w);
+// Lote B2 — con / sin bisagras de la puerta adicional (por defecto con: el precio de tarifa las incluye)
+let QBIS=true;
+function setQBis(v){QBIS=!!v;document.querySelectorAll('#qBisTgg .tgb').forEach(b=>b.classList.toggle('on',(b.dataset.b==='1')===QBIS));cqp();}
+function descuentoBisagrasAd(){return QBIS?0:BISAGRAS_PUERTA_AD*BISAGRA_PUERTA;}
+function precioPuertaAd(a,w){const p=gpp(S.tar,a,w);return p>0?Math.max(0,p-descuentoBisagrasAd()):p;}
+function cqp(){const a=+document.getElementById('qA').value||0,w=+document.getElementById('qW').value||0;if(!a||!w){document.getElementById('qpP').textContent='';return;}const p=precioPuertaAd(a,w);document.getElementById('qpP').textContent=p>0?`${S.tar}: ${fmt(p)}/ud${QBIS?'':` (sin bisagras: −${fmt(descuentoBisagrasAd())})`}${GPP_NOTA}${S.recargoModelo>0?' (recargo modelo +'+S.recargoModelo+'%)':''}`:'Sin precio para esta medida';}
+function addQP(){const a=+document.getElementById('qA').value||0,w=+document.getElementById('qW').value||0,cnt=+document.getElementById('qC').value||1;if(!a||!w)return;const p=precioPuertaAd(a,w); /* Lote B2 */
   // Lote R (18-09-2026): con descripción escrita se añaden igualmente las medidas (antes se perdían)
   const dq=gv('qD').trim();
-  const ln={sec:'Puertas adicionales',tab:'t2',desc:(dq?`${dq} (${a}×${w})`:`Puerta ${S.tar} ${a}×${w}`)+(S.recargoModelo>0?` · recargo modelo +${S.recargoModelo}%`:''),cnt,p,nota:(GPP_NOTA||'').trim()};
+  // Lote B2: meta de la puerta adicional → sale en la escena con su descripción y una caja de electrodoméstico detrás
+  const ln={sec:'Puertas adicionales',tab:'t2',desc:(dq?`${dq} (${a}×${w})`:`Puerta ${S.tar} ${a}×${w}`)+(QBIS?'':' · sin bisagras')+(S.recargoModelo>0?` · recargo modelo +${S.recargoModelo}%`:''),cnt,p,nota:(GPP_NOTA||'').trim(),
+    meta:{tipo:'puertaAd',alto:a,ancho:w,bisagras:QBIS,nombre:dq||`Puerta ${S.tar}`,tarifa:S.tar}};
   const fus=consolidarLN(ln); // Lote J
   if(!fus){ln.id=++LID;LN.push(ln);}
   uBadge();flash(fus?`🚪 Puerta añadida (agrupado: ${fus.cnt} uds)`:'🚪 Puerta añadida');
@@ -6195,6 +6283,7 @@ function limpiarPuertaRapida(){
   ['qA','qW','qD'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const c=document.getElementById('qC');if(c)c.value=1;
   const p=document.getElementById('qpP');if(p)p.textContent='';
+  setQBis(true); // Lote B2
 }
 
 // RINCÓN — array based para renumeración correcta
@@ -6216,7 +6305,7 @@ function rRincon(){
   // Reset forma especial del rincón
   RFORMA='ninguna';const rdfd=document.getElementById('rDFD'),rdfi=document.getElementById('rDFI');if(rdfd)rdfd.value='';if(rdfi)rdfi.value='';pintarFormaTgg('r','ninguna');
   // Lote U: el «Ancho real» del rincón recto se pone en «📐 Medidas especiales» (campo oculto que leen rdsg() y addRin()).
-  const inpRR=document.getElementById('rRRecAncho');if(inpRR)inpRR.value='';
+  ['rRRecAncho','rRAlt','rRFon','rRLadoI'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';}); // Lote B1
   addRP();if(esRinEsc(SEL)){addRP();repartirPuertasEsc();renderRinP();} // Lote R7: una puerta por brazo · Lote U: medidas calculadas
   pintarRPrimero();renderRFCJ();
 }
@@ -6315,9 +6404,10 @@ function rdsg(){
   const anchoRealRR=+document.getElementById('rRRecAncho')?.value||0;
   const ajusteRR=armazonRRectoTarifa(SEL,anchoRealRR);
   const armTar=ajusteRR.arm;
-  // Lote F: en rincón el alto/fondo no son editables, así que solo aplica la forma especial (×2).
+  // Lote B1: alto, fondo y lados del rincón se pueden cambiar → +30 % si no son los de la tarjeta (excluyente con el ×2).
   const spPz=r3dSpecFormulario(),pzEf=(spPz&&isRin(SEL))?spPz.piezas:{}; // Lote R8: piezas del casco cambiadas en el 3D
-  const optsArm={esEspecial:RFORMA!=='ninguna',altoNoStd:false,fondoNoStd:false,materialPuerta:piezasHayPuerta(pzEf)};
+  const mdR=medidasRin();
+  const optsArm={esEspecial:RFORMA!=='ninguna',altoNoStd:mdR.altoNoStd,fondoNoStd:mdR.fondoNoStd||mdR.ladoNoStd,materialPuerta:piezasHayPuerta(pzEf)};
   const armP=gap2(armTar,optsArm,RARMMAN);
   RD_ARM=armTar; // Lote M
   const recArmR=notaRecargoArm(optsArm,RFORMA);
@@ -6402,9 +6492,10 @@ function addRin(){
   const anchoRealRR=+document.getElementById('rRRecAncho')?.value||0;
   const ajusteRR=armazonRRectoTarifa(SEL,anchoRealRR);
   const armTar=ajusteRR.arm;
-  // Lote F: forma especial (×2) en rincón. Alto/fondo no editables → solo esEspecial.
+  // Lote F: forma especial (×2) en rincón. Lote B1: y +30 % por alto, fondo o lados no estándar (excluyentes).
   const spPz=r3dSpecFormulario(),pzEf=(spPz&&isRin(SEL))?spPz.piezas:{}; // Lote R8: piezas del casco cambiadas en el 3D
-  const optsArm={esEspecial:RFORMA!=='ninguna',altoNoStd:false,fondoNoStd:false,materialPuerta:piezasHayPuerta(pzEf)};
+  const mdR=medidasRin();
+  const optsArm={esEspecial:RFORMA!=='ninguna',altoNoStd:mdR.altoNoStd,fondoNoStd:mdR.fondoNoStd||mdR.ladoNoStd,materialPuerta:piezasHayPuerta(pzEf)};
   const dobleFondo=(RFORMA==='chaflan')?{dcho:+document.getElementById('rDFD').value||null,izq:+document.getElementById('rDFI').value||null}:null;
   const armP=gap2(armTar,optsArm,RARMMAN);let pt=0,tt=0,pd=[],altoPuertaMax=0,manos=[]; // Lote M
   const snapPuertas=RPuertas.map(p=>({alto:+p.alto||0,ancho:+p.ancho||0,tir:p.tir||'on',mano:p.mano||'D',...(p.pMan!=null?{pMan:+p.pMan}:{}),...(p.tMan!=null?{tMan:+p.tMan}:{})}));
@@ -6447,6 +6538,7 @@ function addRin(){
   // Descripción: usa nombre del armazón realmente tarifado y añade nota de ancho fabricado.
   let desc=`${etiquetaMueble(MHOJA,armTar,RPuertas,RFrentesCJ,S.tar)} + ${S.tar} [${pd.join(', ')}]`; // Lote Q
   if(ajusteRR.ajustado)desc+=` · ancho real ${anchoRealRR}cm${ajusteRR.supera?' [excede estándar]':''}`;
+  desc+=descMedidasRin(mdR); // Lote B1
   if(esRinEsc(SEL)&&RPRIMERO)desc+=` · abre primero ${RPRIMERO}`; // Lote R7: sale en la hoja de producción
   {const txtPz=textoPiezasDesc(pzEf);if(txtPz)desc+=` · ${txtPz}`;} // Lote R8
   // Lote R6 — ciego del bajo rincón recto en la descripción (hoja de producción): lado y ancho con el ancho real
@@ -6468,8 +6560,8 @@ function addRin(){
   const mediasBaldas=esColumnaFam(armTar)?(+document.getElementById('rMBaldas').value||0):0;
   const meta={
     tipo:'mueble',armId:armTar.id,fam:armTar.fam,nom:armTar.nom,
-    alt:armTar.alt,anc:armTar.anc,fon:+armTar.fon||0,
-    anchoReal:anchoRealRR||null,armIdSeleccionado:SEL.id,
+    alt:mdR.alt,anc:armTar.anc,fon:mdR.fon, // Lote B1: alto y fondo reales (como los muebles normales)
+    anchoReal:anchoRealRR||null,ladoIzq:mdR.L&&mdR.ladoNoStd?mdR.ladoI:null,armIdSeleccionado:SEL.id,
     altoPuertaMax,esRinEsc:esRinEsc(armTar),esRinRec:isRin(armTar)&&isRinR(armTar),
     esColg:esColganteFam(armTar),esBajo:esBajoFam(armTar),esCol:esColumnaFam(armTar),
     baldasMan,baldaFreg,mediasBaldas,manos,frentesIndic:frentesParaIndic,
@@ -7605,7 +7697,7 @@ function fusionarNotasAuto(pares){
 function dimsHojaMueble(l){
   const m=l.meta;if(!m||m.tipo!=='mueble')return ['','',''];
   let anc=m.anchoReal||m.anc;
-  if(m.esRinEsc){const mm=(m.nom||'').match(/(\d+)x(\d+)$/);if(mm)anc=`${mm[1]}x${mm[2]}`;}
+  if(m.esRinEsc){const mm=(m.nom||'').match(/(\d+)x(\d+)$/);if(mm)anc=`${m.ladoIzq?fmtCm(m.ladoIzq):mm[1]}x${m.anchoReal?fmtCm(m.anchoReal):mm[2]}`;} // Lote B1
   const f=v=>(v==null||v===''||(typeof v==='number'&&!v))?'':(typeof v==='number'?fmtCm(v):esc(String(v)));
   return [f(+m.alt||m.alt),f(typeof anc==='string'&&/x/.test(anc)?anc:(+anc||anc)),f(+m.fon||m.fon)];
 }
@@ -7769,6 +7861,8 @@ function iniciarEdicion(id){
     document.getElementById('rinF').style.display='block';
     // Lote U: ancho real del rincón recto (se cambia en «📐 Medidas especiales»; el campo va oculto)
     const inpRR=document.getElementById('rRRecAncho');if(inpRR)inpRR.value=m.anchoReal||'';
+    {const s=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v;}; // Lote B1: alto, fondo y lado izq. del rincón
+     s('rRAlt',(+m.alt&&+m.alt!==SEL.alt)?+m.alt:'');s('rRFon',(+m.fon&&+m.fon!==+SEL.fon)?+m.fon:'');s('rRLadoI',+m.ladoIzq||'');}
     RPuertas=m.mPuertas.map(p=>({...p}));
     // Lote R7: los rincones no llevan cajones ni gavetas; una línea antigua que los traiga los pierde al guardar
     RFrentesCJ=[];if((m.mFrentesCJ||[]).some(f=>(+f.alto)&&(+f.ancho)))flash('⚠️ Los rincones no llevan cajones ni gavetas: se quitan al guardar');
@@ -7878,7 +7972,7 @@ function limpiarFormularioMueble(){
   const mRegF=document.getElementById('mRegF');if(mRegF)mRegF.style.display='none';
   const gi=document.getElementById('gInfo');if(gi)gi.style.display='none';
   // Limpiar inputs del modal rincón
-  ['rDFD','rDFI','rNt','rBaldas','rMBaldas','rRRecAncho','rRA'].forEach(idc=>{const el=document.getElementById(idc);if(el)el.value='';});
+  ['rDFD','rDFI','rNt','rBaldas','rMBaldas','rRRecAncho','rRAlt','rRFon','rRLadoI','rRA'].forEach(idc=>{const el=document.getElementById(idc);if(el)el.value='';});
   const rCnt=document.getElementById('rCnt');if(rCnt)rCnt.value=1;
   const rRW=document.getElementById('rRW');if(rRW)rRW.value=20;
   const chkR=document.getElementById('chkR');if(chkR)chkR.checked=false;
