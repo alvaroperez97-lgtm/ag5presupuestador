@@ -1130,7 +1130,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-27.3';
+const APP_BUILD = '2026-09-27.4';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1667,6 +1667,11 @@ const R3D_CTE={
   // los dedos y cada frente monta (5,7 − 3) / 2 = 1,35 sobre el perfil. El cajeo va SIN CANTEAR. Con gola, el paletón
   // delantero de arriba se hace de 8 y va enrasado al frente, justo DEBAJO del cajeo de arriba.
   paletonGola:8,       // cm [confirmado 24-09-2026]
+  // Lote AL1 (27-09-2026, Álvaro) — ALTOS. Trasera acanalada en las 4 piezas con la cara trasera a 1,6 del fondo (bajos: 5).
+  // Colgador (herraje, no se corta): cuerpo con tapa rectangular gris grafito de 4,4 (a lo largo del fondo) × 6,9 (alto) × 1,4
+  // (sobre el costado), en las esquinas interiores superiores traseras. Gola de altos: la base se recorta 2 por delante y el
+  // perfil va embutido en ese canto (alto puerta); en la caldera no hay perfil y el paletón de abajo sube esos mismos 2.
+  traseraRemetidaAlto:1.6, colgador:{anc:4.4,alto:6.9,gros:1.4}, golaAltoBase:2, // [confirmado 27-09-2026]
   tirLargo:16, tirAlto:1.2, tirSaliente:2.8, tirMargen:3, // tirador genérico (se afinará por modelo en R2)
   cajLatH:{CJ:8.5,GV:18.5}, cajPared:{IATIRA:1.6,AVYOU:1.2}, cajHolgura:0.6, cajFondoGros:1.6, cajRetranqueo:2,
   cajAltoMin:8,        // cm: alto mínimo que se supone a un frente sin alto tecleado
@@ -1811,7 +1816,51 @@ const CONSTR=(()=>{
         corte:c=>({largo:c.A-Math.max(c.tb,c.th('palTras')),ancho:c.trAncho}),
         cajas:c=>[trasVista(c,c.tb,c.A-c.tb-c.th('palTras'),c.F-c.C.traseraRemetida-c.tr)]})];
   const huecosBajo=c=>{const z=c.F-c.C.traseraRemetida-c.tr;return {zCaja:z,zBalda:z,yHueco:c.A-c.tTop};};
+  // ═══ Lote AL1 (27-09-2026, Álvaro) — ALTOS: alto puerta (colgar) y alto caldera ═══
+  // Alto puerta: costados por FUERA a todo el alto y fondo (4 cantos); base y techo INTERIORES entre costados (2 cantos:
+  // delante y detrás); trasera acanalada en las 4 piezas (ranura t/2), cara trasera a 1,6 del fondo (bajos: 5), con un
+  // cajeo trasero en cada esquina superior para el gancho del colgador (solo se ve por detrás: por dentro lo tapa la tapa
+  // grafito del colgador; no se dibuja). Cremallera para las baldas = mecanizado del costado (CREMALLERA_ALTOS), no pieza.
+  // Colgadores 4,4 × 6,9 × 1,4 en las esquinas interiores superiores traseras. Sin patas. Baldas 4 cantos, fondo F − 3,5.
+  // Gola de altos: NO hay cajeo en costados ni techo; solo se recorta 2 el canto delantero de la base (que no se cantea) y
+  // el perfil va embutido ahí, enrasado con costados y techo. La puerta mide el alto completo (no pierde 3 como en bajos).
+  // Ejemplo A.70 × An.60 × F.33 con 16: costados 70 × 33, base y techo 56,8 × 33 (base con gola 56,8 × 31), trasera 68,4 × 58,4.
+  // Alto caldera (dibujo 27-09-2026): costados iguales, DOS paletones planos de 12 delante (arriba y abajo, enrasados al
+  // frente y a los bordes), sin base, techo, trasera, baldas ni paletones traseros; 2 colgadores. Con gola no hay perfil:
+  // el paletón de abajo sube 2 y ese hueco es la apertura. Ejemplo A.70 × An.60 × F.45 con 16: costados 70 × 45, paletones 56,8 × 12.
+  const costAlto=(id,lado,der)=>({id,nombre:'Costado',pos:`por fuera, a todo el alto y fondo, lado ${lado}`,estado:'confirmado',fecha:'27-09-2026',ud:1,grosor:'t',
+    posPuerta:`costado visto integrado, lado ${lado}: a todo el alto, 4 cantos del color de la puerta; base y techo se acortan en ese lado`,
+    corte:c=>({largo:c.A,ancho:c.F}),cantos:{L:2,A:2},cantosPuerta:{L:2,A:2},
+    cajas:c=>{const w=c.th(id);return [{x:der?c.W-w:0,y:0,z:0,w,h:c.A,d:c.F,col:'costado'}];}});
+  const costadosAlto=()=>[costAlto('cI','izquierdo',false),costAlto('cD','derecho',true)];
+  // Colgador: cuerpo con tapa grafito contra el costado (1,4 de grueso) y la trasera (4,4 hacia delante), colgado del techo
+  // (o del canto superior del costado en la caldera). Herraje: no se corta ni se edita (sin id). zTras(c) = cara delantera
+  // de la trasera (el fondo, si no la hay); yTop(c) = cara de arriba del colgador.
+  const colgadores=(zTras,yTop)=>({nombre:'Colgador',pos:'2, en las esquinas interiores superiores traseras, tapa rectangular gris grafito',estado:'confirmado',fecha:'27-09-2026',ud:2,grosor:'',corte:null,cantos:{L:0,A:0},
+    cajas:c=>{const K=c.C.colgador,z=zTras(c)-K.anc,y=yTop(c)-K.alto;
+      return [{x:c.tL,y,z,w:K.gros,h:K.alto,d:K.anc,col:'colgador'},{x:c.W-c.tR-K.gros,y,z,w:K.gros,h:K.alto,d:K.anc,col:'colgador'}];}});
+  const zTrasAlto=c=>c.F-c.C.traseraRemetidaAlto-c.tr;
+  const cascoAlto=()=>[...costadosAlto(),
+    {id:'base',nombre:'Base',pos:c=>c.golaBase?`interior, entre costados, abajo, recortada ${fmtCm(c.gbR)} por delante para el perfil de gola (canto delantero sin cantear)`:'interior, entre costados, abajo',
+      estado:'confirmado',fecha:'27-09-2026',ud:1,grosor:'t',corte:c=>({largo:c.Wi,ancho:c.F-c.gbR}),cantos:c=>c.golaBase?{L:1,A:0}:{L:2,A:0},
+      cajas:c=>[{x:c.tL,y:0,z:c.gbR,w:c.Wi,h:c.tb,d:c.F-c.gbR,col:'suelo'}]},
+    {id:'techo',nombre:'Techo',pos:'interior, entre costados, arriba',estado:'confirmado',fecha:'27-09-2026',ud:1,grosor:'t',
+      corte:c=>({largo:c.Wi,ancho:c.F}),cantos:{L:2,A:0},cajas:c=>{const e=c.th('techo');return [{x:c.tL,y:c.A-e,z:0,w:c.Wi,h:e,d:c.F,col:'techo'}];}},
+    trasera({pos:c=>`en ranura en las 4 piezas, cara trasera a ${fmtCm(c.C.traseraRemetidaAlto)} del fondo, con cajeo trasero en las dos esquinas superiores para el gancho del colgador`,estado:'confirmado',fecha:'27-09-2026',
+      corte:c=>({largo:c.A-Math.max(c.tb,c.th('techo')),ancho:c.trAncho}),
+      cajas:c=>[trasVista(c,c.tb,c.A-c.tb-c.th('techo'),zTrasAlto(c))]}),
+    colgadores(zTrasAlto,c=>c.A-c.th('techo')),
+    balda('27-09-2026')];
+  const cascoCaldera=()=>[...costadosAlto(),
+    plano('palDel','delantero, arriba, enrasado al frente y con el borde superior','27-09-2026',(c,e)=>({x:c.tL,y:c.A-e,z:0,w:c.Wi,h:e,d:c.C.paleton})),
+    plano('palInf',c=>c.golaBase?`delantero, abajo, enrasado al frente, subido ${fmtCm(c.gbR)} para dejar el hueco de apertura de la gola (sin perfil)`:'delantero, abajo, enrasado al frente y con el borde inferior','27-09-2026',(c,e)=>({x:c.tL,y:c.gbR,z:0,w:c.Wi,h:e,d:c.C.paleton})),
+    colgadores(c=>c.F,c=>c.A)];
   return {
+    // Lote AL1 — altos con construcción. perfilGolaBase: el 3D dibuja el perfil de gola embutido en la base (solo el alto puerta).
+    // Hueco de baldas: de la base a la cara inferior de los colgadores [supuesto para el 3D: la cremallera deja 20 arriba y abajo].
+    alto:{lab:'Alto puerta (colgar)',pendiente:false,perfilGolaBase:true,piezas:cascoAlto(),
+      huecos:c=>{const z=zTrasAlto(c);return {zCaja:z,zBalda:z,yHueco:c.A-c.th('techo')-c.C.colgador.alto};}},
+    caldera:{lab:'Alto caldera',pendiente:false,piezas:cascoCaldera(),huecos:c=>({zCaja:c.F,zBalda:c.F,yHueco:c.A-c.th('palDel')})},
     bajo:{lab:'Bajo puerta / gavetero / cajonero',pendiente:false,piezas:[...cascoBajo(),balda('Lote N')],huecos:huecosBajo},
     // Lote R6 (23-09-2026) — Bajo rincón recto (Álvaro): el casco del bajo puerta más un CIEGO de melamina interior que
     // cierra la parte del mueble que no lleva puerta. Ciego: del color del armazón, enrasado delante con el casco, entre la
@@ -1999,7 +2048,10 @@ function constrCtx(sp){
   // lleve o no frentes de AG5 (la gola va con el MUEBLE). Uno arriba y otro por cada gola intermedia (rincones: solo arriba).
   const golaCaj=GOLA_CAJEO_TIPOS.includes(sp.tipo)&&!!sp.tg&&sp.tg.t==='gola';
   const golas=golaCaj?golaIntervalos(sp,yB,hornoAbajo):[];
-  return {golaCaj,golas,gcA:golaCaj?C.golaCajeoAlto:0,gcF:golaCaj?C.golaCajeoFondo:0,
+  // Lote AL1 (27-09-2026) — altos con gola: sin cajeo; recorte de 2 en la base (alto puerta) o paletón de abajo 2 más alto
+  // (caldera). Va con el MUEBLE, como el cajeo de los bajos (lleve frentes de AG5 o del cliente).
+  const golaBase=GOLA_BASE_TIPOS.includes(sp.tipo)&&!!sp.tg&&sp.tg.t==='gola';
+  return {golaCaj,golas,golaBase,gbR:golaBase?C.golaAltoBase:0,gcA:golaCaj?C.golaCajeoAlto:0,gcF:golaCaj?C.golaCajeoFondo:0,
     palDelAn:golaCaj?C.paletonGola:C.paleton,palDelTop:golaCaj?A-C.golaCajeoAlto:A,
     chDz:golaCaj?C.golaCajeoFondo*Math.hypot(W,chZR-chZL)/(W||1):0,/* Lote G1e: 2,5 perpendicular a la diagonal, medidos en z */A,W,F,Fb,t,tr:sp.tr||grosorTrasera('')/10,yB,hornoAbajo,hueco,fonBalda:fondoBaldaMueble(sp.fam,F,!!sp.rincon),C,
     pz,g,th,tL,tR,tb,Wi:W-tL-tR,bx0,bW:W-bx0-(pz.cD==='p'?g:0),trAncho:W-Math.max(tL,tR),tTop:Math.max(th('palDel'),th('palTras')),
@@ -2011,6 +2063,11 @@ function constrCtx(sp){
     chI,chD,chM,chZL,chZR,chZ:x=>chZL+(chZR-chZL)*x/(W||1),chL:Math.hypot(W,chZR-chZL)}; // Lote C1
 }
 const GOLA_CAJEO_TIPOS=['bajo','fregadero','placap','placa','placah','rinRec','rinEsc','chaflan']; // Lote G1 · G1b · G1e: cascos con cajeo de gola en los costados
+const GOLA_BASE_TIPOS=['alto','caldera']; // Lote AL1: altos con gola → recorte de 2 en la base (alto puerta) o paletón inferior subido 2 (caldera), sin cajeo
+// Lote AL1 (27-09-2026, Álvaro) — cremallera de los altos: 2 filas de agujeros Ø3 por costado (delante y detrás) para los
+// soportes de balda, con paso 6,4 y un margen de unos 20 arriba y abajo. Es un MECANIZADO del costado (no pieza): queda
+// apuntado para cuando el despiece lleve mecanizados; el 3D no lo dibuja. borde = distancia de cada fila al canto [supuesto].
+const CREMALLERA_ALTOS={paso:6.4,margen:20,diam:0.3,borde:3.7}; // cm
 // Lote G1b — el frente es de gola si el mueble lo es y lleva gola en ese frente (el tirador la excluye en su puerta). Con
 // frentes del cliente el reparto de alturas es el mismo que con los de AG5 (el mueble es igual).
 function golaReparto(sp){return !!sp.tg&&sp.tg.t==='gola'&&(!!sp.admiteTir||!!sp.sinFrentes);}
@@ -2047,7 +2104,7 @@ function constrPiezas(tabla,c){return tabla.piezas.filter(pz=>!pz.cuando||pz.cua
 // MPIEZAS (formulario) y en meta.piezas (línea: snapshot de edición y proyecto guardado). La trasera solo se elimina.
 const ETQ_PIEZA={cI:'Costado izquierdo',cD:'Costado derecho',base:'Base',palDel:'Paletón delantero',palTras:'Paletón trasero',
   refuerzo:'Paletón de refuerzo',travPlaca:'Travesaño delantero',trasera:'Trasera',baldaFija:'Balda fija',balda:'Balda',ciego:'Ciego',
-  techo:'Techo',trasIzq:'Trasera izquierda',refA:'Refuerzo 12',refB:'Refuerzo 12 − t'}; // Lote R7
+  techo:'Techo',trasIzq:'Trasera izquierda',refA:'Refuerzo 12',refB:'Refuerzo 12 − t',palInf:'Paletón inferior'}; // Lote R7 · AL1
 const PIEZA_ESTADO_LAB={x:'eliminada',p:'material de puerta'};
 function etqPieza(clave){const [id,k]=String(clave).split('#');return (ETQ_PIEZA[id]||id)+(k!=null?' '+(+k+1):'');}
 function piezasLimpias(pz){const o={};Object.keys(pz||{}).forEach(k=>{if(pz[k]==='x'||pz[k]==='p')o[k]=pz[k];});return o;}
@@ -2094,7 +2151,8 @@ function avisoPiezasHoja(l){
   const p=ks.filter(k=>pz[k]==='p'),x=ks.filter(k=>pz[k]==='x');
   const sp=r3dSpecLinea(l),g=sp?Math.round(sp.gPuerta*10):GROSOR_PIEZA_PUERTA;
   const cost=p.some(k=>k==='cI'||k==='cD'),partes=[];
-  if(p.length)partes.push(`EN MATERIAL DE PUERTA (${g} mm${cost?'; costado visto integrado hasta el suelo, 4 cantos, base interior en ese lado':''}): ${p.map(etqPieza).join(', ')}`);
+  const esAltoT=!!sp&&GOLA_BASE_TIPOS.includes(sp.tipo); // Lote AL1: en altos el costado ya va a todo el alto y la base ya es interior
+  if(p.length)partes.push(`EN MATERIAL DE PUERTA (${g} mm${cost?(esAltoT?'; costado visto integrado a todo el alto, 4 cantos':'; costado visto integrado hasta el suelo, 4 cantos, base interior en ese lado'):''}): ${p.map(etqPieza).join(', ')}`);
   if(x.length)partes.push(`ELIMINADAS, NO FABRICAR: ${x.map(etqPieza).join(', ')}`);
   return avPush+`<div style="margin-top:3px;padding:3px 6px;border:2px solid #c0392b;background:#fdecea;color:#8b0000;font-weight:900;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact">⚠️ PIEZAS DEL CASCO · ${esc(partes.join(' · '))}</div>`;
 }
@@ -2302,6 +2360,7 @@ const R3D_COL={costado:'#d9c39a',suelo:'#e2cea6',trav:'#d9c39a',techo:'#ecd9b2',
   balda:'#e6d4ad', // Lote R3: baldas y balda fija del horno
   horno:'#2b2d31',hornoMandos:'#3b3e44',hornoPuerta:'#17191c',hornoCristal:'#2a333d',hornoLed:'#5aa0ff', // Lote R3: horno de relleno
   stroke:'#8a5a2b',strokeCaj:'#5c5f66',strokeHerr:'#55585d',
+  colgador:'#4a4d52', // Lote AL1: colgador de los altos (tapa gris grafito)
   eliminada:'rgba(214,40,40,0.14)'}; // Lote R5: pieza del casco eliminada (fantasma, se puede tocar para restaurarla)
 // Color de tirador / gola a partir del nombre del color elegido (informativo). Por defecto aluminio.
 const R3D_COL_HERRAJE={blanco:'#f2f2f2',negro:'#2b2b2b',aluminio:'#b8bcc2',plata:'#c9ccd1',inox:'#c9ccd1',cromo:'#d6d9de',
@@ -2326,8 +2385,11 @@ function r3dSpec(o){
   const sub=o.hoja?o.hoja.subId:''; // Lote R3: bajos placa por subfamilia (placap puertas · placa gavetas/cajones · placah horno)
   // Lote C1: bajo chaflán = bajo regular con forma especial Chaflán (rincón chaflán de bajos del árbol)
   const esChaf=esBajo&&!isRin(o.arm)&&(o.forma==='chaflan'||!!(o.hoja&&o.hoja.forma==='chaflan'));
-  const tipo=esChaf?'chaflan':esFreg?'fregadero':esBajoRinEsc(o.arm)?'rinEsc':(esBajoRinRecto(o.arm)?'rinRec':(esBajo?(['placap','placa','placah'].includes(sub)?sub:'bajo'):'generico')); // Lote R6
-  const sp={nombre:o.arm.nom,lab:o.hoja?o.hoja.lab:'',fam:o.arm.fam,sub,tipo,pendiente:!esBajo,
+  // Lote AL1 (27-09-2026): alto puerta (familia Colgantes) y alto caldera con construcción propia; el resto de altos, columnas,
+  // sobrefrigos y sobreencimeras siguen en el casco genérico con aviso.
+  const esAlto=o.arm.fam==='Colgantes',esCald=o.arm.fam==='Caldera';
+  const tipo=esChaf?'chaflan':esFreg?'fregadero':esBajoRinEsc(o.arm)?'rinEsc':(esBajoRinRecto(o.arm)?'rinRec':(esBajo?(['placap','placa','placah'].includes(sub)?sub:'bajo'):(esAlto?'alto':(esCald?'caldera':'generico')))); // Lote R6 · AL1
+  const sp={nombre:o.arm.nom,lab:o.hoja?o.hoja.lab:'',fam:o.arm.fam,sub,tipo,pendiente:!esBajo&&!esAlto&&!esCald,
     horno:o.horno==='45'?'45':'60',nBaldas:Math.max(0,+o.nBaldas||0), // Lote R3
     alt:+o.alt||o.arm.alt,anc:+o.anc||o.arm.anc,fon:+o.fon||(+o.arm.fon),gros:(+o.gros||16)/10,
     // Lote D1: color de armazón y trasera 8 mm (10 en Textil) del proyecto; patas 10/15 del proyecto; en el placa horno
@@ -2450,7 +2512,7 @@ function r3dPiezas(sp,conFrentes,est){
   // Frentes cajón/gaveta apilados desde arriba (en el placa horno sin gola, desde abajo: el horno va encima; con gola el
   // horno va abajo y el cajón arriba, Lote D1). Alto vacío → se reparte el hueco que dejan los que sí tienen alto.
   const hg=C.frenteHolgura,g=C.frenteGrosor;
-  const lleva=sp.admiteTir, esGola=golaReparto(sp), esTir=lleva&&sp.tg.t==='tirador'; // Lote G1b: gola del mueble
+  const lleva=sp.admiteTir, esGola=golaReparto(sp)&&!cx.golaBase, esTir=lleva&&sp.tg.t==='tirador'; // Lote G1b: gola del mueble · AL1: en altos el perfil va en la base, la puerta no pierde nada arriba
   const reservaGola=f=>(esGola&&f.tir)?C.golaAlto:0; // hueco del perfil gola encima del frente
   const nVacios=sp.frentes.filter(f=>!f.alto).length;
   const desdeAbajo=(esPlacaH&&!hornoAbajo)||!!sp.colHorno; // Lote D1 · X1 (columna horno/micro: gavetas abajo)
@@ -2641,6 +2703,15 @@ function r3dPiezas(sp,conFrentes,est){
          inferior, las dos van detrás de los frentes (antes la de arriba llegaba hasta la cara de los frentes). */
       box(0,y1-e,0,W,e,zf-e,colHerr,R3D_COL.strokeHerr);                              // ala superior, detrás del frente
     });
+  }
+  // Lote AL1 (27-09-2026, Álvaro) — gola de ALTOS (alto puerta): perfil embutido en el canto delantero de la base (recortada
+  // 2), de costado a costado, enrasado con costados y techo; sin cajeo. Se dibuja como hueco abierto por abajo: fondo en
+  // sombra contra el canto recortado y ala superior a ras de la cara de arriba de la base [supuesto, solo dibujo]. Solo si
+  // alguna puerta lleva gola (con tirador en todas no hay perfil). La caldera no lleva perfil: el paletón de abajo sube 2.
+  if(conFrentes&&cx.golaBase&&constrTabla(tipo).perfilGolaBase&&golaReparto(sp)&&sp.puertas.some(p=>p.tir)){
+    const e=C.golaChapa,R=cx.gbR,sh=R3D_COL.strokeHerr;
+    box(cx.tL,0,R-e,cx.Wi,cx.tb,e,r3dOscurecer(colHerr,C.golaSombra),sh); // fondo, en sombra, contra el canto recortado de la base
+    box(cx.tL,cx.tb-e,0,cx.Wi,e,R-e,colHerr,sh);                           // ala superior, a ras de la cara de arriba de la base
   }
   // Lote R3 — baldas: las mismas que salen en herrajes sueltos (o las manuales), de las medidas de Lote N. Una: centrada
   // en el hueco; varias: repartidas a alturas iguales (Álvaro, 22-09-2026). Pegadas a la trasera (o al paletón trasero),
@@ -3112,6 +3183,8 @@ function r3dCaption(sp){
   const trMm=Math.round((sp.tr||grosorTrasera('')/10)*10); // Lote D1
   let t=`${sp.lab?sp.lab+' · ':''}${sp.nombre} — ${med} · tablero ${Math.round(sp.gros*10)} mm${sp.patas?` · ${sp.nPatas||4} patas de ${sp.pataAlto||R3D_CTE.pataAlto}`:''}`;
   if(sp.tipo==='bajo')t+=` · trasera ${trMm} mm a ${R3D_CTE.traseraRemetida} cm`;
+  if(sp.tipo==='alto')t+=` · trasera ${trMm} mm a ${fmtCm(R3D_CTE.traseraRemetidaAlto)} cm · 2 colgadores`; // Lote AL1
+  if(sp.tipo==='caldera')t+=` · sin trasera · 2 colgadores`; // Lote AL1
   if(sp.tipo==='rinEsc'){const cx=constrCtx(sp); // Lote R7
     t+=` · brazo izq. ${fmtCm(cx.H)} · brazo dcho. ${fmtCm(sp.anc)} · traseras ${trMm} mm a ${R3D_CTE.traseraRemetida} cm · refuerzo ${RIN_ESC_REFUERZO}×${RIN_ESC_REFUERZO} · ${sp.primero?'abre primero '+sp.primero:'⚠️ falta qué puerta abre primero'}`;
     // Frente de cada brazo: P1 → H − F, P2 → W − F. La que abre primero cabe con 2 cm menos que su frente; la otra, entera.
