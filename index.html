@@ -1123,7 +1123,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-26.1';
+const APP_BUILD = '2026-09-27.1';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1251,6 +1251,7 @@ const COL_PUERTA_BAJA          = 160;  // cm: alto por defecto de la puerta de a
 const COL_CALDERA_PUERTA_BAJA  = 80;   // cm: puerta de abajo de la columna caldera
 const COL_HORNO_GAVETA         = 30;   // cm: alto de cada gaveta de abajo de la columna horno/micro (sin gola)
 const COL_HORNO_GAVETA_GOLA    = 29.5; // cm: ídem con gola. Lote X2 (26-09-2026, Álvaro): UNA gola entre las dos gavetas (29,5 + 3 + 29,5 = 62); con una sola gaveta no hay gola (30, push)
+const CAJON_ARRIBA_ALTO        = 15;   // cm: cajón de arriba del gavetero y del bajo placa gavetas. Lote A (27-09-2026, Álvaro): arrancan con cajón 15 + 2 gavetas que se reparten el resto (A.75 → 15 + 30 + 30)
 const COL_HORNO_HUECO          = 60;   // cm: hueco del horno en la columna horno/micro
 const COL_MICRO_HUECO          = 40;   // cm: hueco del micro encima del horno
 const PUSH_PUERTA_NOM          = 'Sistema Push en Puertas'; // nombre exacto en el catálogo de Varios (VR): su precio manda
@@ -2366,7 +2367,7 @@ function r3dSpecFormulario(){
       regletaAncho:+document.getElementById('rRW')?.value||RIN_REGLETA_ANCHO});
   }
   return r3dSpec({arm:SEL,hoja:MHOJA,alt:document.getElementById('mAlt').value,anc:document.getElementById('mAnc').value,
-    fon:document.getElementById('mFon').value,puertas:MPuertas,frentes:MFrentesCJ,cfg:isBajo(SEL)?S.tb:S.ta,tar:tarEfectiva(),modCaj:S.modCaj,gros:S.gros,sinFrentes:MFRCLI,
+    fon:document.getElementById('mFon').value,puertas:MPuertas,frentes:frentesGaveteroGola({frentes:MFrentesCJ}).frentes/* Lote A2 */,cfg:isBajo(SEL)?S.tb:S.ta,tar:tarEfectiva(),modCaj:S.modCaj,gros:S.gros,sinFrentes:MFRCLI,
     horno:MHORNO,nBaldas:nBaldasMueble(metaBaldasFormulario()), // Lote R3
     push:esPushColHorno(), // Lote X1
     forma:MFORMA,fondos:MFORMA==='chaflan'?fondosChaflanForm():null, // Lote C1
@@ -5294,7 +5295,7 @@ function seguirMedidaArm(){
     if(MPUERTAS_ARR)MPuertas=puertasArranque(SEL,anc); // columna sin tocar que pasa de 60 a 61+: 4 puertas (o al revés)
     MDEF.ancho=af;
   }
-  repartirPuertas();renderMP();renderMFCJ();
+  repartirPuertas();repartirFrentesGavetero();renderMP();renderMFCJ(); // Lote A
 }
 // Lote P — medidas reales del armazón para la descripción del presupuesto, solo si difieren de la tarjeta:
 // "Bajo A.70 An.60 (72×57×50)". Así la línea refleja exactamente lo elegido (y lo editado después).
@@ -5485,6 +5486,50 @@ function frentesColHornoGola(frentes,colHornoGola){
 }
 // Lote X2 — al añadir/quitar gavetas en la columna horno/micro se recalcula la puerta de arriba (y la gaveta única pasa a 30).
 function reajustarColHorno(){if(SEL&&esColHornoMicro(SEL,MHOJA)){repartirPuertas();renderMP();}}
+// Lote A (27-09-2026, Álvaro) — gavetero y bajo placa gavetas: los frentes exteriores suman el alto de puerta del mueble
+// (MDEF.alto: 75; 77 con gola). Los cajones automáticos van a CAJON_ARRIBA_ALTO (15) y las gavetas automáticas se reparten
+// lo que queda: A.75 → 15 + 30 + 30; A.70 → 15 + 27,5 + 27,5. Si se borra el cajón, se recompone: 37,5 + 37,5. Sin gavetas
+// automáticas, los cajones automáticos se reparten el resto. Lo tecleado a mano (_mA) se respeta, como en las puertas.
+// Lote A2 (27-09-2026, Álvaro) — con GOLA: perfil arriba (ya descontado en MDEF.alto: 80 → 77) y otro ENTRE CADA DOS GAVETAS;
+// cada perfil deja su hueco de apertura de 3 (REBAJE_PUERTA_GOLA). Cajón + 2 gavetas: 80 − 3 − 3 = 74 → 15 + 29,5 + 29,5;
+// 2 gavetas: 74 → 37 + 37. Entre el cajón y la primera gaveta no hay perfil.
+function esGaveteroAuto(){return !!(SEL&&MHOJA&&!isRin(SEL)&&esBajoFam(SEL)&&(MHOJA.subId==='gavetero'||MHOJA.subId==='placa'));}
+function esGaveteroGola(){return esGaveteroAuto()&&S.tb.t==='gola';}
+function golasIntermediasGavetero(fr){return esGaveteroGola()?Math.max(0,fr.filter(f=>f&&!esFrenteInt(f)&&f.tipo==='GV').length-1):0;}
+function repartirFrentesGavetero(excepto,lista){
+  if(!esGaveteroAuto())return;
+  const fr=lista||MFrentesCJ,T=(+MDEF.alto||0)-REBAJE_PUERTA_GOLA*golasIntermediasGavetero(fr);if(!(T>0))return;
+  const ext=fr.map((f,i)=>i).filter(i=>fr[i]&&!esFrenteInt(fr[i]));
+  let fijo=0;const cj=[],gv=[];
+  ext.forEach(i=>{const f=fr[i];if(f._mA||(excepto!=null&&excepto===i))fijo+=(+f.alto||0);else (f.tipo==='CJ'?cj:gv).push(i);});
+  const poner=(i,v)=>{if(excepto==null||excepto!==i)fr[i].alto=v;};
+  const reparte=(ids,resto)=>{let usado=0;ids.forEach((i,k)=>{const v=k<ids.length-1?r1(resto/ids.length):r1(resto-usado);usado+=v;poner(i,v);});};
+  if(gv.length){
+    cj.forEach(i=>poner(i,CAJON_ARRIBA_ALTO));
+    const resto=T-fijo-CAJON_ARRIBA_ALTO*cj.length;
+    if(resto>0.05)reparte(gv,resto);
+  } else if(cj.length){
+    const resto=T-fijo;
+    if(resto>0.05)reparte(cj,resto);
+  }
+}
+// Lote A2 — gavetero / placa gavetas con gola: lleva perfil el frente de ARRIBA (el primer cajón o, sin cajones, la primera
+// gaveta) y cada gaveta menos la primera (perfil entre gavetas). Los demás, sin gola (tir 'off'): así los metros de gola son
+// los de los perfiles (cajón + 2 gavetas An.60 → 2 perfiles = 120 cm, no 180) y el 3D pone los huecos y cajeos donde van.
+// Recibe y devuelve {frentes,pushGav} (el formato de frentesColHornoGola) con copias de los frentes.
+function frentesGaveteroGola(fx){
+  if(!esGaveteroGola())return fx;
+  const ext=fx.frentes.filter(f=>f&&!esFrenteInt(f)),arriba=ext.find(f=>f.tipo!=='GV')||ext[0],gv1=ext.find(f=>f.tipo==='GV');
+  return {frentes:fx.frentes.map(f=>(!f||esFrenteInt(f))?f:Object.assign({},f,{tir:(f===arriba||(f.tipo==='GV'&&f!==gv1))?'on':'off'})),pushGav:fx.pushGav};
+}
+// Escribe los altos repartidos sin repintar el frente que se está tecleando (no pierde el foco).
+function refrescarAltosFrentes(idx){MFrentesCJ.forEach((f,i)=>{if(i===idx)return;const el=document.getElementById('mfA'+i),v=(f.alto===''||f.alto==null)?'':String(f.alto);if(el&&el.value!==v)el.value=v;});}
+// Al editar una línea: lo que coincide con el reparto automático sigue automático; lo demás se da por tecleado.
+function marcarManualesFrentes(){
+  if(!esGaveteroAuto()){MFrentesCJ.forEach(f=>{delete f._mA;});return;}
+  const ref=MFrentesCJ.map(f=>Object.assign({},f,{_mA:false}));repartirFrentesGavetero(null,ref);
+  MFrentesCJ.forEach((f,i)=>{f._mA=(+f.alto>0)&&Math.abs(+f.alto-(+ref[i].alto||0))>0.05;});
+}
 function precioPushPuerta(){const it=VR.find(v=>v.n===PUSH_PUERTA_NOM);return it?+it.p:0;}
 // Gaveta de arranque de la columna horno/micro (alto fijo: la puerta de arriba se calcula con lo que queda).
 function gavetaColHornoIni(){return {alto:S.tb.t==='gola'?COL_HORNO_GAVETA_GOLA:COL_HORNO_GAVETA,ancho:MDEF.ancho,tir:'on',tipo:'GV',fondo:'F50',ss:'off'};}
@@ -5587,11 +5632,13 @@ function selA(id,card){
     const gi=document.getElementById('gInfo');gi.style.display=isGB?'block':'none';if(isGB)gi.textContent='🔧 Gola bajos: armazón se cobra como 75 (aunque sea de 80) · puerta 77 → tramo 90 sin recargo · la gola se suma sola en el presupuesto';
     if(!isGB&&S.tb.t==='gola'&&puertasApiladas(SEL)){gi.style.display='block';gi.textContent='🔧 Gola: una sola por columna · las puertas suman el alto − 3 (hueco de apertura; P1 abajo a 157) · la gola se suma sola en el presupuesto';} // Lote U2
     if(esColHornoMicro(SEL,MHOJA)){gi.style.display='block';gi.textContent=S.tb.t==='gola'?`🔧 ${SEL.fam==='Columnas'?'Columna':'Semicolumna'} horno/micro con gola: UNA gola entre las dos gavetas (${fmtCm(COL_HORNO_GAVETA_GOLA)} + 3 + ${fmtCm(COL_HORNO_GAVETA_GOLA)}); con una sola gaveta no hay gola: gaveta de ${COL_HORNO_GAVETA} con push · horno ${COL_HORNO_HUECO}${SEL.fam==='Columnas'?` y micro ${COL_MICRO_HUECO}`:''} · la puerta de arriba va SIN gola, con apertura PUSH TO OPEN (se suma sola en Varios)`:`🔧 Columna horno/micro: gavetas de ${COL_HORNO_GAVETA} · horno ${COL_HORNO_HUECO} y micro ${COL_MICRO_HUECO} · la puerta de arriba se queda con el resto`;} // Lote X1
+    if(isGB&&MHOJA&&(MHOJA.subId==='gavetero'||MHOJA.subId==='placa')){gi.textContent=`🔧 ${MHOJA.subId==='placa'?'Placa gavetas':'Gavetero'} con gola: perfil arriba y entre las gavetas (hueco de ${REBAJE_PUERTA_GOLA} cada uno) · cajón ${CAJON_ARRIBA_ALTO} + 2 gavetas de 29,5 · sin cajón, 2 gavetas de 37 · la gola se suma sola en el presupuesto`;} // Lote A2
     MDEF={alto:altoPuertaDefecto(SEL,altoArm0),ancho:SEL.anc}; // Lote P
-    // Lote Q: frentes de arranque según la subfamilia (gavetero → 1 gaveta; placa / placa horno → 2 gavetas).
-    const gvIni=()=>({alto:'',ancho:MDEF.ancho,tir:'on',tipo:'GV',fondo:'F50',ss:'off'});
-    if(MHOJA.arranque==='GV'){MPuertas=[];MFrentesCJ=[gvIni()];}
-    else if(MHOJA.arranque==='GV2'){MPuertas=[];MFrentesCJ=[gvIni(),gvIni()];}
+    // Lote Q: frentes de arranque según la subfamilia (Lote A: gavetero y placa gavetas → cajón + 2 gavetas; placa horno → cajón bajo el horno).
+    // Lote A (27-09-2026, Álvaro): gavetero y placa gavetas arrancan igual → cajón 15 arriba + 2 gavetas con el resto, ya
+    // con medida (antes entraban sin alto y el mueble se cobraba sin frentes: 72,45 € en vez de ~302 €).
+    const gvIni=t=>({alto:'',ancho:MDEF.ancho,tir:'on',tipo:t||'GV',fondo:'F50',ss:'off'});
+    if(MHOJA.arranque==='GV'||MHOJA.arranque==='GV2'){MPuertas=[];MFrentesCJ=[gvIni('CJ'),gvIni(),gvIni()];repartirFrentesGavetero();}
     else if(MHOJA.arranque==='HORNO'){MHORNO='60';MPuertas=[];MFrentesCJ=[frenteHornoIni(altoArm0)];} // Lote R3: placa horno → 1 cajón bajo el horno
     else if(MHOJA.arranque==='COLHORNO'){MPuertas=puertasArranque(SEL,SEL.anc);MFrentesCJ=[gavetaColHornoIni(),gavetaColHornoIni()];} // Lote X1: columna horno/micro → 2 gavetas abajo + puerta arriba
     else if(MHOJA.arranque==='COLGAVINT'){MPuertas=puertasArranque(SEL,SEL.anc);MFrentesCJ=Array.from({length:GAVINT_ARRANQUE},()=>gavetaIntIni('GV'));gi.style.display='block';gi.textContent=`🔧 Columna gavetas interiores: puertas como el despensero · cada cajón/gaveta interior se cobra solo el herraje al ancho del mueble (sin frente ni tirador) · bisagras 180º`;} // Lote F (25-09-2026)
@@ -5775,7 +5822,7 @@ function renderMFCJ(){
       c.appendChild(d);return;
     }
     d.innerHTML=`<div style="display:grid;grid-template-columns:75px 75px auto auto;gap:8px;align-items:end">`+
-      `<div class="fg"><label>Alto F${n}</label><input type="number" value="${f.alto||''}" placeholder="15" oninput="updMFCJ(${i},'alto',this.value)"></div>`+
+      `<div class="fg"><label>Alto F${n}</label><input type="number" id="mfA${i}" value="${f.alto||''}" placeholder="15" oninput="updMFCJ(${i},'alto',this.value)"></div>`+
       `<div class="fg"><label>Ancho F${n}</label><input type="number" value="${f.ancho||''}" placeholder="60" oninput="updMFCJ(${i},'ancho',this.value)"></div>`+
       htmlToggleTir('updMFCJ',i,f.tir)+
       `<button class="btn bd2" onclick="delMFCJ(${i})" style="margin-bottom:1px">✕</button>`+
@@ -5786,10 +5833,14 @@ function renderMFCJ(){
   cp();
 }
 function addMFCJ(){if(esColGavInt(MHOJA)){MFrentesCJ.push(gavetaIntIni('GV'));renderMFCJ();return;} // Lote F: en la columna gavetas interiores todas las filas son interiores
-  MFrentesCJ.push({alto:'',ancho:MDEF.ancho||(SEL?SEL.anc:''),tir:'on',tipo:'CJ',fondo:'F50',ss:'off'});reajustarColHorno();renderMFCJ();} // Lote P: ancho vigente · X2
+  MFrentesCJ.push({alto:'',ancho:MDEF.ancho||(SEL?SEL.anc:''),tir:'on',tipo:'CJ',fondo:'F50',ss:'off'});reajustarColHorno();repartirFrentesGavetero();renderMFCJ();} // Lote P: ancho vigente · X2 · Lote A
 // Lote H — al cambiar tipo a CJ se resetea el salvasifón (solo aplica a gavetas)
-function updMFCJ(idx,field,val){if(MFrentesCJ[idx]){MFrentesCJ[idx][field]=val;if(field==='tipo'&&val!=='GV')MFrentesCJ[idx].ss='off';if(field==='tipo'||field==='alto')reajustarColHorno();/* Lote X2 */if(field==='tir'||field==='tipo'||field==='fondo'||field==='ss')renderMFCJ();else cp();}}
-function delMFCJ(idx){MFrentesCJ.splice(idx,1);reajustarColHorno();renderMFCJ();} // Lote X2
+function updMFCJ(idx,field,val){if(MFrentesCJ[idx]){MFrentesCJ[idx][field]=val;if(field==='tipo'&&val!=='GV')MFrentesCJ[idx].ss='off';if(field==='tipo'||field==='alto')reajustarColHorno();/* Lote X2 */
+  /* Lote A: gavetero / placa gavetas → tecleado = a mano (vacío = vuelve a automático) y los demás frentes se recomponen */
+  if(field==='alto'){MFrentesCJ[idx]._mA=String(val).trim()!=='';repartirFrentesGavetero(idx);refrescarAltosFrentes(idx);}
+  if(field==='tipo')repartirFrentesGavetero();
+  if(field==='tir'||field==='tipo'||field==='fondo'||field==='ss')renderMFCJ();else cp();}}
+function delMFCJ(idx){MFrentesCJ.splice(idx,1);reajustarColHorno();repartirFrentesGavetero();renderMFCJ();} // Lote X2 · Lote A: sin el cajón → 37,5 + 37,5
 function togMR(){document.getElementById('mRegF').style.display=document.getElementById('chkMR').checked?'grid':'none';cp();}
 function cp(){
   if(!SEL)return;
@@ -5845,7 +5896,7 @@ function cp(){
   // Frentes Cajón/Gaveta: mismo cálculo que una puerta normal (T-1 a T-9), + 1 tirador si tir=on
   const kCaj={n:0,cj:0,gv:0,tot:0}; // Lote K: cajones/gavetas (herraje) de este mueble, para el total que se ve
   sincAnchoFrentesInt(mAncV); // Lote F: los interiores siguen al ancho del mueble
-  const fxCp=frentesColHornoGola(MFrentesCJ,esPushColHorno()); // Lote X2: gola solo entre las 2 gavetas; gaveta única push
+  const fxCp=frentesGaveteroGola(frentesColHornoGola(MFrentesCJ,esPushColHorno())); // Lote X2: gola solo entre las 2 gavetas; gaveta única push · Lote A2: gavetero con gola
   fxCp.frentes.forEach((f,i)=>{
     const a=+f.alto||0,w=+f.ancho||0;
     if(a&&w){
@@ -5908,7 +5959,8 @@ function addM(){
   sincAnchoFrentesInt(+document.getElementById('mAnc').value||SEL.anc); // Lote F: interiores al ancho del mueble
   for(let i=0;i<MFrentesCJ.length;i++){
     const f=MFrentesCJ[i];const a=+f.alto||0,w=+f.ancho||0;
-    if(!a||!w)continue;
+    /* Lote A (27-09-2026, Álvaro): un frente sin alto o sin ancho no se cobra (el mueble salía solo con el armazón) → no deja añadir */
+    if(!a||!w){flash(`⚠️ Falta el ${!a?'alto':'ancho'} del frente F${i+1}`);const el=document.getElementById('mfA'+i);if(el&&!a)el.focus();return;}
     if(w>120){flash(`⚠️ Frente cajón F${i+1}: ${w}cm > 120cm, no permitido`);return;}
     // Lote T — salvasifón válido con I.ATIRA y AV YOU (gaveta + SUP_SALVASIFON)
     const ssEf=f.tipo==='GV'&&f.ss==='on'&&admiteSalvasifon(SEL);
@@ -5931,7 +5983,7 @@ function addM(){
   const cfg=isBajo(SEL)?S.tb:S.ta;
   let ptTot=0,tTot=0,pd=[],altoPuertaMax=0,manos=[];
   const pushCol=esPushColHorno(); // Lote X1: columna/semicolumna horno/micro con gola → puerta de arriba sin gola, push to open
-  const fxAdd=frentesColHornoGola(MFrentesCJ,pushCol),pushGav=fxAdd.pushGav; // Lote X2: gola solo entre las 2 gavetas; gaveta única push
+  const fxAdd=frentesGaveteroGola(frentesColHornoGola(MFrentesCJ,pushCol)),pushGav=fxAdd.pushGav; // Lote X2: gola solo entre las 2 gavetas; gaveta única push · Lote A2
   // Snapshot completo de puertas y frentes para permitir edición posterior (Lote M: incluye precios manuales)
   const snapPuertas=MPuertas.map(p=>({alto:+p.alto||0,ancho:+p.ancho||0,tir:p.tir||'on',mano:p.mano||'D',...(p.pMan!=null?{pMan:+p.pMan}:{}),...(p.tMan!=null?{tMan:+p.tMan}:{})}));
   const snapFrentes=fxAdd.frentes.map(f=>({alto:+f.alto||0,ancho:+f.ancho||0,tir:f.tir||'on',tipo:f.tipo||'CJ',fondo:f.fondo||'F50',ss:(f.tipo==='GV'&&f.ss==='on')?'on':'off',...(f.pMan!=null?{pMan:+f.pMan}:{}),...(f.tMan!=null?{tMan:+f.tMan}:{}),...(esFrenteInt(f)?{int:'on'}:{})})); // Lote F: int (interior)
@@ -7724,7 +7776,7 @@ function iniciarEdicion(id){
     if(MFORMA==='chaflan')MDEF.ancho=anchoFrentesForm(+m.anc||SEL.anc); // Lote C1: las puertas del chaflán siguen a la diagonal
     MPuertas=m.mPuertas.map(p=>({...p}));
     MFrentesCJ=(m.mFrentesCJ||[]).map(f=>({...f}));
-    marcarManualesPuertas();MPUERTAS_ARR=false; // Lote U: lo que no coincide con el reparto automático queda a mano · X2: con los frentes ya restaurados
+    marcarManualesPuertas();marcarManualesFrentes();MPUERTAS_ARR=false; /* Lote A: frentes del gavetero igual que las puertas */ // Lote U: lo que no coincide con el reparto automático queda a mano · X2: con los frentes ya restaurados
     MHORNO=(m.horno==='45')?'45':'60';pintarHornoUI(); // Lote R3
     MPIEZAS=piezasLimpias(m.piezas); // Lote R5: piezas del casco de la línea
     renderMP();renderMFCJ();
