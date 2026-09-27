@@ -1123,7 +1123,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-27.1';
+const APP_BUILD = '2026-09-27.2';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -2414,7 +2414,7 @@ function r3dPiezas(sp,conFrentes,est){
     constrPiezas(tabla,cx).forEach(pz=>{if(!pz.cajas)return;const cl=pz.ud==='nBaldas'?pz.id+'#0':pz.id,st=(cl&&cx.pz[cl])||''; // Lote R8: la balda de la tabla es la 1ª unidad
       pz.cajas(cx).forEach(b=>{const col=colPz(st,R3D_COL[b.col]||R3D_COL.costado),ex=editPz&&cl?{key:'pz:'+cl}:null;
         if(b.pts){P.push(Object.assign({k:'prism',pts:b.pts,rects:b.rects,y:b.y,h:b.h,col,st:R3D_COL.stroke},ex||{}));return;} // Lote R8: pieza en L de una pieza
-        box(b.x,b.y,b.z,b.w,b.h,b.d,col,null,ex);if(b.obst)obst.push(b.obst);});});
+        box(b.x,b.y,b.z,b.w,b.h,b.d,col,null,Object.assign({grp:'pz:'+cl},ex||{}));if(b.obst)obst.push(b.obst);});}); /* Lote A3: grp = pieza del casco (sus tramos se ven como una sola) */
     const hu=tabla.huecos(cx);zCaja=hu.zCaja;zBalda=hu.zBalda;yHueco=hu.yHueco;yB=cx.yB;zBaldaMin=hu.zBaldaMin||0;
     cx.golas.forEach(([a,b])=>obst.push([a,b,0,cx.gcF])); // Lote G1 · G1b: ninguna caja de cajón entra en un perfil gola
   }
@@ -2600,8 +2600,8 @@ function r3dPiezas(sp,conFrentes,est){
     box(xf+e,y0,L1+f-e,W-xf-e,cx.gcA,e,sombra,sh);     // fondo, brazo derecho
     box(xf+e,y0,0,F-xf-e,e,L1+f-e,colHerr,sh);          // ala inferior, brazo izquierdo
     box(F,y0,L1,W-F,e,f-e,colHerr,sh);                  // ala inferior, brazo derecho
-    box(xf+e,A-e,0,F+g-xf-e,e,L1+f-e,colHerr,sh);       // ala superior, brazo izquierdo (hasta la cara de las puertas)
-    box(F+g,A-e,L1-g,W-F-g,e,g+f-e,colHerr,sh);         // ala superior, brazo derecho
+    box(xf+e,A-e,0,F-xf-e,e,L1+f-e,colHerr,sh);         // ala superior, brazo izquierdo (Lote A3: detrás de la puerta, como la inferior)
+    box(F,A-e,L1,W-F,e,f-e,colHerr,sh);                 // ala superior, brazo derecho (Lote A3)
   }
   else if(conFrentes&&golaTops.length&&tipo==='chaflan'){
     // Lote G1e — chaflán: el perfil sigue la diagonal. Se dibuja como el de un bajo (a lo largo de x, fondo hacia dentro) y se
@@ -2610,18 +2610,18 @@ function r3dPiezas(sp,conFrentes,est){
     const tira=(y,h,v0,v1,col)=>{const u0=Math.max(v0*s,v1*s)/c,u1=L+Math.min(v0*s,v1*s)/c;box(u0,y,v0,u1-u0,h,v1-v0,col,sh);};
     tira(A-cx.gcA,cx.gcA,f-e,f,sombra);  // fondo, en sombra
     tira(A-cx.gcA,e,0,f-e,colHerr);      // ala inferior, detrás de la puerta
-    tira(A-e,e,-g,f-e,colHerr);          // ala superior, hasta la cara de las puertas
+    tira(A-e,e,0,f-e,colHerr);           // ala superior, detrás de la puerta (Lote A3)
     for(let k=s0;k<P.length;k++)r3dLlevar(P[k],c,s,0,cx.chZL);
   }
   else if(conFrentes&&golaTops.length){
     const e=C.golaChapa,zf=cx.gcF;
     cx.golas.forEach(([y0,y1])=>{
       if(!golaTops.some(tp=>tp>=y0-0.01&&tp<=y1+0.01))return; // cajeo sin frente de gola debajo: se queda vacío
-      const arriba=y1>=A-1e-6;
       box(0,y0,zf-e,W,y1-y0,e,r3dOscurecer(colHerr,C.golaSombra),R3D_COL.strokeHerr); // fondo, en sombra
       box(0,y0,0,W,e,zf-e,colHerr,R3D_COL.strokeHerr);                                // ala inferior, detrás del frente de abajo
-      if(arriba)box(0,A-e,-g,W,e,g+zf-e,colHerr,R3D_COL.strokeHerr);                 // ala superior hasta la cara de los frentes
-      else box(0,y1-e,0,W,e,zf-e,colHerr,R3D_COL.strokeHerr);                         // ala superior, detrás del frente de arriba
+      /* Lote A3 (27-09-2026, Álvaro): el perfil de arriba es como el intermedio: el ala superior NO sobresale más que la
+         inferior, las dos van detrás de los frentes (antes la de arriba llegaba hasta la cara de los frentes). */
+      box(0,y1-e,0,W,e,zf-e,colHerr,R3D_COL.strokeHerr);                              // ala superior, detrás del frente
     });
   }
   // Lote R3 — baldas: las mismas que salen en herrajes sueltos (o las manuales), de las medidas de Lote N. Una: centrada
@@ -2833,6 +2833,35 @@ function r3dGLIni(vis){
 // Malla del visor: caras (triángulos) y aristas (tiras finas en pantalla) de todas las piezas, ya proyectadas a
 // coordenadas de recorte. pick = colores-índice (pieza i → i + 1) sin luces ni aristas. hw = media anchura de arista en
 // unidades del viewBox. Devuelve {op, tr, li}: Float32Array de [x, y, z, r, g, b, a] por vértice.
+// Lote A3 (27-09-2026, Álvaro: «esas líneas no tendrían que estar») — una pieza del casco partida en tramos (costado con
+// cajeos de gola: tramos que se tocan para no cruzar el perfil) pintaba una raya en cada junta, a todo el fondo del
+// costado. Se quita de cada arista el trozo que coincide con una arista de OTRA caja de la misma pieza (g): ahí la cara
+// sigue plana. El escalón real del cajeo (de z = 0 a 2,5) no lo comparte nadie y se queda. Modifica aris en el sitio.
+function r3dQuitarJuntas(aris){
+  /* Las cajas del casco van alineadas con los ejes: cada arista se agrupa por su recta (grupo, eje y las otras dos
+     coordenadas) y solo se compara con las de su misma recta. Aristas inclinadas (cajas giradas): no se tocan. */
+  const EPS=1e-4,R=v=>Math.round(v*1000),rectas=new Map();
+  aris.forEach((e,k)=>{if(e.g==null)return;
+    const df=[0,1,2].filter(c=>Math.abs(e.b[c]-e.a[c])>EPS);if(df.length!==1)return;
+    const ax=df[0],o=[0,1,2].filter(c=>c!==ax),key=e.g+'|'+ax+'|'+R(e.a[o[0]])+'|'+R(e.a[o[1]]);
+    let l=rectas.get(key);if(!l)rectas.set(key,l={ax,ids:[]});l.ids.push(k);});
+  const quitar=new Set(),nuevas=[];
+  rectas.forEach(({ax,ids})=>{
+    if(ids.length<2)return;
+    ids.forEach(k=>{
+      const e=aris[k],s0=Math.min(e.a[ax],e.b[ax]),s1=Math.max(e.a[ax],e.b[ax]),cub=[];
+      ids.forEach(j=>{if(j===k)return;const o=aris[j];if(o.i===e.i)return;
+        const a=Math.max(s0,Math.min(o.a[ax],o.b[ax])),b=Math.min(s1,Math.max(o.a[ax],o.b[ax]));if(b-a>EPS)cub.push([a,b]);});
+      if(!cub.length)return;
+      cub.sort((p,q)=>p[0]-q[0]);
+      const libres=[];let s=s0;cub.forEach(([a,b])=>{if(a>s+EPS)libres.push([s,a]);s=Math.max(s,b);});if(s1>s+EPS)libres.push([s,s1]);
+      quitar.add(k);
+      libres.forEach(([a,b])=>{const A=e.a.slice(),B=e.a.slice();A[ax]=a;B[ax]=b;nuevas.push({i:e.i,g:e.g,a:A,b:B});});
+    });
+  });
+  if(!quitar.size)return;
+  const quedan=aris.filter((e,k)=>!quitar.has(k));aris.length=0;quedan.forEach(e=>aris.push(e));nuevas.forEach(e=>aris.push(e));
+}
 function r3dMallaGL(P,cam,vis,pick,hw){
   const caras=[],aris=[];
   const cara=(i,pts,n)=>caras.push({i,pts,n});
@@ -2842,7 +2871,8 @@ function r3dMallaGL(P,cam,vis,pick,hw){
       const V=r3dVerts(p);
       [[[0,3,2,1],[0,0,-1]],[[4,5,6,7],[0,0,1]],[[0,1,5,4],[0,-1,0]],[[3,7,6,2],[0,1,0]],[[0,4,7,3],[-1,0,0]],[[1,2,6,5],[1,0,0]]]
         .forEach(([ix,n0])=>cara(i,ix.map(k=>V[k]),r3dNormal(p,n0)));
-      if(!pick)EB.forEach(([a,b])=>aris.push({i,a:V[a],b:V[b]}));
+      if(!pick){if(p.grp!=null&&p._jn)p._jn.forEach(e=>aris.push({i,a:e.a,b:e.b})); /* Lote A3: juntas ya limpias (no dependen de la cámara) */
+        else EB.forEach(([a,b])=>aris.push({i,a:V[a],b:V[b],g:p.grp}));}
     } else if(p.k==='cyl'){
       const N=p.seg||20,y0=p.y,y1=p.y+p.h,pt=(k,y)=>{const a=k/N*2*Math.PI;return [p.x+p.r*Math.cos(a),y,p.z+p.r*Math.sin(a)];}; // Lote V1: p.seg = lados (escena)
       for(let k=0;k<N;k++){const a=(k+0.5)/N*2*Math.PI;cara(i,[pt(k,y0),pt(k+1,y0),pt(k+1,y1),pt(k,y1)],[Math.cos(a),0,Math.sin(a)]);
@@ -2861,6 +2891,11 @@ function r3dMallaGL(P,cam,vis,pick,hw){
         if(!pick){aris.push({i,a:[a[0],y0,a[1]],b:[b[0],y0,b[1]]});aris.push({i,a:[a[0],y1,a[1]],b:[b[0],y1,b[1]]});aris.push({i,a:[a[0],y0,a[1]],b:[a[0],y1,a[1]]});}}
     }
   });
+  if(!pick&&aris.some(e=>e.g!=null)){ // Lote A3: limpia las juntas de las piezas nuevas y lo guarda en cada pieza (escena: al girar no se repite)
+    r3dQuitarJuntas(aris);
+    aris.forEach(e=>{if(e.g!=null&&!P[e.i]._jn)P[e.i]._jn=[];});
+    aris.forEach(e=>{if(e.g!=null)P[e.i]._jn.push({a:e.a,b:e.b});});
+  }
   // Profundidad → [−0,95, 0,95] con el rango real de esta vista (ortográfica: lineal)
   let dmin=Infinity,dmax=-Infinity;const PR=new Map(),pj=v=>{let q=PR.get(v);if(!q){q=cam.proy(v);PR.set(v,q);if(q[2]<dmin)dmin=q[2];if(q[2]>dmax)dmax=q[2];}return q;};
   caras.forEach(f=>f.pts.forEach(pj));aris.forEach(e=>{pj(e.a);pj(e.b);});
@@ -3925,13 +3960,13 @@ function escenaPatas(h,pa){
 }
 function escenaPiezas3D(){
   const E=ESCENA,C=ESC_CTE,P=[],pa=+S.patas||R3D_CTE.pataAlto;let macizos=0;
-  E.items.forEach(it=>{
+  E.items.forEach((it,ii)=>{
     const l=LN.find(x=>x.id===it.lid),h=escenaHuella(l);if(!h)return;
     const yB=h.nivel==='alto'?E.altoAltos-h.alt:pa,rot=escenaRotar(it,h),T=(x,z)=>{const q=rot(x,h.bd-z);return [q[0],E.ancho-q[1]];};
     const sp=r3dSpecLinea(l);let loc;
     if(sp){loc=r3dPiezas(sp,true,{}).filter(p=>p.col!==R3D_COL.eliminada);if(!sp.patas&&h.nivel!=='alto')loc=loc.concat(escenaPatas(h,pa));}
     else{macizos++;loc=[escenaMacizo(h)].concat(h.nivel!=='alto'?escenaPatas(h,pa):[]);}
-    loc.forEach(p=>P.push(escenaPiezaEnSala(p,T,yB)));
+    loc.forEach(p=>{const q=escenaPiezaEnSala(p,T,yB);if(p.grp&&q.k==='box')q.grp=ii+'|'+p.grp;P.push(q);}); /* Lote A3: juntas del casco fuera también en la escena (grupo por mueble) */
   });
   const e=C.paredGrosor,s=C.sueloGrosor,L=E.largo,W=E.ancho,H=E.alto,K=C.col3d,bx=(x,y,z,w,h,d,col)=>({k:'box',x,y,z,w,h,d,col,st:K.borde});
   const rz=r=>({x:r[0],z:W-r[3],w:r[2]-r[0],d:r[3]-r[1]}); // rectángulo de planta → x, z, w, d del 3D (Z = ancho − y)
