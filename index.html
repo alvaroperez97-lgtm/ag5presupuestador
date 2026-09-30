@@ -14,6 +14,10 @@
 :root{--m:#4A2C0E;--mm:#7B4A1E;--d:#9B7A2A;--dc:#C4973A;--c:#F8F3EA;--cd:#EDE4D0;--b:#FFF;--g:#888;--t:#2A1A0A;--sh:0 2px 10px rgba(74,44,14,.14);color-scheme:light;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Lato',sans-serif;background:var(--c);color:var(--t);font-size:13px;}
+/* Lote AM1 (30-09-2026, Álvaro): toda la app en MAYÚSCULAS, en pantalla y en las hojas de impresión (también los campos
+   de texto y sus placeholders). Es solo visual: los valores guardados (S, LN, proyectos, tarifa, colores de la app de corte)
+   siguen tal cual se teclearon. El !important pisa los text-transform:none sueltos de algunas etiquetas. */
+body,body *,body ::placeholder{text-transform:uppercase!important;}
 header{background:var(--m);color:var(--c);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 3px 12px rgba(0,0,0,.35);position:sticky;top:0;z-index:200;}
 .hl{display:flex;align-items:center;gap:12px;} .hl img{height:42px;}
 .he{font-size:11px;line-height:1.55;color:var(--cd);}
@@ -266,7 +270,7 @@ tr:hover td{background:var(--c);}
       <div class="fg"><label>Teléfono</label><input id="cTel" oninput="sp()"></div>
       <div class="fg"><label>Email</label><input type="email" id="cEmail" oninput="sp()"></div>
       <div class="fg"><label>Fecha</label><input type="date" id="pFecha" oninput="sp()"></div>
-      <div class="fg" style="grid-column:1/-1"><label>Dirección / Obra</label><input id="cDir" oninput="sp()"></div>
+      <div class="fg" style="grid-column:1/-1"><label>Referencia del cliente</label><input id="cDir" oninput="sp()" placeholder="Obra, nombre del cliente final, nº de pedido del estudio…"></div><!-- Lote AM1: antes «Dirección / Obra», misma clave -->
       <div class="fg"><label>Validez</label><input id="pVal" value="30 días" oninput="sp()"></div>
       <!-- Lote AJ1 (29-09-2026, Álvaro): el descuento del cliente se fija aquí, con sus datos. Obligatorio (0 si no hay):
            vacío bloquea el paso a ② Muebles. El campo de ⑥ lo refleja en solo lectura y sigue mandando en cTot/impresión. -->
@@ -850,9 +854,9 @@ tr:hover td{background:var(--c);}
     <div class="pt">📁 Proyectos guardados</div>
     <div id="proyList"></div>
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px">
-      <button class="btn bp" onclick="guardarProyecto('PRES')">📄 Guardar como presupuesto</button>
-      <button class="btn" style="background:#8a5a2b;color:#fff" onclick="guardarProyecto('PED')">🧾 Guardar como pedido</button>
-      <button class="btn" id="btnGuardarCambios" style="display:none;background:#2e7d4f;color:#fff" onclick="guardarCambiosProyecto()">💾 Guardar cambios</button>
+      <button class="btn bp" onclick="pedirGuardar('PRES')">📄 Guardar como presupuesto</button>
+      <button class="btn" style="background:#8a5a2b;color:#fff" onclick="pedirGuardar('PED')">🧾 Guardar como pedido</button>
+      <button class="btn" id="btnGuardarCambios" style="display:none;background:#2e7d4f;color:#fff" onclick="pedirGuardar('CAMBIOS')">💾 Guardar cambios</button>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--g)"><input type="checkbox" id="numManualChk"> Nº manual</label>
       <input type="text" id="numManual" placeholder='p.ej. 0007 ó 2026-0007' style="width:160px;border:1px solid var(--cd);background:#fff;color:var(--m);border-radius:6px;padding:7px;font-size:13px">
     </div>
@@ -915,6 +919,18 @@ tr:hover td{background:var(--c);}
     </div>
     <div id="cvtEdDes" style="font-size:12px;color:var(--mm);margin:10px 0 12px;font-style:italic;line-height:1.4"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn bs" onclick="cerrarEdicionCVT()">Cancelar</button><button class="btn bp" onclick="guardarEdicionCVT()">💾 Guardar</button></div>
+  </div>
+</div>
+<!-- Lote AM1 (30-09-2026, Álvaro): al guardar, elegir entre salir (app limpia) o quedarse en el proyecto. Solo pantalla. -->
+<div id="guardarModal" class="r3dModal" onclick="if(event.target===this)cerrarPedirGuardar()">
+  <div class="r3dBox" style="max-width:360px">
+    <div class="pt" style="justify-content:space-between"><span style="font-size:13px" id="guardarModalTit">💾 Guardar</span><button class="btn bd2" onclick="cerrarPedirGuardar()">✕</button></div>
+    <div id="guardarModalTxt" style="font-size:12px;color:var(--mm);margin:0 0 12px;line-height:1.45"></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn bp" onclick="ejecutarPedirGuardar(true)">💾 Guardar y salir</button>
+      <button class="btn" style="background:#2e7d4f;color:#fff" onclick="ejecutarPedirGuardar(false)">💾 Solo guardar</button>
+      <button class="btn bs" onclick="cerrarPedirGuardar()">Cancelar</button>
+    </div>
   </div>
 </div>
 <!-- Lote R1 (18-09-2026): visor 3D de un mueble ya presupuestado (botón 🧊 de la pestaña Proyectos). Solo pantalla. -->
@@ -1156,7 +1172,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-29.1';
+const APP_BUILD = '2026-09-30.1';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -1222,7 +1238,11 @@ const ELECTRO_COL        = '#c9ccd1'; // gris inox
 const SUP_SALVASIFON       = 11.00; // suplemento salvasifón sobre la gaveta (€/ud)
 // Lote T (22-09-2026) — Tirador Stock en ancho no estándar: tramo superior + 3,00 ptos
 // (TSV de tiradores: "para anchos no estándar incrementar 3,00 puntos"). Coincidencia EXACTA contra TD.an.
-const SUP_TIR_STOCK_NO_STD = 3.00;  // €/ud tirador
+// Lote AM1 (30-09-2026, Álvaro): la regla pasa a TODOS los modelos de tirador (Stock, J, U, Solapa, Solapa Curvo):
+// ancho que no está en la tabla → tramo superior (o el mayor si lo supera) + 3,00 €/ud. Los tiradores solo tienen
+// las medidas de la tabla, así que por encima del mayor se cobra el mayor + 3,00.
+const SUP_TIR_NO_STD = 3.00;  // €/ud tirador (todos los modelos)
+const SUP_TIR_STOCK_NO_STD = SUP_TIR_NO_STD;  // alias histórico (Lote T)
 // Lote J — "Puerta del cliente" en accesorios extraíbles y abatibles Blum: cuando el mueble
 // no lleva puerta nuestra hay que montar la puerta que aporta el cliente sobre el accesorio.
 // Recargo FIJO en €/ud; no le afectan ×2/+30%/+15% (esos son recargos de armazón).
@@ -1457,11 +1477,11 @@ function gtp(tipo,ancho){
   let i=d.an.findIndex(a=>a>=ancho);if(i<0)i=d.an.length-1;
   return (d.p[i]||0)+supTirNoStd(tipo,ancho);
 }
-// Lote T — suplemento por ancho no estándar del tirador (solo Tirador Stock).
-// Ej.: puerta An.57 → tramo 60 (13,91) + 3,00 = 16,91; puerta An.60 → 13,91.
+// Lote T — suplemento por ancho no estándar del tirador. Lote AM1 (30-09-2026): todos los modelos, no solo Stock.
+// Ej.: Stock An.57 → tramo 60 (13,91) + 3,00 = 16,91; An.60 → 13,91. Tirador J An.57 → tramo 60 (18,43) + 3,00 = 21,43.
 function supTirNoStd(tipo,ancho){
-  const d=TD[tipo];if(!d||tipo!=='tirador-stock'||!(ancho>0))return 0;
-  return d.an.includes(+ancho)?0:SUP_TIR_STOCK_NO_STD;
+  const d=TD[tipo];if(!d||!(ancho>0))return 0;
+  return d.an.includes(+ancho)?0:SUP_TIR_NO_STD;
 }
 function gap(ancho){
   let i=GA.an.findIndex(a=>a>=ancho);if(i<0)i=GA.an.length-1;
@@ -1697,7 +1717,8 @@ const R3D_CTE={
   // Colgador (herraje, no se corta): cuerpo con tapa rectangular gris grafito de 4,4 (a lo largo del fondo) × 6,9 (alto) × 1,4
   // (sobre el costado), en las esquinas interiores superiores traseras. Gola de altos: la base se recorta 2 por delante y el
   // perfil va embutido en ese canto (alto puerta); en la caldera no hay perfil y el paletón de abajo sube esos mismos 2.
-  traseraRemetidaAlto:1.6, colgador:{anc:4.4,alto:6.9,gros:1.4}, golaAltoBase:2, // [confirmado 27-09-2026]
+  traseraRemetidaAlto:1.6, colgador:{anc:6.9,alto:4.4,gros:1.4}, golaAltoBase:2, // [confirmado 27-09-2026; tapa girada a 6,9 × 4,4 el 30-09-2026, Lote AM1, foto del catálogo]
+  cajeoColgador:{alto:4.2,anc:1.3}, // Lote AM1 [confirmado 30-09-2026]: cajeo de la trasera de los altos para el gancho del colgador, desde el canto superior del mueble y desde la cara interior del costado
   tirLargo:16, tirAlto:1.2, tirSaliente:2.8, tirMargen:3, // tirador genérico (se afinará por modelo en R2)
   cajLatH:{CJ:8.5,GV:18.5}, cajPared:{IATIRA:1.6,AVYOU:1.2}, cajHolgura:0.6, cajFondoGros:1.6, cajRetranqueo:2,
   cajAltoMin:8,        // cm: alto mínimo que se supone a un frente sin alto tecleado
@@ -1845,9 +1866,12 @@ const CONSTR=(()=>{
   // ═══ Lote AL1 (27-09-2026, Álvaro) — ALTOS: alto puerta (colgar) y alto caldera ═══
   // Alto puerta: costados por FUERA a todo el alto y fondo (4 cantos); base y techo INTERIORES entre costados (2 cantos:
   // delante y detrás); trasera acanalada en las 4 piezas (ranura t/2), cara trasera a 1,6 del fondo (bajos: 5), con un
-  // cajeo trasero en cada esquina superior para el gancho del colgador (solo se ve por detrás: por dentro lo tapa la tapa
-  // grafito del colgador; no se dibuja). Cremallera para las baldas = mecanizado del costado (CREMALLERA_ALTOS), no pieza.
-  // Colgadores 4,4 × 6,9 × 1,4 en las esquinas interiores superiores traseras. Sin patas. Baldas 4 cantos, fondo F − 3,5.
+  // cajeo trasero en cada esquina superior para el gancho del colgador: 4,2 de alto desde el canto superior del mueble y
+  // 1,3 desde la cara interior del costado (R3D_CTE.cajeoColgador; en la pieza, con la ranura t/2: 21 × 34 mm con 16,
+  // 22,5 × 32,5 con 19) [confirmado 30-09-2026, Lote AM1]. Por dentro lo tapa la tapa grafito del colgador; el 3D dibuja el
+  // cajeo en la parte vista de la trasera. Cremallera para las baldas = mecanizado del costado (CREMALLERA_ALTOS), no pieza.
+  // Colgadores: tapa 6,9 (fondo) × 4,4 (alto) × 1,4 (grueso) en las esquinas interiores superiores traseras (foto 30-09-2026).
+  // Sin patas. Baldas 4 cantos, fondo F − 3,5.
   // Gola de altos: NO hay cajeo en costados ni techo; solo se recorta 2 el canto delantero de la base (que no se cantea) y
   // el perfil va embutido ahí, enrasado con costados y techo. La puerta mide el alto completo (no pierde 3 como en bajos).
   // Ejemplo A.70 × An.60 × F.33 con 16: costados 70 × 33, base y techo 56,8 × 33 (base con gola 56,8 × 31), trasera 68,4 × 58,4.
@@ -1859,22 +1883,34 @@ const CONSTR=(()=>{
     corte:c=>({largo:c.A,ancho:c.F}),cantos:{L:2,A:2},cantosPuerta:{L:2,A:2},
     cajas:c=>{const w=c.th(id);return [{x:der?c.W-w:0,y:0,z:0,w,h:c.A,d:c.F,col:'costado'}];}});
   const costadosAlto=()=>[costAlto('cI','izquierdo',false),costAlto('cD','derecho',true)];
-  // Colgador: cuerpo con tapa grafito contra el costado (1,4 de grueso) y la trasera (4,4 hacia delante), colgado del techo
-  // (o del canto superior del costado en la caldera). Herraje: no se corta ni se edita (sin id). zTras(c) = cara delantera
-  // de la trasera (el fondo, si no la hay); yTop(c) = cara de arriba del colgador.
+  // Colgador: cuerpo con tapa grafito contra el costado (1,4 de grueso) y la trasera (6,9 hacia delante, 4,4 de alto; Lote AM1),
+  // colgado del techo (o del canto superior del costado en la caldera). Herraje: no se corta ni se edita (sin id). zTras(c) =
+  // cara delantera de la trasera (el fondo, si no la hay); yTop(c) = cara de arriba del colgador. El gancho que atraviesa el
+  // cajeo de la trasera no se dibuja [supuesto 3D: el cuerpo queda delante de la trasera].
   const colgadores=(zTras,yTop)=>({nombre:'Colgador',pos:'2, en las esquinas interiores superiores traseras, tapa rectangular gris grafito',estado:'confirmado',fecha:'27-09-2026',ud:2,grosor:'',corte:null,cantos:{L:0,A:0},
     cajas:c=>{const K=c.C.colgador,z=zTras(c)-K.anc,y=yTop(c)-K.alto;
       return [{x:c.tL,y,z,w:K.gros,h:K.alto,d:K.anc,col:'colgador'},{x:c.W-c.tR-K.gros,y,z,w:K.gros,h:K.alto,d:K.anc,col:'colgador'}];}});
   const zTrasAlto=c=>c.F-c.C.traseraRemetidaAlto-c.tr;
+  // Lote AM1 (30-09-2026) — cajeo del colgador en la pieza de trasera (mm, a 0,1): al ancho se le suma la ranura t/2 (la
+  // pieza entra en el costado) y al alto se le resta (la pieza empieza t/2 por debajo del canto superior del techo).
+  // Con 16: 21 × 34; con 19: 22,5 × 32,5 (no se redondea al mm entero: es un mecanizado, no una medida de corte).
+  const cajeoColgadorPieza=c=>{const K=c.C.cajeoColgador,r=c.th('techo')/2,mm=v=>Math.round(v*100)/10;return {anc:mm(K.anc+r),alto:mm(K.alto-r)};};
+  const cajeoColgadorTxt=c=>{const p=cajeoColgadorPieza(c),K=c.C.cajeoColgador;return `${fmtCm(p.anc)} × ${fmtCm(p.alto)} mm en la pieza (${fmtCm(K.anc)} desde el costado × ${fmtCm(K.alto)} desde el canto superior del mueble)`;};
+  // Parte vista de la trasera del alto (entre base y techo) con el cajeo del colgador en las dos esquinas de arriba:
+  // caja baja a todo el ancho + caja alta entre los dos cajeos. El cajeo visto mide K.alto − grueso del techo de alto.
+  const trasVistaCajeoColgador=c=>{const K=c.C.cajeoColgador,e=c.th('techo'),z=zTrasAlto(c),y0=c.tb,yTop=c.A-e,hv=Math.max(0,Math.min(K.alto-e,yTop-y0));
+    const baja={x:c.tL+0.1,y:y0,z,w:c.Wi-0.2,h:yTop-y0-hv,d:c.tr,col:'trasera'};
+    if(hv<=0||c.Wi-2*K.anc<=0.2)return [trasVista(c,y0,yTop-y0,z)];
+    return [baja,{x:c.tL+K.anc,y:yTop-hv,z,w:c.Wi-2*K.anc,h:hv,d:c.tr,col:'trasera'}];};
   const cascoAlto=()=>[...costadosAlto(),
     {id:'base',nombre:'Base',pos:c=>c.golaBase?`interior, entre costados, abajo, recortada ${fmtCm(c.gbR)} por delante para el perfil de gola (canto delantero sin cantear)`:'interior, entre costados, abajo',
       estado:'confirmado',fecha:'27-09-2026',ud:1,grosor:'t',corte:c=>({largo:c.Wi,ancho:c.F-c.gbR}),cantos:c=>c.golaBase?{L:1,A:0}:{L:2,A:0},
       cajas:c=>[{x:c.tL,y:0,z:c.gbR,w:c.Wi,h:c.tb,d:c.F-c.gbR,col:'suelo'}]},
     {id:'techo',nombre:'Techo',pos:'interior, entre costados, arriba',estado:'confirmado',fecha:'27-09-2026',ud:1,grosor:'t',
       corte:c=>({largo:c.Wi,ancho:c.F}),cantos:{L:2,A:0},cajas:c=>{const e=c.th('techo');return [{x:c.tL,y:c.A-e,z:0,w:c.Wi,h:e,d:c.F,col:'techo'}];}},
-    trasera({pos:c=>`en ranura en las 4 piezas, cara trasera a ${fmtCm(c.C.traseraRemetidaAlto)} del fondo, con cajeo trasero en las dos esquinas superiores para el gancho del colgador`,estado:'confirmado',fecha:'27-09-2026',
+    trasera({pos:c=>`en ranura en las 4 piezas, cara trasera a ${fmtCm(c.C.traseraRemetidaAlto)} del fondo, con cajeo en las dos esquinas superiores para el gancho del colgador: ${cajeoColgadorTxt(c)}`,estado:'confirmado',fecha:'30-09-2026',
       corte:c=>({largo:c.A-Math.max(c.tb,c.th('techo')),ancho:c.trAncho}),
-      cajas:c=>[trasVista(c,c.tb,c.A-c.tb-c.th('techo'),zTrasAlto(c))]}),
+      cajas:c=>trasVistaCajeoColgador(c)}),
     colgadores(zTrasAlto,c=>c.A-c.th('techo')),
     balda('27-09-2026')];
   const cascoCaldera=()=>[...costadosAlto(),
@@ -2094,6 +2130,9 @@ const GOLA_BASE_TIPOS=['alto','caldera']; // Lote AL1: altos con gola → recort
 // soportes de balda, con paso 6,4 y un margen de unos 20 arriba y abajo. Es un MECANIZADO del costado (no pieza): queda
 // apuntado para cuando el despiece lleve mecanizados; el 3D no lo dibuja. borde = distancia de cada fila al canto [supuesto].
 const CREMALLERA_ALTOS={paso:6.4,margen:20,diam:0.3,borde:3.7}; // cm
+// Lote AM1 (30-09-2026, Álvaro, catálogo del colgador «Leva 723») — taladros del costado para el colgador: Ø5, a 3,4 del
+// canto superior y a 2 y 5,2 del canto trasero (cm). Mecanizado: queda para cuando el despiece lleve mecanizados.
+const TALADROS_COLGADOR={diam:0.5,desdeArriba:3.4,desdeAtras:[2,5.2]};
 // Lote G1b — el frente es de gola si el mueble lo es y lleva gola en ese frente (el tirador la excluye en su puerta). Con
 // frentes del cliente el reparto de alturas es el mismo que con los de AG5 (el mueble es igual).
 function golaReparto(sp){return !!sp.tg&&sp.tg.t==='gola'&&(!!sp.admiteTir||!!sp.sinFrentes);}
@@ -2327,11 +2366,11 @@ function despiecePuertasLinea(l){
   return out;
 }
 // Lote AJ1 (29-09-2026, Álvaro) — regleta vista de un mueble en las listas de corte, con el tablero de puerta del modelo.
-// Se corta como una puerta (alto − 2, ancho − 3, 4 cantos) [supuesto: descuento de la regleta pendiente de confirmar].
+// Se corta como una puerta (alto − 2, ancho − 3, 4 cantos) [confirmado por Álvaro 30-09-2026, Lote AM1: sin marca
+// [supuesto] por el descuento; la marca solo sale si el tablero de puerta es supuesto, igual que en las puertas].
 // Largo = medida a favor de veta: el alto con veta vertical (la normal) o el ancho si la regleta del rincón recto va con
 // «veta horizontal» (75×15 → 748 × 147; horizontal → 147 × 748: cada descuento sigue a su medida). La regleta es una
 // línea CVT hija (Lote R6), no pieza del casco: se lee de meta.regleta. Modelo «Sin puerta»: material = su tarifa CVT.
-const AVISO_REGLETA_CORTE='regletas: corte como puerta (alto − 2, ancho − 3, 4 cantos), descuento pendiente de confirmar';
 function despieceRegletaLinea(l){
   const m=l&&l.meta;if(!m||m.tipo!=='mueble'||!m.regleta)return null;
   const ra=+m.regleta.alto||0,rw=+m.regleta.ancho||0;if(!ra||!rw)return null;
@@ -2343,7 +2382,7 @@ function despieceRegletaLinea(l){
   const vetaH=!!m.regleta.vetaH,hMm=DESPIECE_MM(ra)-CORTE_PUERTA_ALTO,wMm=DESPIECE_MM(rw)-CORTE_PUERTA_ANCHO;
   const p={cantidad:n,descripcion:`Regleta${vetaH?' (veta horizontal)':''} · ${mueble}`,largo:vetaH?wMm:hMm,ancho:vetaH?hMm:wMm,
     grueso:mc.gros,material:mc.material,caras:0,cantosL:CANTOS_PUERTA.L,cantosA:CANTOS_PUERTA.A,pieza:vetaH?'Regleta (veta horizontal)':'Regleta',
-    pos:`regleta vista ${fmtCm(ra)}×${fmtCm(rw)} cm${vetaH?' · veta a lo ancho':''}`,estado:'supuesto',mueble,lineaId:l.id,enPuerta:true,corte:mc.corte,tar:tarM,vetaH};
+    pos:`regleta vista ${fmtCm(ra)}×${fmtCm(rw)} cm${vetaH?' · veta a lo ancho':''}`,estado:mc.supuesto?'supuesto':'confirmado',mueble,lineaId:l.id,enPuerta:true,corte:mc.corte,tar:tarM,vetaH};
   return {mueble,piezas:[p],mat:mc,avisoMat,avisos:[]};
 }
 function avisoMaterialPuerta(mc,color){
@@ -2375,7 +2414,7 @@ function listasCorteProyecto(modo){
       d.avisos.forEach(a=>avisos.push(`${d.mueble}: ${a}`));if(d.avisoMat)avMat.add(d.avisoMat);
       d.piezas.forEach(p=>(p.corte?pta:prov).push(p));
       const r=despieceRegletaLinea(l); // Lote AJ1: regleta del mueble, largo a favor de veta
-      if(r){if(r.avisoMat)avMat.add(r.avisoMat);avMat.add(AVISO_REGLETA_CORTE);r.piezas.forEach(p=>(p.corte?pta:prov).push(p));}
+      if(r){if(r.avisoMat)avMat.add(r.avisoMat);r.piezas.forEach(p=>(p.corte?pta:prov).push(p));} /* Lote AM1: descuento confirmado, sin aviso */
     }
   });
   avMat.forEach(a=>avisos.push(a));
@@ -4554,7 +4593,10 @@ const VR=[
   {c:'Accesorios',n:'Marco Microondas 40x60 Blanco',p:14.75},{c:'Accesorios',n:'Marco Microondas 40x60 Inox',p:51.11},{c:'Accesorios',n:'Rejilla Aireación Horno 12.5x60 Blanco',p:13.59},{c:'Accesorios',n:'Rejilla Aireación Horno 12.5x60 Inox',p:21.84},{c:'Accesorios',n:'Rejilla Ventilación Zócalo 44x7 Blanca',p:9.36},{c:'Accesorios',n:'Rejilla Ventilación Zócalo 44x7 Alu',p:9.36},
   {c:'Accesorios',n:'Kit Reciclaje 2+2 M-600',p:81.65},{c:'Accesorios',n:'Kit Reciclaje 3+3 M-800/900',p:104.46},{c:'Accesorios',n:'Accesorio Rincón Recto Hidden Corner',p:335.13},
   {c:'Patas',n:'Pata Plástico Negra H.13/19',p:0.60},{c:'Patas',n:'Pata Plástico Shandy 5cm',p:1.35},{c:'Patas',n:'Pata Deco Cromo Brillo Fija H.15',p:17.10},{c:'Patas',n:'Pata Deco Aluminio H.10 Cromo',p:7.62},{c:'Patas',n:'Pata Deco Aluminio H.10 Níquel',p:8.43},
-  {c:'Zócalos',n:'Zócalo Alum/PVC 4ml Alto 10',p:39.00},{c:'Zócalos',n:'Zócalo Alum/PVC 4ml Alto 15',p:42.00},{c:'Zócalos',n:'Ángulo Zócalo Flexible',p:4.46},{c:'Zócalos',n:'Ángulo Zócalo 90°',p:4.46},
+  {c:'Zócalos',n:'Zócalo Alum/PVC 4ml Alto 10',p:39.00},{c:'Zócalos',n:'Zócalo Alum/PVC 4ml Alto 15',p:42.00},
+  /* Lote AM1 (30-09-2026, Álvaro): los 3 colores de zócalo (aluminio, blanco, negro) al mismo precio */
+  {c:'Zócalos',n:'Zócalo Blanco/PVC 4ml Alto 10',p:39.00},{c:'Zócalos',n:'Zócalo Blanco/PVC 4ml Alto 15',p:42.00},
+  {c:'Zócalos',n:'Zócalo Negro/PVC 4ml Alto 10',p:39.00},{c:'Zócalos',n:'Zócalo Negro/PVC 4ml Alto 15',p:42.00},{c:'Zócalos',n:'Ángulo Zócalo Flexible',p:4.46},{c:'Zócalos',n:'Ángulo Zócalo 90°',p:4.46},
   {c:'Encimeras',n:'Encimera Stock Blanco 3.60ml F30',p:103.25},{c:'Encimeras',n:'Encimera Negro Pizarra 3.60ml F30',p:122.64},{c:'Encimeras',n:'Copete Aluminio Plata Mate 4m',p:29.70},{c:'Encimeras',n:'Esquinas Copete',p:1.19},{c:'Encimeras',n:'Rincón Copete',p:1.20},{c:'Encimeras',n:'Tapas Copete',p:0.68},{c:'Encimeras',n:'Cantonera Remata Encimeras Alu',p:5.42},{c:'Encimeras',n:'Prolongación/Unión Encimera Alu',p:5.64},
   {c:'Gola',n:'Escuadra Gola U',p:1.27},{c:'Gola',n:'Tapas Gola U',p:3.12},{c:'Gola',n:'Mecanizado Gola U Bajos',p:12.75},{c:'Gola',n:'Mecanizado Gola Bajo Encimera (cocina)',p:20.00},{c:'Gola',n:'Codo Gola Rincón Recto',p:9.00},
   {c:'Tiras y Cornisas',n:'T-5 Tira Corniluz/Regleta (3050×50×19)',p:33.65},{c:'Tiras y Cornisas',n:'T-5 Tira Cornisa Recta Rechapada (3050×70×30)',p:34.80},{c:'Tiras y Cornisas',n:'T-5 Tira Cornisa Rech. Moldurada (3600×90)',p:71.74},
@@ -4719,8 +4761,29 @@ function construirSnapshotProy(qn,tipo){
   };
 }
 
+// Lote AM1 (30-09-2026, Álvaro) — ventana «Guardar y salir / Solo guardar» para PRES, PED y guardar cambios ('CAMBIOS').
+let GUARDAR_PEND=null;
+function pedirGuardar(tipo){
+  if(!LN.length){alert('No hay líneas que guardar.');return;}
+  if(tipo==='CAMBIOS'&&!S.qn){alert('No hay un proyecto cargado. Usa «Guardar como…».');return;}
+  GUARDAR_PEND=tipo;
+  const tit=tipo==='PED'?'🧾 Guardar como pedido':tipo==='CAMBIOS'?'💾 Guardar cambios en '+S.qn:'📄 Guardar como presupuesto';
+  const txt=tipo==='CAMBIOS'
+    ?'Se sobrescribe '+esc(S.qn)+' con los cambios actuales (la versión guardada anterior se pierde).<br><b>Guardar y salir</b>: la app queda limpia para el siguiente proyecto. <b>Solo guardar</b>: sigues trabajando en '+esc(S.qn)+'.'
+    :'Se guarda con número nuevo en Proyectos.<br><b>Guardar y salir</b>: la app queda limpia para el siguiente proyecto. <b>Solo guardar</b>: sigues trabajando en él (el siguiente guardado es «Guardar cambios»).';
+  document.getElementById('guardarModalTit').textContent=tit;
+  document.getElementById('guardarModalTxt').innerHTML=txt;
+  document.getElementById('guardarModal').style.display='flex';
+}
+function cerrarPedirGuardar(){GUARDAR_PEND=null;document.getElementById('guardarModal').style.display='none';}
+function ejecutarPedirGuardar(salir){
+  const tipo=GUARDAR_PEND;cerrarPedirGuardar();if(!tipo)return;
+  if(tipo==='CAMBIOS')guardarCambiosProyecto(salir,true);else guardarProyecto(tipo,salir);
+}
 // Guardar como presupuesto ('PRES') o pedido ('PED'). Siempre crea un registro nuevo con número único.
-function guardarProyecto(tipo){
+// Lote AM1: salir = true (por defecto) limpia la app tras guardar; false deja el proyecto abierto con su número.
+function guardarProyecto(tipo,salir){
+  if(salir===undefined)salir=true;
   if(!LN.length){alert('No hay líneas que guardar.');return;}
   const proy=lsLeer(LS_PROYECTOS,[]);
   let qn,numAuto=null;
@@ -4745,27 +4808,32 @@ function guardarProyecto(tipo){
   renderProyectosGuardados();
   rP();
   // Lote AJ1 (29-09-2026, Álvaro): tras guardar (presupuesto, pedido o PRES → PED) la app queda limpia para el siguiente
-  // proyecto. El registro ya está en ⑥ Proyectos; se recupera con «Cargar». «Guardar cambios» (Lote R) no limpia.
-  nuevoP({trasGuardar:true});
-  flash((tipo==='PED'?'🧾 Pedido':'📄 Presupuesto')+' guardado: '+qn+' · app lista para el siguiente');
+  // proyecto. El registro ya está en ⑥ Proyectos; se recupera con «Cargar».
+  // Lote AM1 (30-09-2026): solo si se elige «Guardar y salir»; con «Solo guardar» el proyecto sigue abierto con su número.
+  if(salir){nuevoP({trasGuardar:true});flash((tipo==='PED'?'🧾 Pedido':'📄 Presupuesto')+' guardado: '+qn+' · app lista para el siguiente');}
+  else flash((tipo==='PED'?'🧾 Pedido':'📄 Presupuesto')+' guardado: '+qn+' · sigues en él');
 }
 
 // Lote R (18-09-2026) — sobrescribe el proyecto cargado con el estado actual, SIN consumir número nuevo.
 // Conserva número y tipo (PRES/PED) del registro original. El contador no se toca.
-function guardarCambiosProyecto(){
+// Lote AM1 (30-09-2026): salir = true limpia la app tras sobrescribir (por defecto no: se sigue en el proyecto);
+// sinConfirmar = true cuando viene de la ventana pedirGuardar (ya ha hecho de confirmación).
+function guardarCambiosProyecto(salir,sinConfirmar){
   if(!S.qn){alert('No hay un proyecto cargado. Usa «Guardar como…».');return;}
   if(!LN.length){alert('No hay líneas que guardar.');return;}
   const proy=lsLeer(LS_PROYECTOS,[]);
   const i=proy.findIndex(p=>p.qn===S.qn);
   if(i<0){alert('El proyecto '+S.qn+' ya no existe en este dispositivo. Usa «Guardar como…».');actualizarCabeceraNum();return;}
-  if(!confirm('¿Sobrescribir '+S.qn+' con los cambios actuales?\nLa versión guardada anterior se pierde.'))return;
+  if(!sinConfirmar&&!confirm('¿Sobrescribir '+S.qn+' con los cambios actuales?\nLa versión guardada anterior se pierde.'))return;
   const tipo=proy[i].tipo||S.tipoDoc||'PRES';
   proy[i]=construirSnapshotProy(S.qn,tipo);
   if(!lsGuardar(LS_PROYECTOS,proy))return;
   lsBorrar(LS_BORRADOR); // igual que guardarProyecto: el borrador queda obsoleto
   S.tipoDoc=tipo;
   actualizarCabeceraNum();renderProyectosGuardados();rP();
-  flash('💾 Cambios guardados en '+S.qn);
+  const qnG=S.qn;
+  if(salir){nuevoP({trasGuardar:true});flash('💾 Cambios guardados en '+qnG+' · app lista para el siguiente');} /* Lote AM1 */
+  else flash('💾 Cambios guardados en '+qnG);
 }
 
 // Restaura un snapshot completo (proyecto guardado o borrador autoguardado) sobre el estado de trabajo.
@@ -4840,10 +4908,11 @@ function renderProyectosGuardados(){
       ?'<span style="background:#8a5a2b;color:#fff;font-size:9px;font-weight:900;padding:2px 7px;border-radius:8px">PEDIDO</span>'
       :'<span style="background:#3b6ea5;color:#fff;font-size:9px;font-weight:900;padding:2px 7px;border-radius:8px">PRESUP.</span>';
     const cli=(p.cliente&&p.cliente.nom)?p.cliente.nom:'—';
+    const ref=(p.cliente&&p.cliente.dir)?String(p.cliente.dir).trim():''; // Lote AM1: referencia del cliente tras la fecha
     return `<div style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid var(--cd);flex-wrap:wrap">`+
       `<div style="min-width:130px;font-weight:700;color:var(--m)">${p.qn}</div>`+
       `<div>${chip}</div>`+
-      `<div style="flex:1;min-width:120px;font-size:12px;color:var(--g)">${esc(cli)}${p.fecha?' · '+esc(p.fecha):''}</div>`+
+      `<div style="flex:1;min-width:120px;font-size:12px;color:var(--g)">${esc(cli)}${p.fecha?' · '+esc(p.fecha):''}${ref?' · <b>'+esc(ref)+'</b>':''}</div>`+
       `<div style="font-weight:700;color:var(--m);min-width:90px;text-align:right">${fmt(p.total||0)}</div>`+
       `<div style="display:flex;gap:6px">`+
         `<button class="btn bp" style="padding:5px 12px;font-size:12px" onclick="cargarProyecto('${p.qn}')">📂 Cargar</button>`+
@@ -7365,7 +7434,7 @@ function limpiarFormularioEncimera(total){
 
 // PRESUPUESTO
 function rP(){
-  document.getElementById('cibox').innerHTML=[['Cliente',S.nom||'—'],['Teléfono',S.tel||'—'],['Email',S.email||'—'],['Fecha',S.fecha||'—'],['Dirección',S.dir||'—'],['Validez',S.val||'30 días']].map(([l,v])=>`<div class="cir"><span class="cil">${l}</span><span>${esc(v)}</span></div>`).join('');
+  document.getElementById('cibox').innerHTML=[['Cliente',S.nom||'—'],['Teléfono',S.tel||'—'],['Email',S.email||'—'],['Fecha',S.fecha||'—'],['Ref. cliente',S.dir||'—'],['Validez',S.val||'30 días']].map(([l,v])=>`<div class="cir"><span class="cil">${l}</span><span>${esc(v)}</span></div>`).join('');
   document.getElementById('obsS').textContent=S.obs?`Obs.: ${S.obs}`:'';
   // Resumen de configuración: lista de modelos (en vez del acabado único de antes)
   const cfgModelos=MODELOS.map((m,i)=>{
@@ -7385,7 +7454,7 @@ function rP(){
   const multi=MODELOS.length>1;
   // Lote K (25-09-2026): las hijas de cajón no salen como fila; su importe va sumado en la fila del mueble.
   const visibles=lineasPresupuesto();
-  const secs=[...new Set(visibles.map(l=>l.sec))];let rows='',n=1;
+  const secs=ordenarSecciones([...new Set(visibles.map(l=>l.sec))]);let rows='',n=1; // Lote AM1: orden fijo
   secs.forEach(s=>{
     rows+=`<tr class="sh"><td colspan="6">${s}</td></tr>`;
     // Lote J — las hijas idénticas (herrajes/regletas auto de distintos muebles) se pintan
@@ -7864,6 +7933,13 @@ function textoInclCajones(k,html){
 function precioFilaPresupuesto(l){return (l.meta&&l.meta.tipo==='mueble'&&!l.parentId)?+(l.p+cajonesDeMueble(l.id).tot).toFixed(2):l.p;}
 // Líneas que se ven en el presupuesto (pantalla, impresión y CSV): todas menos las hijas de cajón.
 function lineasPresupuesto(){return LN.filter(l=>!esHijaCajon(l));}
+// Lote AM1 (30-09-2026, Álvaro) — orden fijo de las secciones del presupuesto (pantalla e impresión). Una sección que
+// no esté en la lista sale al final, en el orden en que apareció.
+const ORDEN_SECCIONES=['Muebles','Puertas adicionales','Costados/Regletas','Gola','Varios','Encimeras'];
+function ordenarSecciones(secs){
+  const pos=s=>{const i=ORDEN_SECCIONES.indexOf(s);return i<0?ORDEN_SECCIONES.length:i;};
+  return secs.map((s,i)=>[s,i]).sort((a,b)=>(pos(a[0])-pos(b[0]))||(a[1]-b[1])).map(x=>x[0]);
+}
 function consolidarLN(nueva){
   if(nueva.parentId)return null; // las hijas van ligadas a su mueble: nunca se fusionan de verdad
   const clave=huellaLN(nueva);
