@@ -1172,7 +1172,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-30.2';
+const APP_BUILD = '2026-09-30.3';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -2385,6 +2385,42 @@ function despieceRegletaLinea(l){
     pos:`regleta vista ${fmtCm(ra)}×${fmtCm(rw)} cm${vetaH?' · veta a lo ancho':''}`,estado:mc.supuesto?'supuesto':'confirmado',mueble,lineaId:l.id,enPuerta:true,corte:mc.corte,tar:tarM,vetaH};
   return {mueble,piezas:[p],mat:mc,avisoMat,avisos:[]};
 }
+// Lote AN1 (30-09-2026, Álvaro) — costados vistos, regletas, cierres a techo y zócalos SUELTOS de ③ en las listas de corte.
+// · Medida TAL CUAL, sin descuento: solo se descuenta (alto − 2, ancho − 3) en puertas, frentes y regletas puestas en muebles.
+// · 4 cantos del color en costados vistos y regletas [confirmado]; cierre a techo y zócalo igual [supuesto, pendiente].
+// · Material: la tarifa CVT de la línea empareja con su tarifa de puerta (CVT-1 → T-1 y CVT-9 → T-9: las corta AG5; el resto
+//   se pide al proveedor), con el color de puerta del modelo de la línea. Grosor 19 mm (31 en las CVT-x-31).
+// · Largo = medida a favor de veta: el alto (veta vertical); regleta con «veta horizontal», el ancho. Zócalo: el largo es la
+//   longitud (el ancho de la línea) y la veta va a lo largo [supuesto].
+// · El zócalo de PVC / aluminio de ④ Varios no se corta. Las hijas de un mueble (regleta, piezas en material de puerta) ya
+//   salen desde el mueble: aquí solo líneas sin parentId.
+const CVT_SUELTO_CORTE={costado:'Costado visto',regleta:'Regleta',techo:'Cierre a techo',zocalo:'Zócalo'};
+// Tarifa de puerta que empareja con una CVT: la del modelo si le corresponde (T-7A / T-7B), si no la primera de TCVT.
+function tarPuertaDeCVT(ct,tarModelo){
+  const base=String(ct||'').replace(/-31$/,'');if(!base)return null;
+  if(tarModelo&&TCVT[tarModelo]===base)return tarModelo;
+  return Object.keys(TCVT).find(k=>TCVT[k]===base)||null;
+}
+function subtipoCVTLinea(l){
+  if(l.subtipo)return l.subtipo;
+  const d=String(l.desc||'');return Object.keys(CVT_TIPO_NOM).find(k=>d.startsWith(CVT_TIPO_NOM[k]))||null; /* líneas antiguas sin subtipo */
+}
+function despieceCVTSueltoLinea(l){
+  if(!l||l.sec!=='Costados/Regletas'||l.parentId)return null;
+  const tipo=subtipoCVTLinea(l),nom=CVT_SUELTO_CORTE[tipo];if(!nom)return null;
+  const a=+l.alto||0,w=+l.ancho||0,ct=tarifaCVTLinea(l),medida=`${fmtCm(a)}×${fmtCm(w)}`;
+  if(!a||!w||!ct)return {piezas:[],avisos:[`${nom} suelto ${medida}: sin medidas o sin tarifa CVT, no sale en la lista`],avisoMat:''};
+  const mod=MODELOS[l.modeloId]||MODELOS[0]||{},color=mod.colorPuerta||'',tarP=tarPuertaDeCVT(ct,mod.tar);
+  const mc=tarP?materialPuertaCorte(tarP,color):{material:`${ct}${color?' '+color:''}`,corte:false,casado:false,supuesto:true};
+  const hMm=DESPIECE_MM(a),wMm=DESPIECE_MM(w),aLo=tipo==='zocalo'||!!l.vetaH;
+  const conf=(tipo==='costado'||tipo==='regleta')&&!mc.supuesto;
+  const nota=typeof notaUsuarioCVT==='function'?notaUsuarioCVT(l):'';
+  const p={cantidad:Math.max(1,+l.cnt||1),descripcion:`${nom} suelto ${medida}`,largo:aLo?wMm:hMm,ancho:aLo?hMm:wMm,
+    grueso:grosorPiezaPuerta(ct),material:mc.material,caras:0,cantosL:CANTOS_PUERTA.L,cantosA:CANTOS_PUERTA.A,pieza:nom,
+    pos:`suelto ③ · ${ct} ${medida} cm${tipo==='zocalo'?' · largo = longitud':''}${l.vetaH?' · veta a lo ancho':''}${nota?' · '+nota:''}`,
+    estado:conf?'confirmado':'supuesto',mueble:'Suelto (③)',lineaId:l.id,enPuerta:true,corte:!!mc.corte,tar:tarP||ct};
+  return {piezas:[p],avisos:[],avisoMat:tarP?avisoMaterialPuerta(mc,color):''};
+}
 function avisoMaterialPuerta(mc,color){
   if(mc.corte&&!mc.casado)return `color de puerta «${color||'sin color'}» sin tablero en la BBDD de corte: sale como «${mc.material}»`;
   if(mc.supuesto)return `tablero «${mc.material}» ${mc.gros} mm: nombre y grosor supuestos, confirmar en la BBDD de corte`;
@@ -2395,6 +2431,12 @@ function avisoMaterialPuerta(mc,color){
 function listasCorteProyecto(modo){
   modo=modo||'ambos';const arm=[],pta=[],prov=[],avisos=[],avMat=new Set();
   LN.forEach(l=>{
+    if(l.sec==='Costados/Regletas'&&!l.parentId){ /* Lote AN1: CVT sueltos de ③, con las puertas */
+      if(modo==='armazones')return;
+      const c=despieceCVTSueltoLinea(l);if(!c)return;
+      c.avisos.forEach(a=>avisos.push(a));if(c.avisoMat)avMat.add(c.avisoMat);
+      c.piezas.forEach(p=>(p.corte?pta:prov).push(p));return;
+    }
     const m=l.meta;if(!m||m.tipo!=='mueble')return;
     if(modo!=='puertas'){
       const d=despieceLinea(l);
@@ -2436,9 +2478,9 @@ function buildListasCorteHTML(){
   let h=`<div class="lc-print" style="page-break-before:always;padding-top:8px">`+
     `<div class="wshead"><div><img src="https://almacengrupocinco.es/wp-content/uploads/2016/05/cropped-logo.png" height="36" onerror="this.style.display='none'"><div style="font-size:8px;color:#666;margin-top:3px">Cañada Aguilera 63 · 47155 Santovenia · 983 268 328</div></div>`+
     `<div style="text-align:right"><div style="font-size:14px;font-weight:700;color:#4A2C0E">LISTAS DE CORTE</div><div style="font-size:9px;color:#666">${rotuloDoc()} · ${S.fecha||'—'}</div></div></div>`+
-    `<div style="font-size:9px;color:#666;font-style:italic;margin-bottom:8px">Medidas finales en mm (la canteadora ya quita lo que pone). Subrayado: 1 raya = 1 canto, 2 rayas = 2 cantos. Puertas y frentes: alto − 2 y ancho − 3, 4 cantos. Regletas igual; la primera medida va a favor de veta. Cajeos y mecanizados no descontados: en Posición. Armazones: solo bajos; el resto, construcción pendiente.</div>`;
+    `<div style="font-size:9px;color:#666;font-style:italic;margin-bottom:8px">Medidas finales en mm (la canteadora ya quita lo que pone). Subrayado: 1 raya = 1 canto, 2 rayas = 2 cantos. Puertas, frentes y regletas de muebles: alto − 2 y ancho − 3, 4 cantos. Costados vistos, regletas, cierres y zócalos sueltos (③): medida tal cual, 4 cantos. La primera medida va a favor de veta. Cajeos y mecanizados no descontados: en Posición. Armazones: solo bajos; el resto, construcción pendiente.</div>`;
   if(modo!=='puertas')h+=sec('Armazones',L.armazones,'LISTA DE CORTE');
-  if(modo!=='armazones'){h+=sec('Puertas y frentes (T-1 · T-9, se cortan en AG5)',L.puertas,'LISTA DE CORTE');h+=sec('Puertas y frentes (resto de tarifas, se piden)',L.proveedor,'LISTA PEDIR PROVEEDOR');}
+  if(modo!=='armazones'){h+=sec('Puertas, frentes y costados vistos (T-1 · T-9, se cortan en AG5)',L.puertas,'LISTA DE CORTE');h+=sec('Puertas, frentes y costados vistos (resto de tarifas, se piden)',L.proveedor,'LISTA PEDIR PROVEEDOR');}
   if(L.avisos.length)h+=`<div style="font-size:9px;color:#b00;margin-top:6px"><b>Avisos:</b><ul style="margin:2px 0 0 14px;padding:0">${L.avisos.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>`;
   return h+'</div>';
 }
