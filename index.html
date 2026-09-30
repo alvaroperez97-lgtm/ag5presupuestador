@@ -49,22 +49,24 @@ input,select,textarea{border:1.5px solid #C9B078;border-radius:6px;padding:7px 1
 input::placeholder,textarea::placeholder{color:#A99878;opacity:1;}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--d);background:#fff;box-shadow:0 0 0 2px rgba(155,122,42,.18);}
 textarea{resize:vertical;min-height:65px;}
-.tgg{display:flex;border-radius:7px;overflow:hidden;border:1.5px solid var(--d);width:fit-content;margin-top:5px;}
-.tgb{padding:8px 18px;border:none;background:var(--c);color:var(--m);cursor:pointer;font-family:'Lato',sans-serif;font-size:12px;font-weight:700;transition:all .2s;}
-.tgb.on{background:var(--m);color:var(--dc);}
+.tgg{display:flex;border-radius:7px;overflow:hidden;border:1.5px solid #d6cfc2;width:fit-content;margin-top:5px;} /* Lote AN2 */
+/* Lote AN2 (30-09-2026, Álvaro): botón elegido = dorado AG5 con ✓ y letra blanca; no elegido = blanco con letra gris
+   (antes marrón oscuro / crema, que parecían dos colores de la marca y no «marcado / sin marcar»). */
+.tgb{padding:8px 18px;border:none;background:#fff;color:#8a8a8a;cursor:pointer;font-family:'Lato',sans-serif;font-size:12px;font-weight:700;transition:all .2s;}
+.tgb.on{background:var(--dc);color:#fff;}
+.tgb.on::before,.pill.on::before,.cpill.on::before{content:'✓ ';}
 .tgb.on.tir-on{background:#2e7d32 !important;color:#fff !important;box-shadow:0 0 8px 2px rgba(46,125,50,.7) !important;border:2px solid #66bb6a !important;font-weight:900 !important;font-size:13px !important;}
 .tgb.on.tir-off{background:#c62828 !important;color:#fff !important;box-shadow:0 0 8px 2px rgba(198,40,40,.7) !important;border:2px solid #ef5350 !important;font-weight:900 !important;font-size:13px !important;}
-.pill{padding:6px 13px;border:2px solid var(--cd);border-radius:20px;background:var(--c);color:var(--t);cursor:pointer;font-size:12px;font-weight:700;transition:all .2s;border:none;font-family:'Lato',sans-serif;}
-.pill{border:2px solid var(--cd);background:var(--c);}
-.pill:hover{border-color:var(--d);} .pill.on{background:var(--m);border-color:var(--m);color:var(--dc);}
+.pill{padding:6px 13px;border:2px solid #ddd;border-radius:20px;background:#fff;color:#8a8a8a;cursor:pointer;font-size:12px;font-weight:700;transition:all .2s;font-family:'Lato',sans-serif;}
+.pill:hover{border-color:var(--dc);color:var(--t);} .pill.on{background:var(--dc);border-color:var(--mm);color:#fff;}
 .pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:5px;}
 .cpills{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:15px;}
-.cpill{padding:5px 13px;border:2px solid var(--cd);border-radius:20px;background:var(--c);color:var(--mm);cursor:pointer;font-size:11.5px;font-weight:700;transition:all .2s;font-family:'Lato',sans-serif;border:2px solid var(--cd);}
-.cpill:hover{border-color:var(--dc);} .cpill.on{background:var(--m);border-color:var(--m);color:var(--dc);}
+.cpill{padding:5px 13px;border:2px solid #ddd;border-radius:20px;background:#fff;color:#8a8a8a;cursor:pointer;font-size:11.5px;font-weight:700;transition:all .2s;font-family:'Lato',sans-serif;}
+.cpill:hover{border-color:var(--dc);color:var(--t);} .cpill.on{background:var(--dc);border-color:var(--mm);color:#fff;}
 .mgr{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:10px;max-height:55vh;overflow-y:auto;}
 .mc{background:#fff;border:1.5px solid var(--cd);border-radius:8px;padding:11px 13px;cursor:pointer;transition:all .2s;}
 .mc:hover{border-color:var(--d);box-shadow:0 3px 10px rgba(155,122,42,.2);transform:translateY(-1px);}
-.mc.on{border-color:var(--m);background:var(--c);}
+.mc.on{border:2.5px solid var(--dc);background:#FFF6E5;} /* Lote AN2 */
 .mcn{font-size:11.5px;font-weight:700;color:var(--m);margin-bottom:5px;line-height:1.3;}
 .mcp{font-size:11px;color:var(--g);display:flex;justify-content:space-between;}
 .mcp span:last-child{font-weight:700;} .mcp.b span:last-child{color:var(--mm);} .mcp.d span:last-child{color:var(--d);}
@@ -114,7 +116,7 @@ tr:hover td{background:var(--c);}
 .ts .st{font-family:'Playfair Display',serif;font-size:13px;font-weight:600;color:var(--m);margin-bottom:11px;}
 .egr{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;max-height:60vh;overflow-y:auto;}
 .ec{background:#fff;border:1.5px solid var(--cd);border-radius:8px;padding:11px 13px;cursor:pointer;transition:all .2s;}
-.ec:hover{border-color:var(--d);} .ec.on{border-color:var(--m);background:var(--c);}
+.ec:hover{border-color:var(--d);} .ec.on{border:2.5px solid var(--dc);background:#FFF6E5;} /* Lote AN2 */
 .er{font-size:10px;color:var(--g);margin-bottom:3px;} .en{font-size:12px;font-weight:700;color:var(--m);margin-bottom:2px;} .ea{font-size:11px;color:var(--mm);}
 .eg{display:inline-block;background:var(--m);color:var(--dc);font-size:10px;font-weight:900;padding:2px 7px;border-radius:10px;margin-top:3px;}
 .gr{background:var(--m);color:var(--c);border-radius:10px;padding:18px;margin-bottom:18px;}
@@ -282,10 +284,10 @@ tr:hover td{background:var(--c);}
     <div class="pt">🎨 Modelos del proyecto</div>
     <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-bottom:14px">
       <div class="fg"><label>Nº de modelos</label><div class="tgg"><button class="tgb on" id="bN1" onclick="setNModelos(1)">1</button><button class="tgb" id="bN2" onclick="setNModelos(2)">2</button><button class="tgb" id="bN3" onclick="setNModelos(3)">3</button></div></div>
-      <div class="fg"><label>Grosor armazón (global)</label><div class="tgg"><button class="tgb on" id="b16" onclick="setGros('16',this)">16mm</button><button class="tgb" id="b19" onclick="setGros('19',this)">19mm (+15%)</button></div></div>
+      <div class="fg"><label>Grosor armazón (por defecto)</label><div class="tgg"><button class="tgb on" id="b16" onclick="setGros('16',this)">16mm</button><button class="tgb" id="b19" onclick="setGros('19',this)">19mm (+15%)</button></div></div>
       <!-- Lote D1 (22-09-2026): color de armazón del catálogo de tableros de la app de corte (de él sale el grosor de la
            trasera: 8 mm, Textil 10) y alto de patas 10/15. Solo 3D y despiece: NO tocan precios. -->
-      <div class="fg"><label>Color armazón</label><select class="di" id="selColorArm" onchange="setColorArm(this.value)" style="min-width:190px"></select><div id="colorArmInfo" style="font-size:10px;color:var(--g);margin-top:3px"></div></div>
+      <div class="fg"><label>Color armazón (por defecto)</label><select class="di" id="selColorArm" onchange="setColorArm(this.value)" style="min-width:190px"></select><div id="colorArmInfo" style="font-size:10px;color:var(--g);margin-top:3px"></div></div>
       <div class="fg"><label>Patas (alto)</label><div class="tgg"><button class="tgb on" id="bPat10" onclick="setPatas('10',this)">10 cm</button><button class="tgb" id="bPat15" onclick="setPatas('15',this)">15 cm</button></div></div>
     </div>
     <!-- Selector de modelo en foco para edición (visible solo con >1 modelo) -->
@@ -296,7 +298,10 @@ tr:hover td{background:var(--c);}
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">
         <div class="fg"><label>Nombre del modelo</label><input id="mdlNombre" oninput="setModeloNombre(this.value)" style="background:#fff;color:var(--t);border-color:var(--d)"></div>
         <div class="fg"><label>Color puerta (info)</label><input id="mdlColPuerta" oninput="MODELOS[MFOCO].colorPuerta=this.value" placeholder="p.ej. Blanco" style="background:#fff;color:var(--t);border-color:var(--d)"></div>
-        <div class="fg"><label>Color armazón (info)</label><input id="mdlColArmazon" oninput="MODELOS[MFOCO].colorArmazon=this.value" placeholder="p.ej. Blanco" style="background:#fff;color:var(--t);border-color:var(--d)"></div>
+        <!-- Lote AN2 (30-09-2026, Álvaro): color de armazón y grosor de ESTE modelo (por defecto, los del proyecto). Cambian el
+             +15 % de 19 mm de sus muebles (re-tarifado al momento), la trasera, el 3D, el despiece y la hoja de producción. -->
+        <div class="fg"><label>Color armazón (este modelo)</label><select class="di" id="mdlColArmazon" onchange="setModeloColorArm(this.value)" style="min-width:150px;background:#fff;color:var(--t);border-color:var(--d)"></select></div>
+        <div class="fg"><label>Grosor armazón (este modelo)</label><div class="tgg"><button class="tgb on" id="mdlG16" onclick="setModeloGros('16')">16mm</button><button class="tgb" id="mdlG19" onclick="setModeloGros('19')">19mm (+15%)</button></div></div>
         <!-- Lote AJ1 (29-09-2026, Álvaro): material de puerta con veta. Solo desbloquea «Veta horizontal» en la regleta del bajo
              rincón recto de este modelo; la lista de corte pone el largo a favor de veta (75×15 → 748×147; horizontal → 147×748). -->
         <div class="fg" style="justify-content:flex-end"><label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--t);cursor:pointer;padding:8px 0"><input type="checkbox" id="mdlVeta" onchange="MODELOS[MFOCO].veta=this.checked" style="width:auto;margin:0"> Lleva veta <span style="color:var(--g)">(regleta del rincón recto)</span></label></div>
@@ -910,7 +915,7 @@ tr:hover td{background:var(--c);}
 
 <!-- Lote AJ1 (29-09-2026, Álvaro): editar alto y ancho/fondo de un costado visto, regleta suelta, zócalo o cierre a techo desde
      el desglose de ⑥ (lápiz). Re-tarifa con la tarifa CVT de la línea (medida superior de la tabla). Solo pantalla. -->
-<div id="cvtEditModal" class="r3dModal" onclick="if(event.target===this)cerrarEdicionCVT()">
+<div id="cvtEditModal" class="r3dModal" onpointerdown="modalPulsado(event,this)" onclick="if(modalClicFondo(event,this))cerrarEdicionCVT()">
   <div class="r3dBox" style="max-width:380px">
     <div class="pt" style="justify-content:space-between"><span style="font-size:13px">✏️ <span id="cvtEdTit"></span></span><button class="btn bd2" onclick="cerrarEdicionCVT()">✕</button></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -922,7 +927,7 @@ tr:hover td{background:var(--c);}
   </div>
 </div>
 <!-- Lote AM1 (30-09-2026, Álvaro): al guardar, elegir entre salir (app limpia) o quedarse en el proyecto. Solo pantalla. -->
-<div id="guardarModal" class="r3dModal" onclick="if(event.target===this)cerrarPedirGuardar()">
+<div id="guardarModal" class="r3dModal" onpointerdown="modalPulsado(event,this)" onclick="if(modalClicFondo(event,this))cerrarPedirGuardar()">
   <div class="r3dBox" style="max-width:360px">
     <div class="pt" style="justify-content:space-between"><span style="font-size:13px" id="guardarModalTit">💾 Guardar</span><button class="btn bd2" onclick="cerrarPedirGuardar()">✕</button></div>
     <div id="guardarModalTxt" style="font-size:12px;color:var(--mm);margin:0 0 12px;line-height:1.45"></div>
@@ -934,7 +939,7 @@ tr:hover td{background:var(--c);}
   </div>
 </div>
 <!-- Lote R1 (18-09-2026): visor 3D de un mueble ya presupuestado (botón 🧊 de la pestaña Proyectos). Solo pantalla. -->
-<div id="r3dModal" class="r3dModal" onclick="if(event.target===this)cerrarRender3D()">
+<div id="r3dModal" class="r3dModal" onpointerdown="modalPulsado(event,this)" onclick="if(modalClicFondo(event,this))cerrarRender3D()">
   <div class="r3dBox">
     <div class="pt" style="justify-content:space-between"><span style="font-size:13px">🧊 <span id="r3dModalTit"></span></span><button class="btn bd2" onclick="cerrarRender3D()">✕</button></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
@@ -950,7 +955,7 @@ tr:hover td{background:var(--c);}
 </div>
 
 <!-- Lote U (23-09-2026): ventana «📐 Medidas especiales» del mueble en curso (normal o rincón). Solo pantalla. -->
-<div id="medEspModal" class="r3dModal" onclick="if(event.target===this)cerrarMedidasEsp()">
+<div id="medEspModal" class="r3dModal" onpointerdown="modalPulsado(event,this)" onclick="if(modalClicFondo(event,this))cerrarMedidasEsp()">
   <div class="r3dBox">
     <div class="pt" style="justify-content:space-between"><span style="font-size:13px">📐 Medidas especiales</span><button class="btn bd2" onclick="cerrarMedidasEsp()">✕</button></div>
     <div id="medEspTit" style="font-size:12px;color:var(--mm);font-weight:700;margin-bottom:10px"></div>
@@ -981,7 +986,7 @@ tr:hover td{background:var(--c);}
 
 <!-- Lote V1 (23-09-2026): creador de escenas — habitación a escala con los muebles del presupuesto (planta con imán y
      vista 3D con el motor del visor). Se guarda con el proyecto. No toca precios. Solo pantalla. -->
-<div id="escModal" class="r3dModal" onclick="if(event.target===this)cerrarEscena()">
+<div id="escModal" class="r3dModal" onpointerdown="modalPulsado(event,this)" onclick="if(modalClicFondo(event,this))cerrarEscena()">
   <div class="r3dBox escBox">
     <div class="pt" style="justify-content:space-between"><span style="font-size:13px">🏠 Escena</span><button class="btn bd2" onclick="cerrarEscena()">✕</button></div>
     <div id="escForm" style="display:none">
@@ -1134,7 +1139,7 @@ const RESALTES={
   gris:    {nom:'Gris', bg:'#e4e4e4', chip:'#888888'}
 };
 function nuevoModelo(i){
-  return {nombre:'Modelo '+i, colorPuerta:'', colorArmazon:(typeof S!=='undefined'&&S&&S.colorArm)||'', resalte:i===1?'none':(['naranja','verde','azul','rosa'][(i-2)]||'gris'), // Lote X1: arranca con el color global
+  return {nombre:'Modelo '+i, colorPuerta:'', colorArmazon:'', gros:null, resalte:i===1?'none':(['naranja','verde','azul','rosa'][(i-2)]||'gris'), // Lote AN2: '' / null = sigue al proyecto
           tar:'Sin puerta', cvt:null, tb:{t:'sin',s:'',c:''}, ta:{t:'sin',s:'',c:''},
           lacaNoStd:false, uneroRebaj:false, vidrioTVA:null,
           recargo:0, recargoCVT:false, // Lote L
@@ -1169,10 +1174,36 @@ function sincronizarModeloFoco(){
 }
 // Devuelve el color de fondo (resalte) de un modelo, o '' si none/no existe.
 function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.resalte||'none'];return (r&&m.resalte!=='none')?r.bg:'';}
+// Lote AN2 (30-09-2026, Álvaro) — color de armazón y grosor (16/19) POR MODELO. Lo elegido en ① Proyecto (S.colorArm,
+// S.gros) es el valor por defecto; en el modelo, colorArmazon '' y gros null significan «como el proyecto» (un valor igual
+// al del proyecto se guarda como «como el proyecto», así el cambio del proyecto arrastra a los modelos que no lo han
+// cambiado). El +15 % de 19 mm, la trasera, el 3D, el despiece y la hoja de producción siguen al modelo de cada línea.
+function grosModelo(idx){const m=MODELOS[idx];const g=m?String(m.gros||''):'';return (g==='19'||g==='16')?g:(S.gros||'16');}
+function colorArmModelo(idx){const m=MODELOS[idx];const c=m?m.colorArmazon:'';return tableroCatalogo(c)?c:(S.colorArm||'');}
+function grosActual(){return grosModelo(SIDX);}         /* modelo cargado en S (scratch): tarificación y formulario de Muebles */
+function colorArmActual(){return colorArmModelo(SIDX);}
+function modeloDeLinea(l){const m=l&&l.meta;const mid=m&&m.modeloId!=null?m.modeloId:(l&&l.modeloId!=null?l.modeloId:0);return MODELOS[mid]?mid:0;}
+// Re-tarifa las líneas de mueble de un modelo al cambiar su grosor: el +15 % de 19 mm solo afecta al armazón, que se
+// guarda en meta.pArm (por unidad, con todos sus recargos) junto al grosor con el que se tarifó (meta.gros). Líneas
+// anteriores a AN2 (sin pArm) no se pueden re-tarifar: conservan su precio y se avisa.
+function retarifarGrosorModelo(mid,grosOld,grosNew){
+  const fac=g=>g==='19'?(1+REC_19MM):1,out={n:0,viejas:0};
+  if(grosOld===grosNew)return out;
+  LN.forEach(l=>{const m=l.meta;if(!m||m.tipo!=='mueble'||modeloDeLinea(l)!==mid)return;
+    if(m.pArm==null){out.viejas++;return;}
+    const pN=m.pArm/fac(m.gros||grosOld)*fac(grosNew);
+    l.p=Math.round((l.p-m.pArm+pN)*100)/100;m.pArm=pN;m.gros=grosNew;out.n++;});
+  return out;
+}
+function trasRetarifar(r,v){
+  if(r.n||r.viejas)flash(`${r.n?r.n+' mueble(s) re-tarifado(s) a '+v+' mm':''}${r.n&&r.viejas?' · ':''}${r.viejas?r.viejas+' línea(s) antigua(s) conservan su precio (edítalas para actualizarlas)':''}`);
+  if(!r.n)return;
+  uBadge();if(document.getElementById('tp')?.classList.contains('on'))rP();
+}
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-30.3';
+const APP_BUILD = '2026-09-30.4';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -2387,7 +2418,8 @@ function despieceRegletaLinea(l){
 }
 // Lote AN1 (30-09-2026, Álvaro) — costados vistos, regletas, cierres a techo y zócalos SUELTOS de ③ en las listas de corte.
 // · Medida TAL CUAL, sin descuento: solo se descuenta (alto − 2, ancho − 3) en puertas, frentes y regletas puestas en muebles.
-// · 4 cantos del color en costados vistos y regletas [confirmado]; cierre a techo y zócalo igual [supuesto, pendiente].
+// · 4 cantos del color en los cuatro tipos [confirmado por Álvaro 30-09-2026]. Una pieza más larga que el tablero
+//   (TABLERO_LARGO_MM) sale entera con aviso: la parte quien corte (no se parte sola).
 // · Material: la tarifa CVT de la línea empareja con su tarifa de puerta (CVT-1 → T-1 y CVT-9 → T-9: las corta AG5; el resto
 //   se pide al proveedor), con el color de puerta del modelo de la línea. Grosor 19 mm (31 en las CVT-x-31).
 // · Largo = medida a favor de veta: el alto (veta vertical); regleta con «veta horizontal», el ancho. Zócalo: el largo es la
@@ -2395,6 +2427,7 @@ function despieceRegletaLinea(l){
 // · El zócalo de PVC / aluminio de ④ Varios no se corta. Las hijas de un mueble (regleta, piezas en material de puerta) ya
 //   salen desde el mueble: aquí solo líneas sin parentId.
 const CVT_SUELTO_CORTE={costado:'Costado visto',regleta:'Regleta',techo:'Cierre a techo',zocalo:'Zócalo'};
+const TABLERO_LARGO_MM=2850; // largo del tablero estándar (2850 × 2100): por encima, la pieza no cabe entera
 // Tarifa de puerta que empareja con una CVT: la del modelo si le corresponde (T-7A / T-7B), si no la primera de TCVT.
 function tarPuertaDeCVT(ct,tarModelo){
   const base=String(ct||'').replace(/-31$/,'');if(!base)return null;
@@ -2413,13 +2446,15 @@ function despieceCVTSueltoLinea(l){
   const mod=MODELOS[l.modeloId]||MODELOS[0]||{},color=mod.colorPuerta||'',tarP=tarPuertaDeCVT(ct,mod.tar);
   const mc=tarP?materialPuertaCorte(tarP,color):{material:`${ct}${color?' '+color:''}`,corte:false,casado:false,supuesto:true};
   const hMm=DESPIECE_MM(a),wMm=DESPIECE_MM(w),aLo=tipo==='zocalo'||!!l.vetaH;
-  const conf=(tipo==='costado'||tipo==='regleta')&&!mc.supuesto;
-  const nota=typeof notaUsuarioCVT==='function'?notaUsuarioCVT(l):'';
+  const conf=!mc.supuesto,largo=aLo?wMm:hMm,avisos=[];
+  if(largo>TABLERO_LARGO_MM)avisos.push(`${nom} suelto ${medida}: ${largo} mm no cabe en el tablero (${TABLERO_LARGO_MM}): hay que partirlo`);
+  const nota=notaUsuarioCVT(l);
   const p={cantidad:Math.max(1,+l.cnt||1),descripcion:`${nom} suelto ${medida}`,largo:aLo?wMm:hMm,ancho:aLo?hMm:wMm,
     grueso:grosorPiezaPuerta(ct),material:mc.material,caras:0,cantosL:CANTOS_PUERTA.L,cantosA:CANTOS_PUERTA.A,pieza:nom,
     pos:`suelto ③ · ${ct} ${medida} cm${tipo==='zocalo'?' · largo = longitud':''}${l.vetaH?' · veta a lo ancho':''}${nota?' · '+nota:''}`,
     estado:conf?'confirmado':'supuesto',mueble:'Suelto (③)',lineaId:l.id,enPuerta:true,corte:!!mc.corte,tar:tarP||ct};
-  return {piezas:[p],avisos:[],avisoMat:tarP?avisoMaterialPuerta(mc,color):''};
+  if(largo>TABLERO_LARGO_MM)p.pos+=` · NO CABE EN EL TABLERO (${TABLERO_LARGO_MM} mm): partir`;
+  return {piezas:[p],avisos,avisoMat:tarP?avisoMaterialPuerta(mc,color):''};
 }
 function avisoMaterialPuerta(mc,color){
   if(mc.corte&&!mc.casado)return `color de puerta «${color||'sin color'}» sin tablero en la BBDD de corte: sale como «${mc.material}»`;
@@ -2570,13 +2605,13 @@ function r3dSpecFormulario(){
     if(!rinTiene3D(SEL))return null; // Lote R7: + rincón escuadra / fregadero
     const mdF=medidasRin(); // Lote B1
     return r3dSpec({arm:SEL,hoja:MHOJA,alt:mdF.alt,anc:mdF.anc,fon:mdF.fon,ladoIzq:mdF.ladoI,
-      puertas:RPuertas,frentes:[],cfg:S.tb,tar:S.tar,modCaj:S.modCaj,gros:S.gros,sinFrentes:false,abrePrimero:RPRIMERO,
+      puertas:RPuertas,frentes:[],cfg:S.tb,tar:S.tar,modCaj:S.modCaj,gros:grosActual(),colorArm:colorArmActual(),sinFrentes:false,abrePrimero:RPRIMERO, /* Lote AN2 */
       piezas:MPIEZAS,cvt:(MODELOS[MMODELO]&&MODELOS[MMODELO].cvt)||TCVT[S.tar]||null,matPuerta:matPuertaTxt(S.tar,MODELOS[MMODELO]&&MODELOS[MMODELO].colorPuerta), // Lote R8
       nBaldas:nBaldasMueble({fam:SEL.fam,nom:SEL.nom,esBajo:true,baldaFreg:esFregadero(SEL)&&!!document.getElementById('chkRBaldaFreg')?.checked}),
       regletaAncho:+document.getElementById('rRW')?.value||RIN_REGLETA_ANCHO});
   }
   return r3dSpec({arm:SEL,hoja:MHOJA,alt:document.getElementById('mAlt').value,anc:document.getElementById('mAnc').value,
-    fon:document.getElementById('mFon').value,puertas:MPuertas,frentes:frentesGaveteroGola({frentes:MFrentesCJ}).frentes/* Lote A2 */,cfg:isBajo(SEL)?S.tb:S.ta,tar:tarEfectiva(),modCaj:S.modCaj,gros:S.gros,sinFrentes:MFRCLI,
+    fon:document.getElementById('mFon').value,puertas:MPuertas,frentes:frentesGaveteroGola({frentes:MFrentesCJ}).frentes/* Lote A2 */,cfg:isBajo(SEL)?S.tb:S.ta,tar:tarEfectiva(),modCaj:S.modCaj,gros:grosActual(),colorArm:colorArmActual(),sinFrentes:MFRCLI, /* Lote AN2 */
     horno:MHORNO,nBaldas:nBaldasMueble(metaBaldasFormulario()), // Lote R3
     push:esPushColHorno(), // Lote X1
     forma:MFORMA,fondos:MFORMA==='chaflan'?fondosChaflanForm():null, // Lote C1
@@ -2588,7 +2623,7 @@ function r3dSpecLinea(l){
   const arm=ARM.find(a=>a.id===(m.armIdSeleccionado||m.armId));if(!arm||(isRin(arm)&&!rinTiene3D(arm)))return null; // Lote R6 · R7
   const hoja=hojaDesdeSnap(m.subfam)||hojaDesdeArm(arm);
   return r3dSpec({arm,hoja,alt:m.alt,anc:(isRin(arm)&&m.anchoReal)||m.anc,fon:m.fon,ladoIzq:m.ladoIzq,/* Lote B1 */regletaAncho:m.regleta&&m.regleta.ancho,abrePrimero:m.abrePrimero,/* Lote R6: ancho real · R7 */puertas:m.mPuertas||[],frentes:m.mFrentesCJ||[],
-    cfg:isBajo(arm)?m.tb:m.ta,tar:m.tarifa,modCaj:m.modCaj||S.modCaj,gros:S.gros,sinFrentes:!!m.frentesCliente,
+    cfg:isBajo(arm)?m.tb:m.ta,tar:m.tarifa,modCaj:m.modCaj||S.modCaj,gros:grosModelo(modeloDeLinea(l)),colorArm:colorArmModelo(modeloDeLinea(l)),sinFrentes:!!m.frentesCliente, /* Lote AN2: grosor y color del modelo de la línea */
     horno:m.horno,nBaldas:nBaldasMueble(m), // Lote R3
     push:!!m.push, // Lote X1
     forma:m.forma,fondos:m.dobleFondo, // Lote C1
@@ -4930,6 +4965,8 @@ function restaurarSnapshot(p){
   S.modCaj=p.modCaj||'IATIRA';
   S.gros=p.gros||'16';
   S.colorArm=tableroCatalogo(p.colorArm)?p.colorArm:'';S.patas=PATAS_ALTOS.includes(String(p.patas))?String(p.patas):'10'; // Lote D1 (proyectos antiguos: sin color, patas 10)
+  // Lote AN2: color y grosor por modelo; igual al del proyecto, texto libre antiguo o ausente → «como el proyecto»
+  MODELOS.forEach(m=>{m.gros=((m.gros==='19'||m.gros==='16')&&m.gros!==S.gros)?m.gros:null;m.colorArmazon=(tableroCatalogo(m.colorArmazon)&&m.colorArmazon!==S.colorArm)?m.colorArmazon:'';});
   ESCENA=escenaSanear(p.escena);ESC_UI.sel=null; // Lote V1: escena del proyecto (proyectos antiguos: sin escena). Antes de recalcularAcumulados, que la purga
   S.nom=p.cliente?.nom||'';S.tel=p.cliente?.tel||'';S.email=p.cliente?.email||'';S.dir=p.cliente?.dir||'';
   S.fecha=p.fecha||'';S.val=p.val||'30 días';S.obs=p.obs||'';
@@ -5161,25 +5198,54 @@ function gv(id){return document.getElementById(id)?.value||'';}
 // y la pone en el botón pulsado. Cada función setX(v,btn) la usa para evitar duplicar el patrón.
 function pill(btn, ids){ ids.forEach(id=>document.getElementById(id)?.classList.remove('on')); btn.classList.add('on'); }
 
+// Lote AN2 (30-09-2026, Álvaro): grosor por defecto del proyecto. Arrastra a los modelos que siguen al proyecto (gros null)
+// y re-tarifa sus muebles al momento (+15 % de 19 mm sobre el armazón, meta.pArm); un modelo con grosor propio no cambia
+// aunque coincida con el valor anterior (lo eligió a mano).
 function setGros(v,btn){
-  // Aviso: las líneas ya añadidas conservan su precio; el grosor solo afecta a lo que se añada después.
-  if(v!==S.gros&&LN.length&&!confirm('Cambiar a '+v+'mm solo afecta a los muebles que añadas a partir de ahora.\nLas '+LN.length+' líneas ya añadidas mantienen su precio actual.\n¿Continuar?'))return;
-  pill(btn,['b16','b19']);S.gros=v;rCards();pintarColorArm(); // Lote D1: el aviso del catálogo depende del grosor
+  v=v==='19'?'19':'16';const prev=S.gros||'16';
+  if(v!==prev){
+    const sig=MODELOS.map((m,i)=>i).filter(i=>!MODELOS[i].gros);
+    const nL=LN.filter(l=>l.meta&&l.meta.tipo==='mueble'&&sig.includes(modeloDeLinea(l))).length;
+    if(nL&&!confirm(`Cambiar el grosor por defecto a ${v} mm re-tarifa los ${nL} mueble(s) de ${sig.map(i=>'M'+(i+1)).join(', ')} (${v==='19'?'+15 %':'sin el +15 %'} sobre el armazón).\n¿Continuar?`))return;
+    S.gros=v;const r={n:0,viejas:0};
+    sig.forEach(i=>{MODELOS[i].gros=null;const q=retarifarGrosorModelo(i,prev,v);r.n+=q.n;r.viejas+=q.viejas;});
+    trasRetarifar(r,v);
+  }
+  if(btn)pill(btn,['b16','b19']);else{document.getElementById('b16')?.classList.toggle('on',S.gros!=='19');document.getElementById('b19')?.classList.toggle('on',S.gros==='19');}
+  rCards();pintarColorArm();pintarArmModelo(); // Lote D1: el aviso del catálogo depende del grosor
+  if(SEL){if(isRin(SEL))rdsg();else cp();}
+}
+// Lote AN2 — grosor y color del modelo en foco (① Proyecto). Igual al del proyecto → «como el proyecto» (null / '').
+function setModeloGros(v){
+  const i=MFOCO,m=MODELOS[i];if(!m)return;v=v==='19'?'19':'16';const old=grosModelo(i);
+  m.gros=(v===(S.gros||'16'))?null:v;pintarArmModelo();
+  if(old!==v){trasRetarifar(retarifarGrosorModelo(i,old,v),v);rCards();if(SEL){if(isRin(SEL))rdsg();else cp();}}
+}
+function setModeloColorArm(v){
+  const m=MODELOS[MFOCO];if(!m)return;
+  m.colorArmazon=(tableroCatalogo(v)&&v!==(S.colorArm||''))?v:'';pintarArmModelo();if(SEL&&!isRin(SEL))cp();
+}
+function opcionesTableros(){return CAT_TABLEROS.map(t=>`<option value="${esc(t[0])}">${esc(t[0])}</option>`).join('');}
+function pintarArmModelo(){
+  const m=MODELOS[MFOCO];if(!m)return;
+  const sel=document.getElementById('mdlColArmazon');
+  if(sel){sel.innerHTML=`<option value="">Como el proyecto (${esc(S.colorArm||'sin color')})</option>`+opcionesTableros();sel.value=tableroCatalogo(m.colorArmazon)?m.colorArmazon:'';}
+  const g=grosModelo(MFOCO);document.getElementById('mdlG16')?.classList.toggle('on',g!=='19');document.getElementById('mdlG19')?.classList.toggle('on',g==='19');
 }
 // Selecciona el modelo global de cajón herraje (I.ATIRA / AV YOU) para todo el presupuesto.
 function setModCaj(v,btn){pill(btn,['bModIATIRA','bModAVYOU']);S.modCaj=v;if(SEL&&!isRin(SEL))cp();} // Lote R1: refresca desglose y vista 3D
 // Lote D1 (22-09-2026) — color de armazón (nombre exacto del catálogo de corte) y alto de patas del proyecto. Sin precio:
 // solo cambian la trasera (grosor y material del despiece) y el dibujo 3D, que se refresca si hay un mueble en el modal.
-function setColorArm(v){const prev=S.colorArm||'';S.colorArm=tableroCatalogo(v)?v:'';
-  // Lote X1 (24-09-2026, Álvaro): el color global rellena el «Color armazón (info)» de cada modelo que esté vacío o siga
-  // con el valor global anterior; lo tecleado a mano en un modelo se respeta.
-  (typeof MODELOS!=='undefined'?MODELOS:[]).forEach(m=>{if(!m.colorArmazon||m.colorArmazon===prev)m.colorArmazon=S.colorArm;});
-  const inp=document.getElementById('mdlColArmazon');if(inp&&typeof MODELOS!=='undefined'&&MODELOS[MFOCO])inp.value=MODELOS[MFOCO].colorArmazon||'';
-  pintarColorArm();if(SEL&&!isRin(SEL))cp();}
+function setColorArm(v){S.colorArm=tableroCatalogo(v)?v:'';
+  // Lote X1 (24-09-2026) · AN2 (30-09-2026, Álvaro): el color del proyecto es el valor por defecto de cada modelo ('' =
+  // como el proyecto); un color propio se respeta aunque coincida con el anterior (lo eligió a mano). Los valores que no
+  // estén en el catálogo (texto libre de antes de AN2) pasan a «como el proyecto».
+  (typeof MODELOS!=='undefined'?MODELOS:[]).forEach(m=>{if(!tableroCatalogo(m.colorArmazon))m.colorArmazon='';});
+  pintarColorArm();pintarArmModelo();if(SEL&&!isRin(SEL))cp();}
 function setPatas(v,btn){S.patas=PATAS_ALTOS.includes(String(v))?String(v):'10';if(btn)pill(btn,['bPat10','bPat15']);else pintarPatas();if(SEL&&!isRin(SEL))cp();}
 function pintarColorArm(){
   const sel=document.getElementById('selColorArm');if(!sel)return;
-  if(!sel.options.length||sel.options.length!==CAT_TABLEROS.length+1)sel.innerHTML=`<option value="">— sin elegir —</option>`+CAT_TABLEROS.map(t=>`<option value="${esc(t[0])}">${esc(t[0])}</option>`).join('');
+  if(!sel.options.length||sel.options.length!==CAT_TABLEROS.length+1)sel.innerHTML=`<option value="">— sin elegir —</option>`+opcionesTableros();
   sel.value=S.colorArm||'';
   const inf=document.getElementById('colorArmInfo');
   if(inf){const av=avisoColorArm(S.colorArm,S.gros);inf.textContent=S.colorArm?`Trasera ${grosorTrasera(S.colorArm)} mm del mismo color${av?' · ⚠️ '+av:''}`:'Sin color: la trasera se supone de 8 mm y el despiece sale sin material';}
@@ -5268,7 +5334,7 @@ function refrescarCabeceraModelo(){
   renderModelosFocus();
   document.getElementById('mdlNombre').value=m.nombre||'';
   document.getElementById('mdlColPuerta').value=m.colorPuerta||'';
-  document.getElementById('mdlColArmazon').value=m.colorArmazon||'';
+  pintarArmModelo(); // Lote AN2: color y grosor de armazón del modelo
   const mv=document.getElementById('mdlVeta');if(mv)mv.checked=!!m.veta; // Lote AJ1
   renderResaltePills();
   // Tarifa puertas pills
@@ -5314,7 +5380,7 @@ function renderMuebleModeloSel(){
   cont.innerHTML='<div style="font-size:11px;color:var(--dc);margin-bottom:5px;font-weight:700">🎨 Modelo del mueble</div><div class="pills">'+MODELOS.map((m,i)=>`<button class="pill${i===MMODELO?' on':''}" onclick="seleccionarModeloMueble(${i})">${i+1}· ${m.nombre||('Modelo '+(i+1))}</button>`).join('')+'</div>';
 }
 function seleccionarModeloMueble(idx){
-  MMODELO=idx;cargarModeloEnS(idx);renderMuebleModeloSel();
+  MMODELO=idx;cargarModeloEnS(idx);renderMuebleModeloSel();rCards(); /* Lote AN2: precios de las tarjetas con el grosor del modelo */
   if(SEL){if(isRin(SEL))rdsg();else cp();}
 }
 // Selector de modelo en pestaña CVT (visible solo con >1 modelo).
@@ -5585,7 +5651,7 @@ function medidasNomArm(arm){if(!arm)return '';const i=arm.nom.search(/\b(A|An)\.
 // Descripción del mueble a partir de lo elegido: etiqueta de subfamilia + composición real de puertas/frentes + medidas.
 // Ej.: "Bajo 2 puertas A.75 An.60" · "Bajo 2 gavetas + 1 cajón A.75 An.60" · "Bajo 1 puerta + 2 cajones A.75 An.60"
 //      "Bajo fregadero rincón 2 puertas A.75 90x80" · "Sobrefrigo abatible 1 puerta An.60 A.40" · "Bajo sin puerta A.75 An.60"
-function etiquetaMueble(hoja,arm,puertas,frentes,tar){
+function etiquetaMueble(hoja,arm,puertas,frentes,tar,med){ /* Lote AN2: med = medidas reales ya formateadas (opcional) */
   let lab=hoja?hoja.lab:(arm?arm.nom.split(' ')[0]:'Mueble');
   if(hoja&&hoja.subId==='fregadero'&&arm&&isRin(arm))lab+=' rincón';
   let nP=0,nFF=0,gv=0,cj=0;
@@ -5596,7 +5662,7 @@ function etiquetaMueble(hoja,arm,puertas,frentes,tar){
   if(nFF)partes.push(nFF+(nFF===1?' frente fijo':' frentes fijos'));
   if(gv)partes.push(gv+(gv===1?' gaveta':' gavetas'));
   if(cj)partes.push(cj+(cj===1?' cajón':' cajones'));
-  return `${lab} ${partes.length?partes.join(' + '):'sin puerta'} ${medidasNomArm(arm)}`.trim();
+  return `${lab} ${partes.length?partes.join(' + '):'sin puerta'} ${med||medidasNomArm(arm)}`.trim();
 }
 // Precio armazón: tras unificación de tarifa, los cascos blancos pasan a tener el mismo precio que los de diseños.
 // El acabado sigue siendo informativo (toggle Blanco/Diseños en Proyecto) pero ya no afecta al cálculo.
@@ -5617,7 +5683,7 @@ function gap2(arm,opts,baseMan){
     if(f>1)p*=f;                                        // ×2 forma especial / material de puerta
     else if(opts.altoNoStd||opts.fondoNoStd)p*=(1+REC_ARM_NO_STD); // +30% alto/fondo no estándar
   }
-  if(S.gros==='19')p*=(1+REC_19MM);                    // +15% 19mm: siempre, último
+  if(grosActual()==='19')p*=(1+REC_19MM);              // +15% 19mm: siempre, último (Lote AN2: grosor del modelo)
   return p;
 }
 // Equivalente "gola bajos": el bajo de 80 con gola se tarifa como Bajos 75. Reenvía los recargos.
@@ -5676,11 +5742,17 @@ function seguirMedidaArm(){
   }
   repartirPuertas();repartirFrentesGavetero();renderMP();renderMFCJ(); // Lote A
 }
-// Lote P — medidas reales del armazón para la descripción del presupuesto, solo si difieren de la tarjeta:
-// "Bajo A.70 An.60 (72×57×50)". Así la línea refleja exactamente lo elegido (y lo editado después).
-function descMedidasArm(arm,alt,anc,fon){
-  if(!arm||(alt===arm.alt&&anc===arm.anc&&fon===(+arm.fon)))return '';
-  return ` (${fmtCm(alt)}×${fmtCm(anc)}×${fmtCm(fon)})`;
+// Lote P — medidas reales del armazón en la descripción. Lote AN2 (30-09-2026, Álvaro): solo la medida final, en el
+// formato de la tarjeta: «Bajo 2 puertas A.72 An.57» (antes «A.75 An.60 (72×57×50)»); el fondo solo si cambia: «F.50».
+// La nota «· ancho 57cm → tarifa An.60» sigue explicando el precio.
+function medidasRealesNom(arm,alt,anc,fon){
+  if(!arm)return '';
+  let s=medidasNomArm(arm);
+  if(alt===arm.alt&&anc===arm.anc&&fon===(+arm.fon))return s;
+  if(/\bA\.[\d.,]+/.test(s))s=s.replace(/\bA\.[\d.,]+/,'A.'+fmtCm(alt));else s+=' A.'+fmtCm(alt);
+  if(/\bAn\.[\d.,]+/.test(s))s=s.replace(/\bAn\.[\d.,]+/,'An.'+fmtCm(anc));else s+=' An.'+fmtCm(anc);
+  if(fon!==(+arm.fon))s+=' F.'+fmtCm(fon);
+  return s.trim();
 }
 // Etiqueta legible de la forma especial (para descripción y desglose).
 const FORMA_LAB={ninguna:'',chaflan:'Chaflán',viga:'Cajeo viga',columna:'Cajeo columna'};
@@ -5701,7 +5773,7 @@ function notaRecargoArm(opts,forma){
   if(opts.esEspecial)t=` (${FORMA_LAB[forma]||'forma especial'} ×2${opts.materialPuerta?', con piezas en material de puerta':''})`;
   else if(opts.materialPuerta)t=' (piezas en material de puerta ×2)'; // Lote R5
   else if(opts.altoNoStd||opts.fondoNoStd)t=' (+30% medida no estándar)';
-  if(S.gros==='19')t+=' +15%(19mm)';
+  if(grosActual()==='19')t+=' +15%(19mm)'; // Lote AN2
   return t;
 }
 // Forma especial (MFORMA / RFORMA: 'ninguna'|'chaflan'|'viga'|'columna'). Lote U (23-09-2026): sin selector en los
@@ -5770,6 +5842,12 @@ function abrirMedidasEsp(){
   $('medEspModal').style.display='flex';
 }
 function cerrarMedidasEsp(){const m=document.getElementById('medEspModal');if(m)m.style.display='none';}
+// Lote AN2 (30-09-2026, Álvaro) — las ventanas emergentes se cerraban solas en el PC: al pulsar dentro de un campo (o al
+// arrastrar el 3D) y soltar el ratón fuera del recuadro, el navegador da el clic al fondo. Ahora solo cierra si el
+// pointerdown Y el clic caen en el fondo (en la tablet el dedo no arrastra así y nunca fallaba).
+let MODAL_DOWN=null;
+function modalPulsado(e,el){MODAL_DOWN=(e.target===el)?el:null;}
+function modalClicFondo(e,el){const ok=e.target===el&&MODAL_DOWN===el;MODAL_DOWN=null;return ok;}
 function setMeForma(v){MEFORMA=v;pintarMeForma();pintarAvisoMedEsp();}
 function pintarMeForma(){document.querySelectorAll('#meFormaTgg .tgb').forEach(b=>b.classList.toggle('on',b.dataset.forma===MEFORMA));}
 function medEspVolverTarifa(){
@@ -5803,7 +5881,7 @@ function pintarAvisoMedEsp(){
     if(!t.length)t.push('Medidas de tarifa: sin recargo');
     if(chaf)t.push(`Fondo izq. ${fmtCm(fI)} · dcho. ${fmtCm(fD)} → puerta en diagonal de ${fmtCm(chaflanDiagonal(anc,fI,fD))} (se pone sola)`); // Lote C1
   }
-  if(S.gros==='19')t.push('Tablero de 19: +15 % encima, como siempre');
+  if(grosActual()==='19')t.push('Tablero de 19: +15 % encima, como siempre'); // Lote AN2
   av.innerHTML=t.map(x=>'· '+x).join('<br>');
 }
 function aplicarMedidasEsp(){
@@ -5851,8 +5929,8 @@ function pintarResumenMedidas(){
   const txtF=chaf?`F izq ${fmtCm(fch.izq)} / dcho ${fmtCm(fch.dcho)} · puerta ${fmtCm(chaflanDiagonal(anc,fch.izq,fch.dcho))}`:`F ${fmtCm(fon)}`;
   mr.innerHTML=`📐 ${esp?'Medida especial':'Medidas de tarifa'}: A ${fmtCm(alt)} × An ${fmtCm(anc)} × ${txtF}${forma}${toca}`;
 }
-function rCards(){document.querySelectorAll('.mc').forEach(c=>{const arm=ARM.find(a=>a.id===+c.dataset.id);if(!arm)return;const m=S.gros==='19'?(1+REC_19MM):1;const el=c.querySelector('.mcp span:last-child');if(el)el.textContent=fmt(arm.p*m);});if(SEL)cp();}
-function rM(){const m=S.gros==='19'?(1+REC_19MM):1;const h=hojaActual();document.getElementById('mGrid').innerHTML=armazonesHoja(h).map(arm=>`<div class="mc" data-id="${arm.id}" onclick="selA(${arm.id},this)"><div class="mcn">${arm.nom}</div><div class="mcp"><span>Precio</span><span>${fmt(arm.p*m)}</span></div><div style="font-size:10px;color:var(--g);margin-top:2px">F.${arm.fon}+p</div></div>`).join('');}
+function rCards(){document.querySelectorAll('.mc').forEach(c=>{const arm=ARM.find(a=>a.id===+c.dataset.id);if(!arm)return;const m=grosModelo(MMODELO)==='19'?(1+REC_19MM):1;const el=c.querySelector('.mcp span:last-child');if(el)el.textContent=fmt(arm.p*m);});if(SEL)cp();}
+function rM(){const m=grosModelo(MMODELO)==='19'?(1+REC_19MM):1; /* Lote AN2 */const h=hojaActual();document.getElementById('mGrid').innerHTML=armazonesHoja(h).map(arm=>`<div class="mc" data-id="${arm.id}" onclick="selA(${arm.id},this)"><div class="mcn">${arm.nom}</div><div class="mcp"><span>Precio</span><span>${fmt(arm.p*m)}</span></div><div style="font-size:10px;color:var(--g);margin-top:2px">F.${arm.fon}+p</div></div>`).join('');}
 let MPuertas=[];
 let MPIEZAS={}; // Lote R5: piezas del casco cambiadas en el 3D del mueble en curso ({clave:'x'|'p'})
 // Lote R1b (18-09-2026) — puertas y frentes del cliente (solo modal regular). Con MFRCLI el mueble se tarifa como
@@ -5953,7 +6031,7 @@ function pintarHornoUI(){
   const ver=esHojaHorno()&&SEL&&!isRin(SEL);box.style.display=ver?'flex':'none';
   document.querySelectorAll('#hornoTgg .tgb').forEach((b,i)=>b.classList.toggle('on',(i===1)===(MHORNO==='45')));
   const inf=document.getElementById('hornoInfo');
-  if(inf&&ver){const alt=+document.getElementById('mAlt').value||SEL.alt,g=(+S.gros||16)/10,h=HORNO_HUECO[MHORNO],gola=S.tb.t==='gola'; // Lote D1
+  if(inf&&ver){const alt=+document.getElementById('mAlt').value||SEL.alt,g=(+grosActual()||16)/10,h=HORNO_HUECO[MHORNO],gola=S.tb.t==='gola'; // Lote D1 · AN2
     inf.textContent=gola?`Con gola: horno ABAJO y cajón arriba · sin trasera · hueco libre ${h} · balda fija a ${fmtCm(r1(h+g))} del canto inferior · frente de arriba ${fmtCm(Math.max(0,r1(alt-h-REBAJE_PUERTA_GOLA)))}`
       :`Hueco libre ${h} · balda fija a ${fmtCm(r1(h+g))} del canto superior · frente de abajo ${fmtCm(Math.max(0,r1(alt-h)))}`;} // Lote X1
 }
@@ -6436,7 +6514,7 @@ function addM(){
   // La regleta NO suma al precio del mueble (pasa a ser línea CVT independiente, ver más abajo).
   const tot=armP+ptTot+tTot;
   // Lote Q: descripción desde subfamilia + composición real ("Bajo 2 gavetas + 1 cajón A.75 An.60"); cola de tarifa/puertas igual.
-  let desc=etiquetaMueble(MHOJA,SEL,MPuertas,MFrentesCJ,S.tar)+descMedidasArm(SEL,mAltV,mAncV,mFonV);if(pd.length)desc+=MFRCLI?` · frentes del cliente [${pd.join(', ')}]`:` + ${tarEf} [${pd.join(', ')}]`; // Lote P: medidas reales · R1b: frentes del cliente
+  let desc=etiquetaMueble(MHOJA,SEL,MPuertas,MFrentesCJ,S.tar,medidasRealesNom(SEL,mAltV,mAncV,mFonV)); /* Lote AN2: medida final en la etiqueta */if(pd.length)desc+=MFRCLI?` · frentes del cliente [${pd.join(', ')}]`:` + ${tarEf} [${pd.join(', ')}]`; // Lote P: medidas reales · R1b: frentes del cliente
   // Lote F: anotar forma especial (×2) y, si chaflán, el doble fondo informativo en la descripción.
   if(MFORMA!=='ninguna'){
     desc+=` · ${FORMA_LAB[MFORMA]} ×2`;
@@ -6477,6 +6555,7 @@ function addM(){
     forma:MFORMA, dobleFondo,
     // Lote M — precio manual del armazón (solo este mueble)
     armPMan:MARMMAN,
+    pArm:armP,gros:grosActual(), // Lote AN2: armazón tarifado (por ud, con recargos) y grosor, para re-tarifar al cambiar el grosor del modelo
     // Lote Q — hoja del árbol (subfamilia) y flags de producción derivados
     subfam:snapHoja(MHOJA),sinBaldas:!!(MHOJA&&MHOJA.sinBaldas),abatible:!!(MHOJA&&MHOJA.abatible),
     horno:esHojaHorno()?MHORNO:null, // Lote R3: alto del horno del bajo placa horno ('60' | '45')
@@ -6876,7 +6955,8 @@ function addRin(){
     subfam:snapHoja(MHOJA),sinBaldas:!!(MHOJA&&MHOJA.sinBaldas),abatible:false, // Lote Q
     // Lote F
     forma:RFORMA, dobleFondo,
-    armPMan:RARMMAN // Lote M
+    armPMan:RARMMAN, // Lote M
+    pArm:armP,gros:grosActual() // Lote AN2: para re-tarifar al cambiar el grosor del modelo
   };
   let idMueble,fusionadoRin=null;
   if(EDIT_ID){
@@ -7341,12 +7421,14 @@ function fondoBaldaMueble(fam,fon,rin){
 }
 // Ancho de balda = ancho del mueble − 2 × grosor de costado (mm → cm).
 function anchoBaldaMueble(anc,gros){return r1((+anc||0)-2*(+gros||16)/10);}
+// Lote AN2: grosor de costado de la balda = el del modelo del mueble elegido; balda suelta, el del proyecto.
+function grosBalda(){return BDS.modeloId!=null?grosModelo(BDS.modeloId):(S.gros||'16');}
 // Medidas de la balda según el modo: {f,t,i,d} en cm, o null si faltan datos.
 function medidasBalda(){
   if(BDS.modo==='mueble'){
     const anc=+gv('bdMAnc')||0,fon=+gv('bdMFon')||0;
     if(!(anc>0&&fon>0))return null;
-    const w=anchoBaldaMueble(anc,S.gros),h=fondoBaldaMueble(BDS.fam,fon);
+    const w=anchoBaldaMueble(anc,grosBalda()),h=fondoBaldaMueble(BDS.fam,fon); /* Lote AN2 */
     if(!(w>0&&h>0))return null;
     return {f:w,t:w,i:h,d:h};
   }
@@ -7409,7 +7491,7 @@ function cBalda(){
   const dib=document.getElementById('bdDib');if(!dib)return;
   const ct=document.getElementById('bdCantosTxt'),des=document.getElementById('bdDes'),tot=document.getElementById('bdTot'),inf=document.getElementById('bdMInfo');
   const m=medidasBalda(),cnt=Math.max(1,+gv('bdCnt')||1);
-  if(inf)inf.textContent=BDS.modo!=='mueble'?'':(m?`${BDS.mueble||'Mueble'}: balda de ${fmtCm(m.f)} × ${fmtCm(m.i)} cm (ancho − ${fmtCm(2*(+S.gros||16)/10)} de costados de ${S.gros} mm · fondo según familia)`:'Elige un mueble o indica ancho y fondo.');
+  if(inf)inf.textContent=BDS.modo!=='mueble'?'':(m?`${BDS.mueble||'Mueble'}: balda de ${fmtCm(m.f)} × ${fmtCm(m.i)} cm (ancho − ${fmtCm(2*(+grosBalda()||16)/10)} de costados de ${grosBalda()} mm · fondo según familia)`:'Elige un mueble o indica ancho y fondo.'); /* Lote AN2 */
   if(!m){dib.innerHTML='';ct.textContent='';des.innerHTML='Indica las medidas de la balda.';tot.textContent=fmt(0);return;}
   dib.innerHTML=svgBalda(m,BDS.cantos,280,190,true);
   ct.textContent='Cantos: '+textoCantosBalda(BDS.cantos);
@@ -7432,7 +7514,7 @@ function addBalda(){
   if(r.fals)desc+=` · falseada +${r.sup} €`;
   // meta: snapshot de la balda para la hoja de producción (medidas, cantos, soportes) y herrajes sueltos
   const meta={tipo:'balda',modo:BDS.modo,mueble:BDS.modo==='mueble'?(BDS.mueble||''):'',modeloId:BDS.modo==='mueble'?BDS.modeloId:null,
-    f:m.f,t:m.t,i:m.i,d:m.d,esp:BDS.esp,acab:BDS.acab,cantos,sop:BDS.sop,falseada:r.fals,celda:r.celda,gros:S.gros};
+    f:m.f,t:m.t,i:m.i,d:m.d,esp:BDS.esp,acab:BDS.acab,cantos,sop:BDS.sop,falseada:r.fals,celda:r.celda,gros:grosBalda()}; /* Lote AN2 */
   const ln={sec:'Varios',tab:'t4',desc,cnt,p:r.p,nota:gv('bdNt'),meta};
   const fus=consolidarLN(ln); // Lote J
   if(!fus){ln.id=++LID;LN.push(ln);}
@@ -7529,11 +7611,11 @@ function rP(){
   const cfgModelos=MODELOS.map((m,i)=>{
     const cvtEff=m.cvt||TCVT[m.tar]||'—';
     return `M${i+1} «${m.nombre||('Modelo '+(i+1))}»: ${m.tar} / ${cvtEff}`+
-      (m.colorPuerta?` · puerta ${m.colorPuerta}`:'')+(m.colorArmazon?` · armazón ${m.colorArmazon}`:'')+
+      (m.colorPuerta?` · puerta ${m.colorPuerta}`:'')+` · armazón ${colorArmModelo(i)||'sin color'} ${grosModelo(i)} mm`+ /* Lote AN2 */
       ` · bajos ${m.tb.t}${m.tb.s?'('+m.tb.s+')':''}${m.tb.c?' '+m.tb.c:''} · altos ${m.ta.t}${m.ta.s?'('+m.ta.s+')':''}${m.ta.c?' '+m.ta.c:''}`+
       ((+m.recargo||0)>0?` · recargo ${m.recargo}% (${m.recargoCVT?'puertas y costados':'puertas'})`:''); // Lote L
   }).join('  |  ');
-  document.getElementById('cfgS').textContent=`Grosor: ${S.gros}mm · Cajón: ${S.modCaj==='AVYOU'?'AV YOU':'I.ATIRA'} · ${cfgModelos}`;
+  document.getElementById('cfgS').textContent=`Cajón: ${S.modCaj==='AVYOU'?'AV YOU':'I.ATIRA'} · ${cfgModelos}`; /* Lote AN2: el grosor va en cada modelo */
   document.getElementById('pQN').textContent=rotuloDoc();
   document.getElementById('pDt').textContent=`Fecha: ${S.fecha||'—'} · Válido: ${S.val||'30 días'}`;
   rGola();
@@ -7876,13 +7958,13 @@ function buildWS(){
   const ivr=+document.getElementById('ivaR')?.value||21;
   const SHADE='-webkit-print-color-adjust:exact;print-color-adjust:exact';
   let h=`<div class="wshead"><div><img src="https://almacengrupocinco.es/wp-content/uploads/2016/05/cropped-logo.png" height="36" onerror="this.style.display='none'"><div style="font-size:8px;color:#666;margin-top:3px">Cañada Aguilera 63 · 47155 Santovenia · 983 268 328</div></div><div style="text-align:right"><div style="font-size:14px;font-weight:700;color:#4A2C0E">${rotuloDoc()}</div><div style="font-size:9px;color:#666">FECHA: ${S.fecha||'—'}</div></div></div>`;
-  h+=`<div class="wsinfo"><div><b>CLIENTE:</b> ${S.nom||'—'}</div><div><b>REF. CLIENTE:</b> ${S.dir||'—'}</div><div style="grid-column:1/3"><b>Descripción proyecto:</b> ${S.obs||'—'}</div><div><b>GROSOR ARMAZÓN:</b> ${S.gros}mm${S.colorArm?` · ${esc(S.colorArm)} (trasera ${grosorTrasera(S.colorArm)} mm)`:''} · patas ${S.patas||'10'}</div><div><b>CAJÓN (herraje):</b> ${S.modCaj==='AVYOU'?'AV YOU':'I.ATIRA'}</div></div>`;
+  h+=`<div class="wsinfo"><div><b>CLIENTE:</b> ${S.nom||'—'}</div><div><b>REF. CLIENTE:</b> ${S.dir||'—'}</div><div style="grid-column:1/3"><b>Descripción proyecto:</b> ${S.obs||'—'}</div><div><b>ARMAZÓN (por defecto):</b> ${S.gros}mm${S.colorArm?` · ${esc(S.colorArm)} (trasera ${grosorTrasera(S.colorArm)} mm)`:''} · patas ${S.patas||'10'}</div><div><b>CAJÓN (herraje):</b> ${S.modCaj==='AVYOU'?'AV YOU':'I.ATIRA'}</div></div>`;
   // Leyenda de modelos: chip de resalte + nombre + tarifas + colores
-  h+=`<table class="wst" style="margin-bottom:10px"><tr class="wsh"><td colspan="5">MODELOS</td></tr><tr><th></th><th>Modelo</th><th>Puerta</th><th>CVT</th><th>Colores (puerta / armazón)</th></tr>`;
+  h+=`<table class="wst" style="margin-bottom:10px"><tr class="wsh"><td colspan="6">MODELOS</td></tr><tr><th></th><th>Modelo</th><th>Puerta</th><th>CVT</th><th>Color puerta</th><th>Armazón</th></tr>`; /* Lote AN2 */
   MODELOS.forEach((m,i)=>{
     const r=RESALTES[m.resalte||'none'];const cvtEff=m.cvt||TCVT[m.tar]||'—';
     const sw=`<span style="display:inline-block;width:16px;height:16px;border:1px solid #999;background:${m.resalte==='none'?'#fff':r.bg};${SHADE}"></span>`;
-    h+=`<tr class="wsr" style="${m.resalte!=='none'?`background:${r.bg};${SHADE}`:''}"><td style="text-align:center">${sw}</td><td><b>M${i+1}</b> ${m.nombre||('Modelo '+(i+1))}</td><td>${m.tar}</td><td>${cvtEff}</td><td>${(m.colorPuerta||'—')} / ${(m.colorArmazon||'—')}</td></tr>`;
+    h+=`<tr class="wsr" style="${m.resalte!=='none'?`background:${r.bg};${SHADE}`:''}"><td style="text-align:center">${sw}</td><td><b>M${i+1}</b> ${m.nombre||('Modelo '+(i+1))}</td><td>${m.tar}</td><td>${cvtEff}</td><td>${esc(m.colorPuerta||'—')}</td><td>${esc(colorArmModelo(i)||'sin color')} ${grosModelo(i)} mm · trasera ${grosorTrasera(colorArmModelo(i))} mm</td></tr>`; /* Lote AN2 */
   });
   h+=`</table>`;
   // Group lines by section
@@ -8414,6 +8496,7 @@ function nuevoP(opc){
   // Ajustes globales del proyecto: grosor 16, cajón I.ATIRA
   S.gros='16';document.getElementById('b16')?.classList.add('on');document.getElementById('b19')?.classList.remove('on');
   S.colorArm='';S.patas='10';pintarColorArm();pintarPatas(); // Lote D1
+  MODELOS[0].colorArmazon='';MODELOS[0].gros=null; // Lote AN2 (nuevoModelo se creó antes del reset de S)
   ESCENA=null;ESC_UI.sel=null; // Lote V1: la escena es del proyecto
   S.modCaj='IATIRA';
   // Cliente, fecha, validez, observaciones (DOM → S vía sp)
