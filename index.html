@@ -165,6 +165,11 @@ tr:hover td{background:var(--c);}
   body.pfab .ws-print{page-break-before:auto;}
   /* Lote F-A (25-09-2026) — listas de corte: solo en la impresión de fábrica */
   .lc-print{display:none!important;} body.pfab .lc-print{display:block!important;}
+  /* Lote AQ1 (30-09-2026, Álvaro) — los precios de la hoja de producción solo salen en «Imprimir valorado»: en la de
+     fábrica y en la sin valorar se ocultan las dos últimas columnas (Puntos, Total) de las tablas valoradas (.wsv),
+     sus subtotales y el resumen (.wsres). */
+  body.pfab table.wsv tr:not(.wsh)>:nth-last-child(-n+2),body.sinval table.wsv tr:not(.wsh)>:nth-last-child(-n+2),
+  body.pfab table.wsv tr.wstot,body.sinval table.wsv tr.wstot,body.pfab .wsres,body.sinval .wsres{display:none!important;}
   /* Lote K — en papel los controles se ven como texto plano: cantidad sin recuadro; descuento e IVA
      muestran el <span class="pv"> (que cTot mantiene al día) en vez del input/select. */
   #tp .qi{border:0;background:none;padding:0;}
@@ -926,6 +931,19 @@ tr:hover td{background:var(--c);}
     <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn bs" onclick="cerrarEdicionCVT()">Cancelar</button><button class="btn bp" onclick="guardarEdicionCVT()">💾 Guardar</button></div>
   </div>
 </div>
+<!-- Lote AQ1 (30-09-2026, Álvaro): editar alto y ancho de una puerta adicional desde el desglose de ⑥ (lápiz), como los
+     costados. Re-tarifa con la tarifa y el modelo de la línea; «sin bisagras» se conserva. Solo pantalla. -->
+<div id="paEditModal" class="r3dModal" onpointerdown="modalPulsado(event,this)" onclick="if(modalClicFondo(event,this))cerrarEdicionPuertaAd()">
+  <div class="r3dBox" style="max-width:380px">
+    <div class="pt" style="justify-content:space-between"><span style="font-size:13px">✏️ <span id="paEdTit"></span></span><button class="btn bd2" onclick="cerrarEdicionPuertaAd()">✕</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg"><label>Alto (cm)</label><input type="number" id="paEdA" step="0.1" min="1" oninput="cEdicionPuertaAd()"></div>
+      <div class="fg"><label>Ancho (cm)</label><input type="number" id="paEdW" step="0.1" min="1" oninput="cEdicionPuertaAd()"></div>
+    </div>
+    <div id="paEdDes" style="font-size:12px;color:var(--mm);margin:10px 0 12px;font-style:italic;line-height:1.4"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn bs" onclick="cerrarEdicionPuertaAd()">Cancelar</button><button class="btn bp" onclick="guardarEdicionPuertaAd()">💾 Guardar</button></div>
+  </div>
+</div>
 <!-- Lote AM1 (30-09-2026, Álvaro): al guardar, elegir entre salir (app limpia) o quedarse en el proyecto. Solo pantalla. -->
 <div id="guardarModal" class="r3dModal" onpointerdown="modalPulsado(event,this)" onclick="if(modalClicFondo(event,this))cerrarPedirGuardar()">
   <div class="r3dBox" style="max-width:360px">
@@ -1203,7 +1221,7 @@ function trasRetarifar(r,v){
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-30.7';
+const APP_BUILD = '2026-09-30.8';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -2482,6 +2500,12 @@ function listasCorteProyecto(modo){
       c.avisos.forEach(a=>avisos.push(a));if(c.avisoMat)avMat.add(c.avisoMat);
       c.piezas.forEach(p=>(p.corte?pta:prov).push(p));return;
     }
+    if(l.sec==='Puertas adicionales'&&!l.parentId){ /* Lote AQ1: puertas adicionales de ②, como las de mueble */
+      if(modo==='armazones')return;
+      const c=despiecePuertaAdLinea(l);if(!c)return;
+      c.avisos.forEach(a=>avisos.push(a));if(c.avisoMat)avMat.add(c.avisoMat);
+      c.piezas.forEach(p=>(p.corte?pta:prov).push(p));return;
+    }
     const m=l.meta;if(!m||m.tipo!=='mueble')return;
     if(modo!=='puertas'){
       const d=despieceLinea(l);
@@ -2523,7 +2547,7 @@ function buildListasCorteHTML(){
   let h=`<div class="lc-print" style="page-break-before:always;padding-top:8px">`+
     `<div class="wshead"><div><img src="https://almacengrupocinco.es/wp-content/uploads/2016/05/cropped-logo.png" height="36" onerror="this.style.display='none'"><div style="font-size:8px;color:#666;margin-top:3px">Cañada Aguilera 63 · 47155 Santovenia · 983 268 328</div></div>`+
     `<div style="text-align:right"><div style="font-size:14px;font-weight:700;color:#4A2C0E">LISTAS DE CORTE</div><div style="font-size:9px;color:#666">${rotuloDoc()} · ${S.fecha||'—'}</div></div></div>`+
-    `<div style="font-size:9px;color:#666;font-style:italic;margin-bottom:8px">Medidas finales en mm (la canteadora ya quita lo que pone). Subrayado: 1 raya = 1 canto, 2 rayas = 2 cantos. Puertas, frentes y regletas de muebles: alto − 2 y ancho − 3, 4 cantos. Costados vistos, regletas, cierres y zócalos sueltos (③): medida tal cual, 4 cantos. La primera medida va a favor de veta. Cajeos y mecanizados no descontados: en Posición. Armazones: solo bajos; el resto, construcción pendiente.</div>`;
+    `<div style="font-size:9px;color:#666;font-style:italic;margin-bottom:8px">Medidas finales en mm (la canteadora ya quita lo que pone). Subrayado: 1 raya = 1 canto, 2 rayas = 2 cantos. Puertas, frentes y regletas de muebles y puertas adicionales (②): alto − 2 y ancho − 3, 4 cantos. Costados vistos, regletas, cierres y zócalos sueltos (③): medida tal cual, 4 cantos. La primera medida va a favor de veta. Cajeos y mecanizados no descontados: en Posición. Armazones: solo bajos; el resto, construcción pendiente.</div>`;
   if(modo!=='puertas')h+=sec('Armazones',L.armazones,'LISTA DE CORTE');
   if(modo!=='armazones'){h+=sec('Puertas, frentes y costados vistos (T-1 · T-9, se cortan en AG5)',L.puertas,'LISTA DE CORTE');h+=sec('Puertas, frentes y costados vistos (resto de tarifas, se piden)',L.proveedor,'LISTA PEDIR PROVEEDOR');}
   if(L.avisos.length)h+=`<div style="font-size:9px;color:#b00;margin-top:6px"><b>Avisos:</b><ul style="margin:2px 0 0 14px;padding:0">${L.avisos.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>`;
@@ -6703,7 +6727,8 @@ function addQP(){const a=+document.getElementById('qA').value||0,w=+document.get
   const dq=gv('qD').trim();
   // Lote B2: meta de la puerta adicional → sale en la escena con su descripción y una caja de electrodoméstico detrás
   const ln={sec:'Puertas adicionales',tab:'t2',desc:(dq?`${dq} (${a}×${w})`:`Puerta ${S.tar} ${a}×${w}`)+(QBIS?'':' · sin bisagras')+(S.recargoModelo>0?` · recargo modelo +${S.recargoModelo}%`:''),cnt,p,nota:(GPP_NOTA||'').trim(),
-    meta:{tipo:'puertaAd',alto:a,ancho:w,bisagras:QBIS,nombre:dq||`Puerta ${S.tar}`,tarifa:S.tar}};
+    meta:{tipo:'puertaAd',alto:a,ancho:w,bisagras:QBIS,nombre:dq||`Puerta ${S.tar}`,tarifa:S.tar},
+    modeloId:modeloActualPuertaAd()}; // Lote AQ1 (30-09-2026, Álvaro): su modelo (color de puerta en corte, recargo al editar)
   const fus=consolidarLN(ln); // Lote J
   if(!fus){ln.id=++LID;LN.push(ln);}
   uBadge();flash(fus?`🚪 Puerta añadida (agrupado: ${fus.cnt} uds)`:'🚪 Puerta añadida');
@@ -7218,6 +7243,100 @@ function guardarEdicionCVT(){
   cerrarEdicionCVT();uBadge();rP();rCVTList();
   flash(`✏️ ${CVT_TIPO_NOM[l.subtipo]||'CVT'} ${a}×${w}: ${fmt(r.p)}/ud`);
 }
+// ═══ Lote AQ1 (30-09-2026, Álvaro) — PUERTAS ADICIONALES: modelo, edición desde ⑥ y listas de corte ═══
+// Modelo: desde AQ1 cada puerta adicional guarda el suyo (l.modeloId, como los CVT de ③). Las anteriores: el primer
+// modelo con su misma tarifa de puerta y, si no hay ninguno, M1 (se calcula al leer; se guarda al editarla).
+// Modelo de la puerta que se añade ahora: el que está cargado en S (su tarifa es la que la ha tarifado).
+function modeloActualPuertaAd(){
+  if(!S_OVERLAY&&MODELOS[SIDX]&&MODELOS[SIDX].tar===S.tar)return SIDX;
+  if(MODELOS[MMODELO]&&MODELOS[MMODELO].tar===S.tar)return MMODELO;
+  const i=MODELOS.findIndex(m=>m.tar===S.tar);return i>=0?i:MMODELO;
+}
+function tarifaDeDescPuertaAd(d){return String(d||'').split(/[\s(),·]+/).find(t=>PD[t])||null;} /* «Puerta T-1 77×60» → T-1 */
+// Datos de una puerta adicional (sección «Puertas adicionales», sin padre): la meta del Lote B2 o, en las anteriores, alto
+// y ancho leídos de la descripción («Lavavajillas (77×60)» / «Puerta T-1 77×60»), como escenaMigrarPuertasAd. null si no.
+function nombrePuertaAd(n){return String(n||'').replace(/\s*\d+(?:[.,]\d+)?\s*×\s*\d+(?:[.,]\d+)?\s*$/,'').trim()||'Puerta';}
+function datosPuertaAd(l){
+  if(!l||l.parentId||l.sec!=='Puertas adicionales')return null;
+  const d=String(l.desc||'');
+  if(l.meta&&l.meta.tipo==='puertaAd'){const m=l.meta;if(!((+m.alto)>0&&(+m.ancho)>0))return null;
+    return {alto:+m.alto,ancho:+m.ancho,bisagras:m.bisagras!==false,nombre:nombrePuertaAd(m.nombre),tarifa:(m.tarifa&&PD[m.tarifa])?m.tarifa:tarifaDeDescPuertaAd(d)};}
+  const mm=d.match(/(\d+(?:[.,]\d+)?)\s*×\s*(\d+(?:[.,]\d+)?)/);if(!mm)return null;
+  const a=+mm[1].replace(',','.'),w=+mm[2].replace(',','.');if(!(a>0&&w>0))return null;
+  const nombre=nombrePuertaAd(d.split(/ \(| · /)[0]);
+  return {alto:a,ancho:w,bisagras:!/sin bisagras/.test(d),nombre,tarifa:tarifaDeDescPuertaAd(d)};
+}
+function modeloPuertaAd(l,dat){
+  if(l&&l.modeloId!=null&&MODELOS[l.modeloId])return l.modeloId;
+  const tar=(dat||datosPuertaAd(l)||{}).tarifa,i=tar?MODELOS.findIndex(m=>m.tar===tar):-1;
+  return i>=0?i:0;
+}
+// Tarifa de puerta de la línea: la guardada (o la de la descripción); si no hay, la de su modelo.
+function tarifaPuertaAd(l,dat,mid){return (dat&&dat.tarifa)||((MODELOS[mid]||MODELOS[0]||{}).tar)||null;}
+// Precio con la MISMA regla que al añadir (precioPuertaAd): gpp con lacas, vidrio T-VA y recargo del modelo de la línea,
+// menos las bisagras si va «sin bisagras» (Lote B2). No pisa el modelo cargado en S.
+function precioPuertaAdModelo(mid,tar,a,w,bisagras){
+  const m=MODELOS[mid]||MODELOS[0]||{};
+  const prev={lacaNoStd:S.lacaNoStd,uneroRebaj:S.uneroRebaj,vidrioTVA:S.vidrioTVA,recargoModelo:S.recargoModelo};
+  S.lacaNoStd=!!m.lacaNoStd;S.uneroRebaj=!!m.uneroRebaj;S.vidrioTVA=m.vidrioTVA||null;S.recargoModelo=+m.recargo||0;
+  let p=0,nota='';
+  try{p=gpp(tar,a,w);nota=GPP_NOTA||'';}finally{Object.assign(S,prev);}
+  if(p>0&&!bisagras)p=Math.max(0,p-BISAGRAS_PUERTA_AD*BISAGRA_PUERTA);
+  return {p,nota,recargo:+m.recargo||0};
+}
+// Descripción con el mismo formato que addQP.
+function descPuertaAd(nombre,tar,a,w,bisagras,recargo){
+  return (nombre===`Puerta ${tar}`?`Puerta ${tar} ${a}×${w}`:`${nombre} (${a}×${w})`)+(bisagras?'':' · sin bisagras')+(recargo>0?` · recargo modelo +${recargo}%`:'');
+}
+function esLineaPuertaAdEditable(l){const d=datosPuertaAd(l);if(!d)return false;const t=tarifaPuertaAd(l,d,modeloPuertaAd(l,d));return !!(t&&PD[t]);}
+let PA_EDIT_ID=null;
+function editarLineaPuertaAd(id){
+  const l=LN.find(x=>x.id===id),d=datosPuertaAd(l);
+  if(!esLineaPuertaAdEditable(l)){flash('⚠️ No se entienden las medidas o la tarifa de esta puerta: bórrala y añádela de nuevo');return;}
+  PA_EDIT_ID=id;const mid=modeloPuertaAd(l,d),tar=tarifaPuertaAd(l,d,mid);
+  document.getElementById('paEdTit').textContent=`${d.nombre} · ${tar}${MODELOS.length>1?' · M'+(mid+1):''}${d.bisagras?'':' · sin bisagras'}`;
+  setVal('paEdA',d.alto);setVal('paEdW',d.ancho);
+  cEdicionPuertaAd();
+  document.getElementById('paEditModal').style.display='flex';
+  document.getElementById('paEdA').focus();
+}
+function cerrarEdicionPuertaAd(){PA_EDIT_ID=null;document.getElementById('paEditModal').style.display='none';}
+// Precio en vivo de la medida tecleada (misma regla que al añadir).
+function cEdicionPuertaAd(){
+  const l=LN.find(x=>x.id===PA_EDIT_ID),d=datosPuertaAd(l),o=document.getElementById('paEdDes');if(!d||!o)return;
+  const a=+document.getElementById('paEdA').value||0,w=+document.getElementById('paEdW').value||0;
+  if(!a||!w){o.textContent='Introduce alto y ancho';return;}
+  const mid=modeloPuertaAd(l,d),r=precioPuertaAdModelo(mid,tarifaPuertaAd(l,d,mid),a,w,d.bisagras);
+  o.textContent=r.p>0?`${a}×${w}: ${fmt(r.p)}/ud${r.nota} — antes ${d.alto}×${d.ancho}: ${fmt(l.p)}/ud`:'Sin precio para esta medida';
+}
+function guardarEdicionPuertaAd(){
+  const l=LN.find(x=>x.id===PA_EDIT_ID),d=datosPuertaAd(l);if(!d)return;
+  const a=+document.getElementById('paEdA').value||0,w=+document.getElementById('paEdW').value||0;
+  if(!a||!w){flash('⚠️ Indica alto y ancho');return;}
+  const mid=modeloPuertaAd(l,d),tar=tarifaPuertaAd(l,d,mid),r=precioPuertaAdModelo(mid,tar,a,w,d.bisagras);
+  if(!(r.p>0)){flash('⚠️ Sin precio en la tarifa para esa medida');return;}
+  l.desc=descPuertaAd(d.nombre,tar,a,w,d.bisagras,r.recargo);
+  l.p=r.p;l.nota=(r.nota||'').trim();l.modeloId=mid;
+  l.meta=Object.assign({},(l.meta&&l.meta.tipo==='puertaAd')?l.meta:{},{tipo:'puertaAd',alto:a,ancho:w,bisagras:d.bisagras,nombre:d.nombre,tarifa:tar});
+  cerrarEdicionPuertaAd();uBadge();rP();
+  flash(`✏️ ${d.nombre} ${a}×${w}: ${fmt(r.p)}/ud`);
+}
+// Listas de corte: la puerta adicional se corta como una puerta de mueble — alto − 2, ancho − 3, 4 cantos, largo = alto
+// (veta vertical). Tablero según la tarifa y el color de puerta de su modelo: T-1 / T-9 → LISTA DE CORTE; el resto →
+// LISTA PEDIR PROVEEDOR. «Sin puerta» no se corta. Ej.: «Lavavajillas (77×60)» T-1 → 768 × 597.
+function despiecePuertaAdLinea(l){
+  if(!l||l.sec!=='Puertas adicionales'||l.parentId)return null;
+  const d=datosPuertaAd(l);
+  if(!d)return {piezas:[],avisos:[`${l.desc||'Puerta adicional'}: sin medidas legibles, no sale en la lista`],avisoMat:''};
+  const mid=modeloPuertaAd(l,d),tar=tarifaPuertaAd(l,d,mid);
+  if(!tar||!PD[tar])return {piezas:[],avisos:[],avisoMat:''};
+  const color=(MODELOS[mid]||MODELOS[0]||{}).colorPuerta||'',mc=materialPuertaCorte(tar,color),medida=`${fmtCm(d.alto)}×${fmtCm(d.ancho)}`;
+  const p={cantidad:Math.max(1,+l.cnt||1),descripcion:`Puerta adicional · ${d.nombre} ${medida}`,
+    largo:DESPIECE_MM(d.alto)-CORTE_PUERTA_ALTO,ancho:DESPIECE_MM(d.ancho)-CORTE_PUERTA_ANCHO,grueso:mc.gros,material:mc.material,
+    caras:0,cantosL:CANTOS_PUERTA.L,cantosA:CANTOS_PUERTA.A,pieza:'Puerta',pos:`adicional ② · ${d.nombre} ${medida} cm${d.bisagras?'':' · sin bisagras'}`,
+    estado:mc.supuesto?'supuesto':'confirmado',mueble:'Puerta adicional (②)',lineaId:l.id,enPuerta:true,corte:!!mc.corte,tar};
+  return {piezas:[p],avisos:[],avisoMat:avisoMaterialPuerta(mc,color)};
+}
 // Elimina una línea CVT por id. Las líneas auto (regleta de mueble, parentId) se borran desde el mueble.
 function dCVT(id){const l=LN.find(x=>x.id===id);if(l&&l.parentId){flash('Regleta de mueble: bórrala/edítala desde el mueble');return;}LN=LN.filter(l=>l.id!==id);rCVTList();uBadge();if(document.getElementById('tp').classList.contains('on'))rP();}
 
@@ -7700,10 +7819,12 @@ function rP(){
       // Lote I: las líneas manuales de Varios se editan con su propio widget
       const editableVM=l.meta&&l.meta.tipo==='varios_manual';
       const editableCVT=esLineaCVTEditable(l); // Lote AJ1: costados vistos, regletas sueltas, zócalos y cierres de ③
+      const editablePA=!editableCVT&&esLineaPuertaAdEditable(l); // Lote AQ1: puertas adicionales de ②
       // Si es línea hija (cajón herraje auto), no editable, no borrable individualmente
       const esHija=!!l.parentId||l.auto==='gola'; // Lote L: las líneas auto de gola se gestionan solas
       const botones=esHija?`<span style="font-size:10px;color:var(--g);font-style:italic">(auto)</span>`
         :editableCVT?`<button class="btn" style="background:#f5c842;color:#856404;padding:4px 8px;font-size:11px;margin-right:4px" onclick="editarLineaCVT(${l.id})" title="Editar medidas">✏️</button><button class="btn bd2" onclick="dL(${l.id})">✕</button>`
+        :editablePA?`<button class="btn" style="background:#f5c842;color:#856404;padding:4px 8px;font-size:11px;margin-right:4px" onclick="editarLineaPuertaAd(${l.id})" title="Editar medidas">✏️</button><button class="btn bd2" onclick="dL(${l.id})">✕</button>`
         :(editable?`<button class="btn" style="background:var(--cd);color:var(--m);padding:4px 8px;font-size:11px;margin-right:4px" onclick="abrirRender3DLinea(${l.id})" title="Vista 3D">🧊</button><button class="btn" style="background:#f5c842;color:#856404;padding:4px 8px;font-size:11px;margin-right:4px" onclick="iniciarEdicion(${l.id})" title="Editar">✏️</button><button class="btn bd2" onclick="dL(${l.id})">✕</button>`
           :editableVM?`<button class="btn" style="background:#f5c842;color:#856404;padding:4px 8px;font-size:11px;margin-right:4px" onclick="favoritoDesdeLinea(${l.id})" title="Guardar como favorito">⭐</button><button class="btn" style="background:#f5c842;color:#856404;padding:4px 8px;font-size:11px;margin-right:4px" onclick="editarVariosManual(${l.id})" title="Editar">✏️</button><button class="btn bd2" onclick="dL(${l.id})">✕</button>`
           :`<button class="btn bd2" onclick="dL(${l.id})">✕</button>`);
@@ -8066,7 +8187,7 @@ function buildWS(){
   // ARMAZONES + PUERTAS
   const muebles=agruparParaHoja(secs['Muebles']||[],midOf);
   if(muebles.length){
-    h+=`<div><table class="wst"><tr class="wsh"><td colspan="7">ARMAZONES / PUERTAS Y FRENTES</td></tr><tr><th>Uds</th><th>Descripción</th><th>Alto</th><th>Ancho</th><th>Fondo</th><th>Puntos</th><th>Total</th></tr>`;
+    h+=`<div><table class="wst wsv"><tr class="wsh"><td colspan="7">ARMAZONES / PUERTAS Y FRENTES</td></tr><tr><th>Uds</th><th>Descripción</th><th>Alto</th><th>Ancho</th><th>Fondo</th><th>Puntos</th><th>Total</th></tr>`;
     let stm=0;muebles.forEach(l=>{stm+=l.p*l.cnt;const dm=dimsHojaMueble(l);h+=`<tr class="wsr" style="${rowBg(l)}"><td>${l.cnt}</td><td>${tag(l)}${esc(l.desc)}${avisoPiezasHoja(l)}</td><td>${dm[0]}</td><td>${dm[1]}</td><td>${dm[2]}</td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;}); // Lote P: medidas reales
     h+=`<tr class="wstot"><td colspan="5"></td><td>Subtotal</td><td>${stm.toFixed(2)}</td></tr></table></div>`;
   }
@@ -8075,7 +8196,7 @@ function buildWS(){
   // El push to open y el resto de Varios se quedan en VARIOS. Solo presentación: LN queda intacto.
   const cajones=agruparHijasVisual(LN.filter(esHijaCajon));
   if(cajones.length){
-    h+=`<div><table class="wst"><tr class="wsh"><td colspan="5">CAJONES Y GAVETAS (HERRAJE)</td></tr><tr><th>Uds</th><th>Cajón / gaveta</th><th>Mueble</th><th>Puntos</th><th>Total</th></tr>`;
+    h+=`<div><table class="wst wsv"><tr class="wsh"><td colspan="5">CAJONES Y GAVETAS (HERRAJE)</td></tr><tr><th>Uds</th><th>Cajón / gaveta</th><th>Mueble</th><th>Puntos</th><th>Total</th></tr>`;
     let stk=0;cajones.forEach(l=>{stk+=l.p*l.cnt;h+=`<tr class="wsr"><td>${l.cnt}</td><td>${esc(l.desc)}</td><td>${esc((l.nota||'').replace(/^\(auto: (.+)\)$/,'$1'))}</td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;});
     h+=`<tr class="wstot"><td colspan="3"></td><td>Subtotal</td><td>${stk.toFixed(2)}</td></tr></table></div>`;
   }
@@ -8083,7 +8204,7 @@ function buildWS(){
   const variosTodos=[...(secs['Varios']||[]),...(secs['Puertas adicionales']||[])];
   const varios=agruparParaHoja(variosTodos.filter(l=>!(l.meta&&l.meta.tipo==='balda')&&!esHijaCajon(l)),midOf); // Lote K: cajones en su tabla
   if(varios.length){
-    h+=`<div><table class="wst"><tr class="wsh"><td colspan="4">VARIOS</td></tr><tr><th>Uds</th><th>Descripción</th><th>Puntos</th><th>Total</th></tr>`;
+    h+=`<div><table class="wst wsv"><tr class="wsh"><td colspan="4">VARIOS</td></tr><tr><th>Uds</th><th>Descripción</th><th>Puntos</th><th>Total</th></tr>`;
     let stv=0;varios.forEach(l=>{stv+=l.p*l.cnt;h+=`<tr class="wsr"><td>${l.cnt}</td><td>${esc(l.desc)}</td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;});
     h+=`<tr class="wstot"><td colspan="2"></td><td>Subtotal</td><td>${stv.toFixed(2)}</td></tr></table></div>`;
   }
@@ -8093,27 +8214,27 @@ function buildWS(){
   // COSTADOS
   const cvts=agruparParaHoja(secs['Costados/Regletas']||[],midOf);
   if(cvts.length){
-    h+=`<div><table class="wst"><tr class="wsh"><td colspan="4">COSTADOS VISTOS Y REGLETAS</td></tr><tr><th>Uds</th><th>Descripción</th><th>Puntos</th><th>Total</th></tr>`;
+    h+=`<div><table class="wst wsv"><tr class="wsh"><td colspan="4">COSTADOS VISTOS Y REGLETAS</td></tr><tr><th>Uds</th><th>Descripción</th><th>Puntos</th><th>Total</th></tr>`;
     let stc=0;cvts.forEach(l=>{stc+=l.p*l.cnt;h+=`<tr class="wsr" style="${rowBg(l)}"><td>${l.cnt}</td><td>${tag(l)}${esc(l.desc)}${l.parentId?' <i style="color:#888">(auto)</i>':''}</td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;});
     h+=`<tr class="wstot"><td colspan="2"></td><td>Subtotal</td><td>${stc.toFixed(2)}</td></tr></table></div>`;
   }
   // ENCIMERAS
   const enc=agruparParaHoja(secs['Encimeras']||[],midOf);
   if(enc.length){
-    h+=`<div><table class="wst"><tr class="wsh"><td colspan="4">ENCIMERAS</td></tr><tr><th>Uds</th><th>Descripción</th><th>Puntos</th><th>Total</th></tr>`;
+    h+=`<div><table class="wst wsv"><tr class="wsh"><td colspan="4">ENCIMERAS</td></tr><tr><th>Uds</th><th>Descripción</th><th>Puntos</th><th>Total</th></tr>`;
     let ste=0;enc.forEach(l=>{ste+=l.p*l.cnt;h+=`<tr class="wsr"><td>${l.cnt}</td><td>${esc(l.desc)}</td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;});
     h+=`<tr class="wstot"><td colspan="2"></td><td>Subtotal</td><td>${ste.toFixed(2)}</td></tr></table></div>`;
   }
   // GOLA
   const gola=agruparParaHoja(secs['Gola']||[],midOf);
   if(gola.length){
-    h+=`<div><table class="wst"><tr class="wsh"><td colspan="4">GOLA</td></tr><tr><th>Uds</th><th>Descripción</th><th>Puntos</th><th>Total</th></tr>`;
+    h+=`<div><table class="wst wsv"><tr class="wsh"><td colspan="4">GOLA</td></tr><tr><th>Uds</th><th>Descripción</th><th>Puntos</th><th>Total</th></tr>`;
     let stg=0;gola.forEach(l=>{stg+=l.p*l.cnt;h+=`<tr class="wsr"><td>${l.cnt}</td><td>${esc(l.desc)}</td><td>${l.p.toFixed(2)}</td><td>${(l.p*l.cnt).toFixed(2)}</td></tr>`;});
     h+=`<tr class="wstot"><td colspan="2"></td><td>Subtotal</td><td>${stg.toFixed(2)}</td></tr></table></div>`;
   }
   h+='</div>';
   // TOTALS BOX
-  h+=`<div style="margin-top:12px;display:flex;justify-content:flex-end"><table class="wst" style="width:250px"><tr class="wsh"><td colspan="2">RESUMEN</td></tr><tr><td><b>Base €</b></td><td style="text-align:right;font-weight:900">${base.toFixed(2)} €</td></tr><tr><td><b>Tipo(${ivr}%)</b></td><td style="text-align:right">${(base*ivr/100).toFixed(2)} €</td></tr><tr class="wstot"><td><b>PVP €</b></td><td style="text-align:right;font-size:12px">${(base*(1+ivr/100)).toFixed(2)} €</td></tr></table></div>`;
+  h+=`<div class="wsres" style="margin-top:12px;display:flex;justify-content:flex-end"><table class="wst" style="width:250px"><tr class="wsh"><td colspan="2">RESUMEN</td></tr><tr><td><b>Base €</b></td><td style="text-align:right;font-weight:900">${base.toFixed(2)} €</td></tr><tr><td><b>Tipo(${ivr}%)</b></td><td style="text-align:right">${(base*ivr/100).toFixed(2)} €</td></tr><tr class="wstot"><td><b>PVP €</b></td><td style="text-align:right;font-size:12px">${(base*(1+ivr/100)).toFixed(2)} €</td></tr></table></div>`;
   // HOJA LISTA DE MUEBLES Y HERRAJES (Lote F-B/F-C; antes «Herrajes sueltos»), informativa
   h+=buildHerrajesSueltosHTML();
   // HOJA LISTA DE TIRADORES (Lote H, informativa)
@@ -8126,7 +8247,7 @@ function buildWS(){
 // misma convención que la lista de corte de la calculadora (1 raya = 1 canto, 2 rayas = 2 cantos) y un
 // dibujo en planta con los lados canteados en trazo grueso. Soportes según lo elegido en cada balda.
 function buildBaldasSueltasHTML(baldas,rowBg,tag){
-  let h=`<div style="grid-column:1/-1"><table class="wst"><tr class="wsh"><td colspan="8">BALDAS SUELTAS</td></tr>`+
+  let h=`<div style="grid-column:1/-1"><table class="wst wsv"><tr class="wsh"><td colspan="8">BALDAS SUELTAS</td></tr>`+
     `<tr><th>Uds</th><th>Balda</th><th>Medidas (cm)</th><th>Planta</th><th>Cantos</th><th>Soportes</th><th>Puntos</th><th>Total</th></tr>`;
   let st=0;
   baldas.forEach(l=>{
