@@ -1203,7 +1203,7 @@ function trasRetarifar(r,v){
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-30.6';
+const APP_BUILD = '2026-09-30.7';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -7846,24 +7846,37 @@ function metaConGola(m){
   return !el.length||el.some(e=>e.tir!=='off'&&e.push!=='on');
 }
 function esChaflanMeta(m){return m.forma==='chaflan'||/Rinc\.Chaf/.test(m.nom||'');}
+// Lote AP1 (30-09-2026, Álvaro) — puertas con push to open, numeradas como en el formulario (P1 = la primera; en
+// columnas, la de abajo; una 2Pta es una sola P). Mismo criterio que pushDeMueble: puerta con medida, no fija (FF), con
+// el botón Push o con el push automático del mueble (columna horno/micro con gola).
+function puertasConPush(m){
+  return (m&&m.mPuertas||[]).reduce((a,p,i)=>{if((+p.alto)&&(+p.ancho)&&p.mano!=='FF'&&(m.push||p.push==='on'))a.push(i+1);return a;},[]);
+}
+// Lote AP1 — línea de push to open añadida a mano en ④ Varios (sin padre). Las hijas antiguas de la columna horno/micro
+// (Lotes X1 · X2, con parentId) no cuentan: ya salen como colocadas por el meta del mueble.
+function esPushVarios(l){return !!(l&&l.sec==='Varios'&&!l.parentId&&(l.desc||'').indexOf(PUSH_PUERTA_NOM)===0);}
 // Bisagras especiales (Álvaro, 25-09-2026): rincón recto → rectas; escuadra (y fregadero rincón) → 180º; chaflán →
 // ángulo especial; mueble con push → sin freno. Las normales no salen. Solo si el mueble lleva puerta.
+// Lote AP1 (30-09-2026, Álvaro): las sin freno, por puerta («P2: bisagras sin freno»); el resto, de todo el mueble.
 function bisagrasEspeciales(m){
   if(!m||m.tipo!=='mueble'||!(m.mPuertas||[]).some(p=>(+p.alto)&&(+p.ancho)))return [];
   const out=[];
   if(m.esRinRec)out.push(BISAGRAS_ESP.rinRec);
   if(m.esRinEsc)out.push(BISAGRAS_ESP.esc);
   if(esChaflanMeta(m))out.push(BISAGRAS_ESP.chaf);
-  if(m.push||(m.mPuertas||[]).some(p=>p.push==='on'&&(+p.alto)&&(+p.ancho)))out.push(BISAGRAS_ESP.push); // Lote AO1: puerta con push
+  const pPush=puertasConPush(m); /* Lote AO1: puerta con push · Lote AP1: por puerta */
+  if(pPush.length)out.push(`${pPush.map(n=>'P'+n).join(', ')}: ${BISAGRAS_ESP.push}`);
   if((m.subfam&&m.subfam.sub==='gavint')||(m.mFrentesCJ||[]).some(esFrenteInt))out.push(BISAGRAS_ESP.gavInt); // Lote F: gavetas interiores
   return out;
 }
 function calcularHerrajesSueltos(){
   let patas=0,colgadores=0,baldas=0,soportes=0,pinzasMad=0,pinzasZoc=0,salvasifon=0,mbaldas=0,abatibles=0; // Lote Q: abatibles
   let sopTrad=0,sopAnti=0; // Lote N — soportes de baldas sueltas, por tipo (tradicional / antivuelco)
+  let pushVarios=0; // Lote AP1: push to open añadidos en ④ Varios → HERRAJES SUELTOS
   let frenteZocCm=0,push=0,pushFr=0; // Lote AO1: pushFr = de cajones y gavetas // Lote F: pinzas de zócalo siempre (por el frente de bajos/columnas) y push to open colocados
   const detalle=[];
   LN.forEach(l=>{
+    if(esPushVarios(l))pushVarios+=l.cnt||1; // Lote AP1 (30-09-2026, Álvaro): los de puerta o frente van en COLOCADOS
     if(!l.meta)return;
     const m=l.meta,c=l.cnt||1;
     if(m.tipo==='mueble'){
@@ -7898,14 +7911,15 @@ function calcularHerrajesSueltos(){
   // zócalo del catálogo, nunca menos que las que salen de esas tiras. Chapas de colgador: una por colgador.
   pinzasZoc=Math.max(pinzasZoc,Math.ceil(frenteZocCm/100*PINZAS_ZOC_POR_M));
   const chapas=colgadores*CHAPAS_POR_COLGADOR;
-  return {patas,colgadores,chapas,baldas,mbaldas,soportes,sopTrad,sopAnti,pinzasMad,pinzasZoc,salvasifon,abatibles,push,pushFr,detalle};
+  return {patas,colgadores,chapas,baldas,mbaldas,soportes,sopTrad,sopAnti,pinzasMad,pinzasZoc,salvasifon,abatibles,push,pushFr,pushVarios,detalle};
 }
 // Hoja imprimible de herrajes sueltos. Página informativa para fábrica, no suma al presupuesto.
 // Lote F-B / F-C (25-09-2026, Álvaro) — hoja «LISTA DE MUEBLES Y HERRAJES» (sustituye a «Herrajes sueltos»):
 //  · Lista de muebles: tipo y qué lleva (cajones/gavetas, push, baldas, patas, colgadores) con las BISAGRAS
 //    ESPECIALES en negrita junto a la descripción (las normales no salen).
 //  · Herrajes en dos apartados: COLOCADOS EN MUEBLE (cajones/gavetas, push to open, colgadores, salvasifón,
-//    abatibles) y SUELTOS (patas, soportes de balda, pinzas de zócalo siempre, chapas de colgador).
+//    abatibles) y SUELTOS (patas, soportes de balda, pinzas de zócalo siempre, chapas de colgador y, Lote AP1,
+//    los push to open añadidos en ④ Varios; los de puerta o frente van en COLOCADOS, dentro del importe).
 // Informativa: no suma al presupuesto. Solo presentación: LN queda intacto.
 function textoCajonesLista(k,modCaj){
   if(!k||!k.n)return '';
@@ -7951,7 +7965,8 @@ function buildHerrajesSueltosHTML(){
     h.sopAnti?['Soportes balda suelta (antivuelco)',h.sopAnti]:null,  // Lote N
     h.pinzasZoc?['Pinzas de zócalo',h.pinzasZoc]:null,
     h.pinzasMad?['Pinzas zócalo de madera',h.pinzasMad]:null,
-    h.chapas?['Chapas de colgador',h.chapas]:null
+    h.chapas?['Chapas de colgador',h.chapas]:null,
+    h.pushVarios?['Push to open',h.pushVarios]:null // Lote AP1: los añadidos en ④ Varios
   ].filter(Boolean);
   const lista=buildListaMueblesHTML();
   if(!lista&&!colocados.length&&!sueltos.length)return '';
