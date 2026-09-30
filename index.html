@@ -268,6 +268,9 @@ tr:hover td{background:var(--c);}
       <div class="fg"><label>Fecha</label><input type="date" id="pFecha" oninput="sp()"></div>
       <div class="fg" style="grid-column:1/-1"><label>Dirección / Obra</label><input id="cDir" oninput="sp()"></div>
       <div class="fg"><label>Validez</label><input id="pVal" value="30 días" oninput="sp()"></div>
+      <!-- Lote AJ1 (29-09-2026, Álvaro): el descuento del cliente se fija aquí, con sus datos. Obligatorio (0 si no hay):
+           vacío bloquea el paso a ② Muebles. El campo de ⑥ lo refleja en solo lectura y sigue mandando en cTot/impresión. -->
+      <div class="fg"><label>Descuento cliente (%) — obligatorio</label><input type="number" id="descCli" min="0" max="100" step="0.01" placeholder="0 si no hay descuento" oninput="setDescCli(this.value)"></div>
       <div class="fg" style="grid-column:1/-1"><label>Observaciones</label><textarea id="pObs" oninput="sp()"></textarea></div>
     </div>
   </div>
@@ -290,6 +293,9 @@ tr:hover td{background:var(--c);}
         <div class="fg"><label>Nombre del modelo</label><input id="mdlNombre" oninput="setModeloNombre(this.value)" style="background:#fff;color:var(--t);border-color:var(--d)"></div>
         <div class="fg"><label>Color puerta (info)</label><input id="mdlColPuerta" oninput="MODELOS[MFOCO].colorPuerta=this.value" placeholder="p.ej. Blanco" style="background:#fff;color:var(--t);border-color:var(--d)"></div>
         <div class="fg"><label>Color armazón (info)</label><input id="mdlColArmazon" oninput="MODELOS[MFOCO].colorArmazon=this.value" placeholder="p.ej. Blanco" style="background:#fff;color:var(--t);border-color:var(--d)"></div>
+        <!-- Lote AJ1 (29-09-2026, Álvaro): material de puerta con veta. Solo desbloquea «Veta horizontal» en la regleta del bajo
+             rincón recto de este modelo; la lista de corte pone el largo a favor de veta (75×15 → 748×147; horizontal → 147×748). -->
+        <div class="fg" style="justify-content:flex-end"><label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--t);cursor:pointer;padding:8px 0"><input type="checkbox" id="mdlVeta" onchange="MODELOS[MFOCO].veta=this.checked" style="width:auto;margin:0"> Lleva veta <span style="color:var(--g)">(regleta del rincón recto)</span></label></div>
       </div>
       <label>Resalte en hoja (para distinguir este modelo)</label>
       <div class="pills" id="mdlResalte" style="margin-top:6px;margin-bottom:14px"></div>
@@ -582,6 +588,12 @@ tr:hover td{background:var(--c);}
             <div id="rinRF" style="display:none;grid-template-columns:1fr 1fr;gap:8px">
               <div class="fg"><label>Alto regleta</label><input type="number" id="rRA" placeholder="70" oninput="rdsg()"></div>
               <div class="fg"><label>Ancho regleta</label><input type="number" id="rRW" value="20" oninput="rdsg()"></div>
+              <!-- Lote AJ1 (29-09-2026, Álvaro): solo en el bajo rincón recto y solo si el modelo «lleva veta» (① Proyecto).
+                   Marcada, la regleta se corta con la veta a lo ancho: en la lista de corte sale 147 × 748 en vez de 748 × 147. -->
+              <div id="rVetaBox" style="display:none;grid-column:1/-1;align-items:center;gap:8px">
+                <input type="checkbox" id="chkRVetaH" onchange="rdsg()">
+                <label for="chkRVetaH" style="font-size:12px;color:var(--c);text-transform:none;letter-spacing:0;font-weight:400">Veta horizontal <span style="color:rgba(232,215,185,.7)">(la regleta se corta con la veta a lo ancho)</span></label>
+              </div>
             </div>
           </div>
           <div id="rBaldaFregBox" style="display:none;background:rgba(255,255,255,.07);border-radius:6px;padding:10px;margin-bottom:10px">
@@ -873,7 +885,7 @@ tr:hover td{background:var(--c);}
       <div></div>
       <div class="tbox">
         <div class="trow"><span>Subtotal:</span><span id="stot">0,00 €</span></div>
-        <div class="trow"><span>Descuento:</span><span style="display:flex;align-items:center;gap:5px"><input type="number" class="di" id="desc" value="0" min="0" max="100" oninput="cTot()"><span class="pv" id="descP" style="display:none">0</span> %</span></div>
+        <div class="trow"><span>Descuento:</span><span style="display:flex;align-items:center;gap:5px"><input type="number" class="di" id="desc" value="" min="0" max="100" readonly title="El descuento se fija en ① Proyecto (datos del cliente)" style="background:var(--cd);cursor:not-allowed"><span class="pv" id="descP" style="display:none">0</span> %</span></div>
         <div class="trow"><span>Base imponible:</span><span id="bimpon">0,00 €</span></div>
         <div class="trow"><span>IVA:</span><span style="display:flex;align-items:center;gap:5px"><select class="di" id="ivaR" onchange="cTot()" style="width:70px"><option value="21">21%</option><option value="10">10%</option><option value="0">0%</option></select><span class="pv" id="ivaP" style="display:none">21 %</span></span></div>
         <div class="trow"><span>Cuota IVA:</span><span id="civa">0,00 €</span></div>
@@ -892,6 +904,19 @@ tr:hover td{background:var(--c);}
   </div>
 </div>
 
+<!-- Lote AJ1 (29-09-2026, Álvaro): editar alto y ancho/fondo de un costado visto, regleta suelta, zócalo o cierre a techo desde
+     el desglose de ⑥ (lápiz). Re-tarifa con la tarifa CVT de la línea (medida superior de la tabla). Solo pantalla. -->
+<div id="cvtEditModal" class="r3dModal" onclick="if(event.target===this)cerrarEdicionCVT()">
+  <div class="r3dBox" style="max-width:380px">
+    <div class="pt" style="justify-content:space-between"><span style="font-size:13px">✏️ <span id="cvtEdTit"></span></span><button class="btn bd2" onclick="cerrarEdicionCVT()">✕</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg"><label>Alto (cm)</label><input type="number" id="cvtEdA" step="0.1" min="1" oninput="cEdicionCVT()"></div>
+      <div class="fg"><label>Ancho / fondo (cm)</label><input type="number" id="cvtEdW" step="0.1" min="1" oninput="cEdicionCVT()"></div>
+    </div>
+    <div id="cvtEdDes" style="font-size:12px;color:var(--mm);margin:10px 0 12px;font-style:italic;line-height:1.4"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn bs" onclick="cerrarEdicionCVT()">Cancelar</button><button class="btn bp" onclick="guardarEdicionCVT()">💾 Guardar</button></div>
+  </div>
+</div>
 <!-- Lote R1 (18-09-2026): visor 3D de un mueble ya presupuestado (botón 🧊 de la pestaña Proyectos). Solo pantalla. -->
 <div id="r3dModal" class="r3dModal" onclick="if(event.target===this)cerrarRender3D()">
   <div class="r3dBox">
@@ -1096,7 +1121,8 @@ function nuevoModelo(i){
   return {nombre:'Modelo '+i, colorPuerta:'', colorArmazon:(typeof S!=='undefined'&&S&&S.colorArm)||'', resalte:i===1?'none':(['naranja','verde','azul','rosa'][(i-2)]||'gris'), // Lote X1: arranca con el color global
           tar:'Sin puerta', cvt:null, tb:{t:'sin',s:'',c:''}, ta:{t:'sin',s:'',c:''},
           lacaNoStd:false, uneroRebaj:false, vidrioTVA:null,
-          recargo:0, recargoCVT:false}; // Lote L
+          recargo:0, recargoCVT:false, // Lote L
+          veta:false}; // Lote AJ1 (29-09-2026): el material de puerta lleva veta → desbloquea «Veta horizontal» en la regleta del rincón recto
 }
 let MODELOS=[nuevoModelo(1)]; // definiciones (fuente de verdad)
 let MFOCO=0;     // índice del modelo que edita la cabecera
@@ -1130,7 +1156,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-27.4';
+const APP_BUILD = '2026-09-29.1';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -2300,6 +2326,26 @@ function despiecePuertasLinea(l){
   if(out.piezas.length)out.avisoMat=avisoMaterialPuerta(mc,color); // un aviso por tablero, lo agrupa listasCorteProyecto
   return out;
 }
+// Lote AJ1 (29-09-2026, Álvaro) — regleta vista de un mueble en las listas de corte, con el tablero de puerta del modelo.
+// Se corta como una puerta (alto − 2, ancho − 3, 4 cantos) [supuesto: descuento de la regleta pendiente de confirmar].
+// Largo = medida a favor de veta: el alto con veta vertical (la normal) o el ancho si la regleta del rincón recto va con
+// «veta horizontal» (75×15 → 748 × 147; horizontal → 147 × 748: cada descuento sigue a su medida). La regleta es una
+// línea CVT hija (Lote R6), no pieza del casco: se lee de meta.regleta. Modelo «Sin puerta»: material = su tarifa CVT.
+const AVISO_REGLETA_CORTE='regletas: corte como puerta (alto − 2, ancho − 3, 4 cantos), descuento pendiente de confirmar';
+function despieceRegletaLinea(l){
+  const m=l&&l.meta;if(!m||m.tipo!=='mueble'||!m.regleta)return null;
+  const ra=+m.regleta.alto||0,rw=+m.regleta.ancho||0;if(!ra||!rw)return null;
+  const n=Math.max(1,+l.cnt||1),mueble=`${(m.subfam&&m.subfam.lab)||m.nom} ${fmtCm(m.anc)}×${fmtCm(m.alt)}×${fmtCm(m.fon)}`;
+  const tarM=m.tarifaModelo||m.tarifa||'Sin puerta',color=colorPuertaLinea(m);
+  let mc,avisoMat='';
+  if(tarM==='Sin puerta'){const ct=((MODELOS[m.modeloId]||MODELOS[0]||{}).cvt)||null;mc={material:`${ct||'CVT'}${color?' '+color:''}`,gros:GROSOR_PUERTA_CORTE,corte:false,casado:false,supuesto:true};}
+  else{mc=materialPuertaCorte(tarM,color);avisoMat=avisoMaterialPuerta(mc,color);}
+  const vetaH=!!m.regleta.vetaH,hMm=DESPIECE_MM(ra)-CORTE_PUERTA_ALTO,wMm=DESPIECE_MM(rw)-CORTE_PUERTA_ANCHO;
+  const p={cantidad:n,descripcion:`Regleta${vetaH?' (veta horizontal)':''} · ${mueble}`,largo:vetaH?wMm:hMm,ancho:vetaH?hMm:wMm,
+    grueso:mc.gros,material:mc.material,caras:0,cantosL:CANTOS_PUERTA.L,cantosA:CANTOS_PUERTA.A,pieza:vetaH?'Regleta (veta horizontal)':'Regleta',
+    pos:`regleta vista ${fmtCm(ra)}×${fmtCm(rw)} cm${vetaH?' · veta a lo ancho':''}`,estado:'supuesto',mueble,lineaId:l.id,enPuerta:true,corte:mc.corte,tar:tarM,vetaH};
+  return {mueble,piezas:[p],mat:mc,avisoMat,avisos:[]};
+}
 function avisoMaterialPuerta(mc,color){
   if(mc.corte&&!mc.casado)return `color de puerta «${color||'sin color'}» sin tablero en la BBDD de corte: sale como «${mc.material}»`;
   if(mc.supuesto)return `tablero «${mc.material}» ${mc.gros} mm: nombre y grosor supuestos, confirmar en la BBDD de corte`;
@@ -2328,6 +2374,8 @@ function listasCorteProyecto(modo){
       const d=despiecePuertasLinea(l);if(!d)return;
       d.avisos.forEach(a=>avisos.push(`${d.mueble}: ${a}`));if(d.avisoMat)avMat.add(d.avisoMat);
       d.piezas.forEach(p=>(p.corte?pta:prov).push(p));
+      const r=despieceRegletaLinea(l); // Lote AJ1: regleta del mueble, largo a favor de veta
+      if(r){if(r.avisoMat)avMat.add(r.avisoMat);avMat.add(AVISO_REGLETA_CORTE);r.piezas.forEach(p=>(p.corte?pta:prov).push(p));}
     }
   });
   avMat.forEach(a=>avisos.push(a));
@@ -2349,7 +2397,7 @@ function buildListasCorteHTML(){
   let h=`<div class="lc-print" style="page-break-before:always;padding-top:8px">`+
     `<div class="wshead"><div><img src="https://almacengrupocinco.es/wp-content/uploads/2016/05/cropped-logo.png" height="36" onerror="this.style.display='none'"><div style="font-size:8px;color:#666;margin-top:3px">Cañada Aguilera 63 · 47155 Santovenia · 983 268 328</div></div>`+
     `<div style="text-align:right"><div style="font-size:14px;font-weight:700;color:#4A2C0E">LISTAS DE CORTE</div><div style="font-size:9px;color:#666">${rotuloDoc()} · ${S.fecha||'—'}</div></div></div>`+
-    `<div style="font-size:9px;color:#666;font-style:italic;margin-bottom:8px">Medidas finales en mm (la canteadora ya quita lo que pone). Subrayado: 1 raya = 1 canto, 2 rayas = 2 cantos. Puertas y frentes: alto − 2 y ancho − 3, 4 cantos. Cajeos y mecanizados no descontados: en Posición. Armazones: solo bajos; el resto, construcción pendiente.</div>`;
+    `<div style="font-size:9px;color:#666;font-style:italic;margin-bottom:8px">Medidas finales en mm (la canteadora ya quita lo que pone). Subrayado: 1 raya = 1 canto, 2 rayas = 2 cantos. Puertas y frentes: alto − 2 y ancho − 3, 4 cantos. Regletas igual; la primera medida va a favor de veta. Cajeos y mecanizados no descontados: en Posición. Armazones: solo bajos; el resto, construcción pendiente.</div>`;
   if(modo!=='puertas')h+=sec('Armazones',L.armazones,'LISTA DE CORTE');
   if(modo!=='armazones'){h+=sec('Puertas y frentes (T-1 · T-9, se cortan en AG5)',L.puertas,'LISTA DE CORTE');h+=sec('Puertas y frentes (resto de tarifas, se piden)',L.proveedor,'LISTA PEDIR PROVEEDOR');}
   if(L.avisos.length)h+=`<div style="font-size:9px;color:#b00;margin-top:6px"><b>Avisos:</b><ul style="margin:2px 0 0 14px;padding:0">${L.avisos.map(a=>`<li>${esc(a)}</li>`).join('')}</ul></div>`;
@@ -4658,7 +4706,7 @@ function construirSnapshotProy(qn,tipo){
     qn,tipo,ts:Date.now(),
     cliente:{nom:S.nom,tel:S.tel,email:S.email,dir:S.dir},
     fecha:gv('pFecha'),val:gv('pVal'),obs:gv('pObs'),
-    desc:+document.getElementById('desc')?.value||0,
+    desc:(()=>{const v=String(document.getElementById('desc')?.value??'').trim();return v===''?null:(+v||0);})(), // Lote AJ1: null = sin rellenar
     ivaR:+document.getElementById('ivaR')?.value||21,
     modCaj:S.modCaj,gros:S.gros,
     colorArm:S.colorArm||'',patas:S.patas||'10', // Lote D1
@@ -4696,7 +4744,10 @@ function guardarProyecto(tipo){
   actualizarCabeceraNum();
   renderProyectosGuardados();
   rP();
-  flash((tipo==='PED'?'🧾 Pedido':'📄 Presupuesto')+' guardado: '+qn);
+  // Lote AJ1 (29-09-2026, Álvaro): tras guardar (presupuesto, pedido o PRES → PED) la app queda limpia para el siguiente
+  // proyecto. El registro ya está en ⑥ Proyectos; se recupera con «Cargar». «Guardar cambios» (Lote R) no limpia.
+  nuevoP({trasGuardar:true});
+  flash((tipo==='PED'?'🧾 Pedido':'📄 Presupuesto')+' guardado: '+qn+' · app lista para el siguiente');
 }
 
 // Lote R (18-09-2026) — sobrescribe el proyecto cargado con el estado actual, SIN consumir número nuevo.
@@ -4740,7 +4791,8 @@ function restaurarSnapshot(p){
   // Volcar a los inputs del DOM
   setVal('cNom',S.nom);setVal('cTel',S.tel);setVal('cEmail',S.email);setVal('cDir',S.dir);
   setVal('pFecha',S.fecha);setVal('pVal',S.val);setVal('pObs',S.obs);
-  setVal('desc',p.desc!=null?p.desc:0);
+  // Lote AJ1: null (borrador sin descuento) → vacío y sigue siendo obligatorio; sin campo (proyectos muy antiguos) → 0
+  setDescCli(p.desc===null?'':(p.desc!=null?p.desc:0));
   const iv=document.getElementById('ivaR');if(iv)iv.value=String(p.ivaR!=null?p.ivaR:21);
   // Pills globales: grosor (modCaj lo repinta refrescarSelectoresGlobales)
   document.getElementById('b16')?.classList.toggle('on',S.gros!=='19');
@@ -4923,11 +4975,25 @@ function actualizarIndicadorLS(){
 }
 
 // TABS
+// Lote AJ1 (29-09-2026, Álvaro) — descuento del cliente en ① Proyecto, obligatorio aunque sea 0. Vacío → no se pasa a ② Muebles.
+// El input #desc de ⑥ (cTot, snapshot, CSV, impresión) se alimenta desde #descCli; los dos van siempre iguales.
+function setDescCli(v){v=String(v==null?'':v).trim();setVal('desc',v===''?'':(+v||0));setVal('descCli',v);cTot();}
+function descuentoClienteOk(){const v=String(document.getElementById('descCli')?.value??'').trim();return v!==''&&!isNaN(+v);}
+function exigirDescuento(){
+  if(descuentoClienteOk())return true;
+  const tabs=document.querySelectorAll('.tb');if(!tabs.length)return true; // sin barra de pestañas (pruebas en Node): nada que bloquear
+  alert('Indica el descuento del cliente en ① Proyecto (0 si no tiene) antes de pasar a Muebles.');
+  const el=document.getElementById('descCli');
+  sw('t1',tabs[0]); // a ① para rellenarlo (sw también repinta la cabecera de modelos)
+  if(el){el.focus();el.style.outline='2px solid #dc3545';setTimeout(()=>{el.style.outline='';},2500);}
+  return false;
+}
 function sw(id,btn){
+  if(id==='t2'&&!exigirDescuento())return;
   document.querySelectorAll('.tc').forEach(t=>t.classList.remove('on'));
   document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
   document.getElementById(id).classList.add('on');
-  btn.classList.add('on');
+  if(btn)btn.classList.add('on'); // Lote AJ1: nuevoP/guardarProyecto llaman a sw sin barra de pestañas en las pruebas de Node
   if(id==='t1'){cargarModeloEnS(MFOCO);refrescarCabeceraModelo();}
   if(id==='t2')renderMuebleModeloSel();
   if(id==='t4')renderBaldaMuebles(); // Lote N: muebles del presupuesto en el widget de baldas
@@ -5052,6 +5118,7 @@ function refrescarCabeceraModelo(){
   document.getElementById('mdlNombre').value=m.nombre||'';
   document.getElementById('mdlColPuerta').value=m.colorPuerta||'';
   document.getElementById('mdlColArmazon').value=m.colorArmazon||'';
+  const mv=document.getElementById('mdlVeta');if(mv)mv.checked=!!m.veta; // Lote AJ1
   renderResaltePills();
   // Tarifa puertas pills
   document.querySelectorAll('#tarifaPills .pill').forEach(b=>{const mm=(b.getAttribute('onclick')||'').match(/setTar\('([^']+)'/);b.classList.toggle('on',!!(mm&&mm[1]===S.tar));});
@@ -6466,7 +6533,13 @@ function sincRegletaRincon(){
     const h=RPuertas.reduce((m,p)=>Math.max(m,+p.alto||0),0);ra.value=h||'';ra.placeholder='= alto puerta';
     if(rw&&!(+rw.value))rw.value=RIN_REGLETA_ANCHO;
   } else {chk.disabled=false;ra.readOnly=false;ra.placeholder='70';}
+  // Lote AJ1: «Veta horizontal» solo en el rincón recto con un modelo que lleva veta; si no, oculta y desmarcada
+  const vb=document.getElementById('rVetaBox'),vc=document.getElementById('chkRVetaH');
+  const vetaOk=!!(SEL&&esBajoRinRecto(SEL)&&(MODELOS[MMODELO]||{}).veta);
+  if(vb)vb.style.display=vetaOk?'flex':'none';if(vc&&!vetaOk)vc.checked=false;
 }
+// Lote AJ1 — ¿la regleta del rincón del formulario va con veta horizontal? Solo cuenta en el bajo rincón recto de un modelo con veta.
+function regletaVetaH(){return !!(SEL&&esBajoRinRecto(SEL)&&(MODELOS[MMODELO]||{}).veta&&document.getElementById('chkRVetaH')?.checked);}
 function togR(){const c=document.getElementById('chkR').checked;document.getElementById('rinRF').style.display=c?'grid':'none';rdsg();}
 function rdsg(){
   if(!SEL)return;
@@ -6603,7 +6676,7 @@ function addRin(){
   let regleta=null;
   if(document.getElementById('chkR')?.checked){
     const ra=+document.getElementById('rRA')?.value||0,rw=+document.getElementById('rRW')?.value||20;
-    if(ra&&rw){regleta={alto:ra,ancho:rw};}
+    if(ra&&rw){regleta={alto:ra,ancho:rw,vetaH:regletaVetaH()};} // Lote AJ1: veta horizontal (solo rincón recto con modelo con veta)
   }
   // S.grr (codo rincón recto) se recalcula desde LN al final
   // La regleta NO suma al precio del mueble (pasa a línea CVT independiente).
@@ -6746,7 +6819,7 @@ function addCVT(){
   const tipo=CVT_TIPO_NOM[CVTTIPO];
   // Guardamos subtipo y dimensiones por línea: necesarios para el cálculo posterior de pinzas en la hoja de herrajes
   const recTxt=(S.recargoModelo>0&&S.recargoCVT)?` · recargo modelo +${S.recargoModelo}%`:''; // Lote L
-  const ln={sec:'Costados/Regletas',tab:'t3',desc:`${tipo} ${tarActiva} (${a}×${w})${recTxt}`,cnt,p,nota:(gv('cvtNt')+(notaCelda?' '+notaCelda.trim():'')).trim(),subtipo:CVTTIPO,alto:a,ancho:w,modeloId:CVTMODELO};
+  const ln={sec:'Costados/Regletas',tab:'t3',desc:`${tipo} ${tarActiva} (${a}×${w})${recTxt}`,cnt,p,nota:(gv('cvtNt')+(notaCelda?' '+notaCelda.trim():'')).trim(),subtipo:CVTTIPO,alto:a,ancho:w,modeloId:CVTMODELO,cvtTar:tarActiva}; // Lote AJ1: cvtTar para re-tarifar al editar
   // Meta para herrajes: el zócalo CVT genera "pinzas zócalo de madera" (2/m, ancho = longitud en cm)
   if(CVTTIPO==='zocalo')ln.meta={tipo:'zocalo_cvt',longCm:w};
   const fus=consolidarLN(ln); // Lote J (la huella incluye desc con medidas, nota y modelo)
@@ -6784,6 +6857,64 @@ function rCVTList(){
   });
   html+=`<tr class="wstot"><td colspan="3" style="text-align:right"><b>Subtotal CVT</b></td><td style="text-align:right;font-weight:900">${fmt(total)}</td><td></td></tr></table>`;
   cont.innerHTML=html;
+}
+// ═══ Lote AJ1 (29-09-2026, Álvaro) — EDITAR MEDIDAS DE UN CVT DESDE EL DESGLOSE DE ⑥ ═══
+// Lápiz solo en las líneas de Costados/Regletas sin parentId (las regletas de mueble y las piezas R5 en material de
+// puerta se editan desde el mueble). Se cambian alto y ancho/fondo y se re-tarifa con la MISMA regla que al añadir en ③:
+// tarifa CVT de la línea, medida superior de la tabla sin recargo, celda vacía → celdaTarifa, suplemento de laca y
+// recargo del modelo de la línea (Lote L). La cantidad se sigue cambiando en la propia fila.
+let CVT_EDIT_ID=null;
+// Tarifa CVT de una línea: campo cvtTar (líneas desde AJ1) o la que va en la descripción («Regleta CVT-4-31 (75×20)»).
+function tarifaCVTLinea(l){
+  if(!l)return null;
+  if(l.cvtTar&&CVT[l.cvtTar])return l.cvtTar;
+  const mm=String(l.desc||'').match(/\b(CVT-\d+(?:-31)?)\b/);
+  return (mm&&CVT[mm[1]])?mm[1]:null;
+}
+function esLineaCVTEditable(l){return !!l&&l.sec==='Costados/Regletas'&&!l.parentId&&!!tarifaCVTLinea(l);}
+// gcvt con laca y recargo del modelo de la línea, sin pisar el modelo cargado en S (respeta S_OVERLAY y la pestaña activa).
+function precioCVTModelo(mid,tar,a,w){
+  const m=MODELOS[mid]||MODELOS[0]||{};
+  const prev={lacaNoStd:S.lacaNoStd,recargoModelo:S.recargoModelo,recargoCVT:S.recargoCVT};
+  S.lacaNoStd=!!m.lacaNoStd;S.recargoModelo=+m.recargo||0;S.recargoCVT=!!m.recargoCVT;
+  let p=0,nota='';
+  try{p=gcvt(tar,a,w);nota=GPP_NOTA||'';}finally{Object.assign(S,prev);}
+  return {p,nota};
+}
+// Nota tecleada por el operario, sin la nota de celda (sin precio / extrapolado) que se regenera al re-tarifar.
+function notaUsuarioCVT(l){return String(l.nota||'').replace(/\((sin precio|alto |ancho )[^)]*\)/g,'').replace(/\s+/g,' ').trim();}
+function editarLineaCVT(id){
+  const l=LN.find(x=>x.id===id);
+  if(!esLineaCVTEditable(l)){flash('⚠️ Esta línea CVT se edita desde su mueble');return;}
+  CVT_EDIT_ID=id;
+  document.getElementById('cvtEdTit').textContent=`${CVT_TIPO_NOM[l.subtipo]||'CVT'} ${tarifaCVTLinea(l)}`;
+  setVal('cvtEdA',l.alto||'');setVal('cvtEdW',l.ancho||'');
+  cEdicionCVT();
+  document.getElementById('cvtEditModal').style.display='flex';
+  document.getElementById('cvtEdA').focus();
+}
+function cerrarEdicionCVT(){CVT_EDIT_ID=null;document.getElementById('cvtEditModal').style.display='none';}
+// Precio en vivo de la medida tecleada (misma regla que al añadir).
+function cEdicionCVT(){
+  const l=LN.find(x=>x.id===CVT_EDIT_ID),d=document.getElementById('cvtEdDes');if(!l||!d)return;
+  const a=+document.getElementById('cvtEdA').value||0,w=+document.getElementById('cvtEdW').value||0;
+  if(!a||!w){d.textContent='Introduce alto y ancho';return;}
+  const r=precioCVTModelo(l.modeloId!=null?l.modeloId:0,tarifaCVTLinea(l),a,w);
+  d.textContent=r.p>0?`${a}×${w}: ${fmt(r.p)}/ud${r.nota}${l.subtipo==='zocalo'?` · pinzas ${Math.ceil(w*(+l.cnt||1)/100*2)}`:''} — antes ${l.alto}×${l.ancho}: ${fmt(l.p)}/ud`:'Sin precio para esta medida';
+}
+function guardarEdicionCVT(){
+  const l=LN.find(x=>x.id===CVT_EDIT_ID);if(!l)return;
+  const a=+document.getElementById('cvtEdA').value||0,w=+document.getElementById('cvtEdW').value||0;
+  if(!a||!w){flash('⚠️ Indica alto y ancho');return;}
+  const tar=tarifaCVTLinea(l),mid=l.modeloId!=null?l.modeloId:0,r=precioCVTModelo(mid,tar,a,w);
+  if(!(r.p>0)){flash('⚠️ Sin precio en la tarifa para esa medida');return;}
+  const m=MODELOS[mid]||{},recTxt=((+m.recargo||0)>0&&m.recargoCVT)?` · recargo modelo +${+m.recargo}%`:''; // como addCVT (Lote L)
+  l.desc=`${CVT_TIPO_NOM[l.subtipo]||'Costado Visto'} ${tar} (${a}×${w})${recTxt}`;
+  l.nota=(notaUsuarioCVT(l)+(r.nota?' '+r.nota.trim():'')).trim();
+  l.alto=a;l.ancho=w;l.p=r.p;l.cvtTar=tar;
+  if(l.meta&&l.meta.tipo==='zocalo_cvt')l.meta.longCm=w; // las pinzas de zócalo (2/m, hoja de herrajes) siguen al ancho nuevo
+  cerrarEdicionCVT();uBadge();rP();rCVTList();
+  flash(`✏️ ${CVT_TIPO_NOM[l.subtipo]||'CVT'} ${a}×${w}: ${fmt(r.p)}/ud`);
 }
 // Elimina una línea CVT por id. Las líneas auto (regleta de mueble, parentId) se borran desde el mueble.
 function dCVT(id){const l=LN.find(x=>x.id===id);if(l&&l.parentId){flash('Regleta de mueble: bórrala/edítala desde el mueble');return;}LN=LN.filter(l=>l.id!==id);rCVTList();uBadge();if(document.getElementById('tp').classList.contains('on'))rP();}
@@ -7264,9 +7395,11 @@ function rP(){
       const editable=l.meta&&l.meta.tipo==='mueble'&&Array.isArray(l.meta.mPuertas);
       // Lote I: las líneas manuales de Varios se editan con su propio widget
       const editableVM=l.meta&&l.meta.tipo==='varios_manual';
+      const editableCVT=esLineaCVTEditable(l); // Lote AJ1: costados vistos, regletas sueltas, zócalos y cierres de ③
       // Si es línea hija (cajón herraje auto), no editable, no borrable individualmente
       const esHija=!!l.parentId||l.auto==='gola'; // Lote L: las líneas auto de gola se gestionan solas
       const botones=esHija?`<span style="font-size:10px;color:var(--g);font-style:italic">(auto)</span>`
+        :editableCVT?`<button class="btn" style="background:#f5c842;color:#856404;padding:4px 8px;font-size:11px;margin-right:4px" onclick="editarLineaCVT(${l.id})" title="Editar medidas">✏️</button><button class="btn bd2" onclick="dL(${l.id})">✕</button>`
         :(editable?`<button class="btn" style="background:var(--cd);color:var(--m);padding:4px 8px;font-size:11px;margin-right:4px" onclick="abrirRender3DLinea(${l.id})" title="Vista 3D">🧊</button><button class="btn" style="background:#f5c842;color:#856404;padding:4px 8px;font-size:11px;margin-right:4px" onclick="iniciarEdicion(${l.id})" title="Editar">✏️</button><button class="btn bd2" onclick="dL(${l.id})">✕</button>`
           :editableVM?`<button class="btn" style="background:#f5c842;color:#856404;padding:4px 8px;font-size:11px;margin-right:4px" onclick="favoritoDesdeLinea(${l.id})" title="Guardar como favorito">⭐</button><button class="btn" style="background:#f5c842;color:#856404;padding:4px 8px;font-size:11px;margin-right:4px" onclick="editarVariosManual(${l.id})" title="Editar">✏️</button><button class="btn bd2" onclick="dL(${l.id})">✕</button>`
           :`<button class="btn bd2" onclick="dL(${l.id})">✕</button>`);
@@ -7803,7 +7936,8 @@ function insertarRegletaCVT(regleta,parentId,cnt,nomMueble,modeloId){
   if(!ct){flash('⚠️ Regleta sin tarifa CVT: el modelo no tiene costados asignados.');return;}
   const p=gcvt(ct,ra,rw);const notaCelda=GPP_NOTA;
   const recTxt=(S.recargoModelo>0&&S.recargoCVT)?` · recargo modelo +${S.recargoModelo}%`:''; // Lote L
-  LN.push({id:++LID,sec:'Costados/Regletas',tab:'t3',desc:`Regleta ${ct} (${ra}×${rw})${recTxt}`,cnt,p,nota:`(auto: ${nomMueble})${notaCelda}`,subtipo:'regleta',alto:ra,ancho:rw,parentId,modeloId});
+  const vetaH=!!regleta.vetaH; // Lote AJ1: veta horizontal (rincón recto con modelo con veta); el precio no cambia
+  LN.push({id:++LID,sec:'Costados/Regletas',tab:'t3',desc:`Regleta ${ct} (${ra}×${rw})${vetaH?' · veta horizontal':''}${recTxt}`,cnt,p,nota:`(auto: ${nomMueble})${notaCelda}`,subtipo:'regleta',alto:ra,ancho:rw,parentId,modeloId,cvtTar:ct,vetaH});
 }
 // Lote R5 (23-09-2026) — piezas del casco en material de puerta: una línea CVT por pieza, tarifa CVT del modelo, a la medida
 // REAL de corte (mayor = alto de la tabla). Hija del mueble como la regleta: bloqueada, cascada al borrar, regenerada al editar.
@@ -7822,6 +7956,9 @@ function dL(id){
   const l=LN.find(x=>x.id===id);if(!l)return;
   if(l.parentId){flash('Línea bloqueada: borra el mueble que la creó');return;}
   if(l.auto==='gola'){flash('La gola se calcula sola: borra o edita los muebles con gola');return;} // Lote L
+  // Lote AJ1 (29-09-2026, Álvaro): un toque sin querer en ✕ borraba al momento; ahora pide confirmación.
+  const nHijas=LN.filter(x=>x.parentId===id).length;
+  if(!confirm(`¿Eliminar «${l.desc}»${l.cnt>1?' ('+l.cnt+' uds)':''}${nHijas?' y sus '+nHijas+' línea(s) asociada(s)':''}?`))return;
   if(EDIT_ID===id)cancelarEdicion(); // D2: no dejar EDIT_ID apuntando a una línea borrada
   LN=LN.filter(x=>x.id!==id&&x.parentId!==id);
   recalcularAcumulados();
@@ -7954,6 +8091,7 @@ function iniciarEdicion(id){
     document.getElementById('chkR').checked=!!r;
     document.getElementById('rinRF').style.display=r?'grid':'none';
     if(r){document.getElementById('rRA').value=r.alto||'';document.getElementById('rRW').value=r.ancho||20;}
+    const vc=document.getElementById('chkRVetaH');if(vc)vc.checked=!!(r&&r.vetaH); // Lote AJ1 (rdsg la oculta si el modelo ya no lleva veta)
     actualizarBaldasManUIRincon(SEL);
     if(m.baldasMan!=null)document.getElementById('rBaldas').value=m.baldasMan;
     // Lote H: restaurar checkbox de balda fregadero
@@ -8050,6 +8188,7 @@ function limpiarFormularioMueble(){
   const rRW=document.getElementById('rRW');if(rRW)rRW.value=20;
   const chkR=document.getElementById('chkR');if(chkR)chkR.checked=false;
   const rinRF=document.getElementById('rinRF');if(rinRF)rinRF.style.display='none';
+  const chkRV=document.getElementById('chkRVetaH');if(chkRV)chkRV.checked=false;const rVB=document.getElementById('rVetaBox');if(rVB)rVB.style.display='none'; // Lote AJ1
   // Ocultar ambos formularios y deseleccionar tarjetas
   const addF=document.getElementById('addF');if(addF)addF.style.display='none';
   const rinF=document.getElementById('rinF');if(rinF)rinF.style.display='none';
@@ -8096,9 +8235,11 @@ function expCSV(){const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';let
 // cajón, y TODOS los formularios de las pestañas (mueble, puerta rápida, CVT, balda, gola manual, línea
 // manual, catálogos, encimera). No toca lo guardado en este dispositivo (proyectos, tarifa modificada,
 // favoritos, contadores). Reescrita en formato legible desde la versión de una sola línea.
-function nuevoP(){
+// Lote AJ1 (29-09-2026): opc.trasGuardar = llamada desde guardarProyecto (sin confirmar, sin flash propio: ya está guardado).
+function nuevoP(opc){
+  opc=opc||{};
   const hayTrabajo=LN.length||gv('cNom').trim()||gv('cDir').trim();
-  if(hayTrabajo&&!confirm('¿Nuevo proyecto? Se perderán las líneas y los datos actuales no guardados.'))return;
+  if(!opc.trasGuardar&&hayTrabajo&&!confirm('¿Nuevo proyecto? Se perderán las líneas y los datos actuales no guardados.'))return;
   // Estado de líneas, edición y modelos
   LN=[];SEL=null;LID=0;EDIT_ID=null;S_OVERLAY=false;
   resetVariosManual();S.gola={};
@@ -8119,8 +8260,8 @@ function nuevoP(){
   S.qn='';S.tipoDoc='';lsBorrar(LS_BORRADOR);
   const nm=document.getElementById('numManual');if(nm)nm.value='';
   const nmc=document.getElementById('numManualChk');if(nmc)nmc.checked=false;
-  // Descuento e IVA de la hoja de presupuesto
-  setVal('desc',0);const iv=document.getElementById('ivaR');if(iv)iv.value='21';
+  // Descuento e IVA de la hoja de presupuesto (Lote AJ1: el descuento arranca en blanco y es obligatorio en ①)
+  setDescCli('');const iv=document.getElementById('ivaR');if(iv)iv.value='21';
   // Formularios de todas las pestañas
   limpiarFormularioMueble();limpiarPuertaRapida();
   limpiarFormularioCVT(true);
@@ -8133,11 +8274,12 @@ function nuevoP(){
   uBadge();rCards();rCVTList();refrescarCabeceraModelo();refrescarSelectoresGlobales();renderMuebleModeloSel();renderCVTModeloSel();
   cTot();
   sw('t1',document.querySelectorAll('.tb')[0]);
-  flash('🆕 Proyecto nuevo');
+  if(!opc.trasGuardar)flash('🆕 Proyecto nuevo');
 }
 
 // NAVIGATE FROM PRESUPUESTO
 function goTab(tabId){
+  if(tabId==='t2'&&!exigirDescuento())return; // Lote AJ1
   const tabs=document.querySelectorAll('.tb');
   const tabMap={'t1':0,'t2':1,'t3':2,'t4':3,'t5':4,'tp':5};
   const idx=tabMap[tabId];
