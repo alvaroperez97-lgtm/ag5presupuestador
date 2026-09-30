@@ -1172,7 +1172,7 @@ function bgModelo(idx){const m=MODELOS[idx];if(!m)return '';const r=RESALTES[m.r
 
 // Lote K — versión de la app (convención AAAA-MM-DD.N, igual que la calculadora de corte).
 // Se muestra en la cabecera; subir el número en cada entrega para saber qué versión está cargada.
-const APP_BUILD = '2026-09-30.1';
+const APP_BUILD = '2026-09-30.2';
 // ═════════════════════════ CONSTANTES DE NEGOCIO ═════════════════════════
 // Recargos porcentuales (multiplicadores). Centralizados para evitar dispersión de números mágicos.
 const REC_19MM           = 0.15;  // +15% espesor 19mm (armazones, baldas)
@@ -4372,7 +4372,7 @@ function editarPrecioDes(inp){
   let tipo=null,clave=null,etq='',actual=null,setMan=null,clearMan=null,supTir=0; // Lote T: supTir = suplemento no estándar del tirador (no se guarda en tarifa)
   if(t==='arm'){
     const arm=esR?RD_ARM:CP_ARM;if(!arm)return;
-    tipo='arm';clave=arm.nom;etq=`armazón ${arm.nom}`;actual=arm.p;
+    tipo='arm';clave=arm.extrap?null:arm.nom;etq=`armazón ${arm.nom}`;actual=arm.p; // Lote AM1b: extrapolado → solo este mueble
     setMan=()=>{if(esR)RARMMAN=nuevo;else MARMMAN=nuevo;};clearMan=()=>{if(esR)RARMMAN=null;else MARMMAN=null;};
   } else if(t==='pd'||t==='fr'){
     const it=(t==='pd'?puertas:frentes)[i];if(!it)return;
@@ -4444,6 +4444,46 @@ function armazonRRectoTarifa(arm, anchoReal){
   if(elegido)return {arm:elegido, ajustado:elegido.anc!==arm.anc||anchoReal!==arm.anc, supera:false, anchoReal};
   const max=candidatos[candidatos.length-1];
   return {arm:max, ajustado:true, supera:true, anchoReal};
+}
+// Lote AM1b (30-09-2026, Álvaro) — PRECIO DEL RINCÓN ESCUADRA por sus lados. Solo nombres con «Rinc.Esc»: bajos, altos
+// (rincón colgante) y columnas; el rincón fregadero y el chaflán siguen con el +30 % de siempre.
+//  · Lados → la tarjeta MÁS BARATA de su serie (misma familia y alto) que cubra los dos lados en cualquier orientación
+//    (80×90 = 90×80), SIN +30 %.
+//  · Ninguna tarjeta los cubre → «como las puertas»: rincón cuadrado del lado mayor, subiendo lo que suben las dos últimas
+//    tarjetas cuadradas de la serie (regla de tres por cm de lado). Se cobra aparte de la tarifa: no se puede guardar en ella.
+//  · El alto no cuenta para el precio; el fondo sí (+30 % si no es el de la tarjeta, excluyente con el ×2 como siempre).
+// Ej. B.Rinc.Esc A.75 (90x80 146,93 · 90x90 154,09 · 95x95 161,36 · 100x80 169,84): 92×85 → 95x95 161,36 · 80×90 → 90x80
+// 146,93 · 90×82 → 90x90 154,09 · 105×105 y 105×80 → 161,36 + 7,27 × 2 = 175,90 · 120×60 → 197,71.
+// Rinc.Esc A.70 (colgante) 90×90 → 128,70 + 7,87 × 2 = 144,44 · Col.Rinc.Esc A.205 100×100 → 383,58 + 19,52 = 403,10.
+function esRinEscTarjeta(arm){return !!arm&&/Rinc\.Esc/.test(arm.nom||'');}
+const RX_LADOS_RIN=/(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/;
+function ladosTarjetaTxt(arm){const m=String(arm&&arm.nom||'').match(RX_LADOS_RIN);return m?`${m[1]}x${m[2]}`:'';}
+// Tarjetas de la serie del rincón: misma familia y mismo nombre salvo los lados («B.Rinc.Esc A.75 »). L1 ≥ L2.
+function tarjetasRinEsc(sel){
+  const m=String(sel&&sel.nom||'').match(RX_LADOS_RIN);if(!m)return [];
+  const pre=sel.nom.slice(0,sel.nom.length-m[0].length);
+  return ARM.filter(a=>a.fam===sel.fam&&a.nom.startsWith(pre)).map(a=>{const k=a.nom.slice(pre.length).match(/^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/);
+    return k?{arm:a,L1:Math.max(+k[1],+k[2]),L2:Math.min(+k[1],+k[2])}:null;}).filter(Boolean);
+}
+// md = medidasRin(). Devuelve null si no aplica (no es escuadra) o {arm, extrap, nota}: arm = tarjeta a cobrar (con extrap,
+// copia de la cuadrada mayor con el precio extrapolado y extrap:true); nota = texto para el desglose y la descripción.
+function tarifaRinEscLados(sel,md){
+  if(!esRinEscTarjeta(sel)||!md||!md.L)return null;
+  const T=tarjetasRinEsc(sel);if(!T.length)return null;
+  const a=Math.max(md.ladoI,md.anc),b=Math.min(md.ladoI,md.anc),lados=`${fmtCm(md.ladoI)}×${fmtCm(md.anc)}`;
+  const cub=T.filter(c=>c.L1>=a&&c.L2>=b).sort((x,y)=>(x.arm.p-y.arm.p)||(x.L1*x.L2-y.L1*y.L2));
+  if(cub.length){const c=cub[0].arm;
+    return {arm:c,extrap:false,nota:(c.id===sel.id&&!md.ladoNoStd)?'':`lados ${lados} → tarifa ${ladosTarjetaTxt(c)}, sin recargo`};}
+  const Q=T.filter(c=>c.L1===c.L2).sort((x,y)=>x.L1-y.L1);
+  if(Q.length<2)return null; /* sin dos tarjetas cuadradas no hay de dónde sacarlo: queda el +30 % de siempre */
+  const q1=Q[Q.length-2],q2=Q[Q.length-1],paso=(q2.arm.p-q1.arm.p)/(q2.L1-q1.L1);
+  const p=Math.round((q2.arm.p+paso*(a-q2.L1)+1e-9)*100)/100;
+  return {arm:{...q2.arm,p,extrap:true},extrap:true,
+    nota:`lados ${lados} → por encima de la tarjeta mayor: cuadrado de ${fmtCm(a)} sacado de ${ladosTarjetaTxt(q1.arm)} y ${ladosTarjetaTxt(q2.arm)} (+${fmt(paso*5)} cada 5 cm) = ${fmt(p)}`};
+}
+// Recargos del armazón del rincón. Escuadra (trE): solo el fondo lleva +30 %; resto de rincones: alto, fondo o lados.
+function optsArmRincon(mdR,trE,pzEf){
+  return {esEspecial:RFORMA!=='ninguna',altoNoStd:trE?false:mdR.altoNoStd,fondoNoStd:trE?mdR.fondoNoStd:(mdR.fondoNoStd||mdR.ladoNoStd),materialPuerta:piezasHayPuerta(pzEf)};
 }
 // Lote F — Re-tarificación general por ancho para el modal regular (NO rincón).
 // Si la operaria selecciona un armazón (p.ej. An.50) y luego teclea un ancho real distinto
@@ -5704,7 +5744,9 @@ function pintarAvisoMedEsp(){
     if(esBajoOColRinRec(SEL)){const a=r1(+$('meAnc').value||SEL.anc),aj=armazonRRectoTarifa(SEL,a);
       if(a!==SEL.anc)t.push(`Ancho real ${fmtCm(a)} → se tarifa como ${aj.arm.nom}${aj.supera?' (supera la tarifa)':''}`);}
     const md=medidasRin({alt:+$('meAlt').value,anc:+$('meAnc').value,fon:+$('meFon').value,ladoI:+$('meLadoI').value}); // Lote B1
-    const q=[md.altoNoStd&&'alto',md.fondoNoStd&&'fondo',md.ladoNoStd&&(md.L?'lados':'ancho')].filter(Boolean);
+    const trE=tarifaRinEscLados(SEL,md); // Lote AM1b: rincón escuadra
+    if(trE){if(trE.nota)t.push(trE.nota.charAt(0).toUpperCase()+trE.nota.slice(1));if(md.altoNoStd)t.push('Alto a medida: en el rincón escuadra no cambia el precio');}
+    const q=trE?[md.fondoNoStd&&'fondo'].filter(Boolean):[md.altoNoStd&&'alto',md.fondoNoStd&&'fondo',md.ladoNoStd&&(md.L?'lados':'ancho')].filter(Boolean);
     if(forma!=='ninguna')t.push(`${FORMA_LAB[forma]}: armazón ×2${q.length?' (no se suma el +30 %)':''}`);
     else if(q.length)t.push(q.join(', ').replace(/^./,c=>c.toUpperCase())+' no estándar: armazón +30 %');
     else t.push('Sin cajeo: sin recargo de forma');
@@ -6618,15 +6660,16 @@ function rdsg(){
   // Ancho real manual para bajos/columnas rincón recto: tarifica con armazón estándar superior.
   const anchoRealRR=+document.getElementById('rRRecAncho')?.value||0;
   const ajusteRR=armazonRRectoTarifa(SEL,anchoRealRR);
-  const armTar=ajusteRR.arm;
+  const mdR=medidasRin(),trE=tarifaRinEscLados(SEL,mdR); // Lote AM1b: rincón escuadra → tarjeta por lados
+  const armTar=trE?trE.arm:ajusteRR.arm;
   // Lote B1: alto, fondo y lados del rincón se pueden cambiar → +30 % si no son los de la tarjeta (excluyente con el ×2).
+  // Lote AM1b: en el rincón escuadra solo el fondo (los lados van a tarjeta y el alto no cuenta).
   const spPz=r3dSpecFormulario(),pzEf=(spPz&&isRin(SEL))?spPz.piezas:{}; // Lote R8: piezas del casco cambiadas en el 3D
-  const mdR=medidasRin();
-  const optsArm={esEspecial:RFORMA!=='ninguna',altoNoStd:mdR.altoNoStd,fondoNoStd:mdR.fondoNoStd||mdR.ladoNoStd,materialPuerta:piezasHayPuerta(pzEf)};
+  const optsArm=optsArmRincon(mdR,trE,pzEf);
   const armP=gap2(armTar,optsArm,RARMMAN);
   RD_ARM=armTar; // Lote M
   const recArmR=notaRecargoArm(optsArm,RFORMA);
-  let lines=[`Armazón: ${peHtml('r','arm',0,RARMMAN!=null?RARMMAN:armTar.p,RARMMAN!=null,tarifaEsMod('arm',armTar.nom))} €${recArmR?`${recArmR} = ${fmt(armP)}`:''}`+(ajusteRR.ajustado?` · ancho real ${anchoRealRR}cm → tarifa An.${armTar.anc}${ajusteRR.supera?' (excede estándar)':''}`:'')],pt=0,tt=0;
+  let lines=[`Armazón: ${peHtml('r','arm',0,RARMMAN!=null?RARMMAN:armTar.p,RARMMAN!=null,tarifaEsMod('arm',armTar.nom))} €${recArmR?`${recArmR} = ${fmt(armP)}`:''}`+(ajusteRR.ajustado?` · ancho real ${anchoRealRR}cm → tarifa An.${armTar.anc}${ajusteRR.supera?' (excede estándar)':''}`:'')+(trE&&trE.nota?` · ${trE.nota}`:'')],pt=0,tt=0; // Lote AM1b
   const ladoBajoR=isBajo(SEL);
   RPuertas.forEach((p,i)=>{
     const a=+p.alto||0,w=+p.ancho||0;
@@ -6706,11 +6749,12 @@ function addRin(){
   // Ancho real manual (bajos/columnas rincón recto). Si se rellena, se tarifa con armazón superior.
   const anchoRealRR=+document.getElementById('rRRecAncho')?.value||0;
   const ajusteRR=armazonRRectoTarifa(SEL,anchoRealRR);
-  const armTar=ajusteRR.arm;
+  const mdR=medidasRin(),trE=tarifaRinEscLados(SEL,mdR); // Lote AM1b: rincón escuadra → tarjeta por lados
+  const armTar=trE?trE.arm:ajusteRR.arm;
   // Lote F: forma especial (×2) en rincón. Lote B1: y +30 % por alto, fondo o lados no estándar (excluyentes).
+  // Lote AM1b: en el rincón escuadra solo el fondo.
   const spPz=r3dSpecFormulario(),pzEf=(spPz&&isRin(SEL))?spPz.piezas:{}; // Lote R8: piezas del casco cambiadas en el 3D
-  const mdR=medidasRin();
-  const optsArm={esEspecial:RFORMA!=='ninguna',altoNoStd:mdR.altoNoStd,fondoNoStd:mdR.fondoNoStd||mdR.ladoNoStd,materialPuerta:piezasHayPuerta(pzEf)};
+  const optsArm=optsArmRincon(mdR,trE,pzEf);
   const dobleFondo=(RFORMA==='chaflan')?{dcho:+document.getElementById('rDFD').value||null,izq:+document.getElementById('rDFI').value||null}:null;
   const armP=gap2(armTar,optsArm,RARMMAN);let pt=0,tt=0,pd=[],altoPuertaMax=0,manos=[]; // Lote M
   const snapPuertas=RPuertas.map(p=>({alto:+p.alto||0,ancho:+p.ancho||0,tir:p.tir||'on',mano:p.mano||'D',...(p.pMan!=null?{pMan:+p.pMan}:{}),...(p.tMan!=null?{tMan:+p.tMan}:{})}));
@@ -6754,6 +6798,7 @@ function addRin(){
   let desc=`${etiquetaMueble(MHOJA,armTar,RPuertas,RFrentesCJ,S.tar)} + ${S.tar} [${pd.join(', ')}]`; // Lote Q
   if(ajusteRR.ajustado)desc+=` · ancho real ${anchoRealRR}cm${ajusteRR.supera?' [excede estándar]':''}`;
   desc+=descMedidasRin(mdR); // Lote B1
+  if(trE&&trE.arm.id!==SEL.id)desc+=trE.extrap?' · tarifa extrapolada':` · tarifa ${ladosTarjetaTxt(trE.arm)}`; // Lote AM1b
   if(esRinEsc(SEL)&&RPRIMERO)desc+=` · abre primero ${RPRIMERO}`; // Lote R7: sale en la hoja de producción
   {const txtPz=textoPiezasDesc(pzEf);if(txtPz)desc+=` · ${txtPz}`;} // Lote R8
   // Lote R6 — ciego del bajo rincón recto en la descripción (hoja de producción): lado y ancho con el ancho real
@@ -6776,7 +6821,9 @@ function addRin(){
   const meta={
     tipo:'mueble',armId:armTar.id,fam:armTar.fam,nom:armTar.nom,
     alt:mdR.alt,anc:armTar.anc,fon:mdR.fon, // Lote B1: alto y fondo reales (como los muebles normales)
-    anchoReal:anchoRealRR||null,ladoIzq:mdR.L&&mdR.ladoNoStd?mdR.ladoI:null,armIdSeleccionado:SEL.id,
+    anchoReal:(trE?mdR.anc:anchoRealRR)||null,ladoIzq:trE?mdR.ladoI:(mdR.L&&mdR.ladoNoStd?mdR.ladoI:null),armIdSeleccionado:SEL.id,
+    /* Lote AM1b: el rincón escuadra guarda SIEMPRE sus dos lados reales (ladoIzq y anchoReal = lado dcho.): la tarjeta
+       cobrada (armId/nom) puede ser otra, y el 3D, la escena, la hoja y el despiece deben dibujar los lados de verdad. */
     altoPuertaMax,esRinEsc:esRinEsc(armTar),esRinRec:isRin(armTar)&&isRinR(armTar),
     esColg:esColganteFam(armTar),esBajo:esBajoFam(armTar),esCol:esColumnaFam(armTar),
     baldasMan,baldaFreg,mediasBaldas,manos,frentesIndic:frentesParaIndic,
